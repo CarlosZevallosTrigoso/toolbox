@@ -9,108 +9,162 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
     background: #0a0a0b;
-    color: #888;
+    color: #999;
     min-height: 100vh;
     padding: 3rem 2.5rem;
-    font-size: 0.85rem;
-    line-height: 1.8;
+    font-size: 0.88rem;
+    line-height: 1.7;
   }
 
-  h1 {
-    font-size: 0.85rem;
-    font-weight: normal;
+  code, .mono {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  }
+
+  .back-link {
+    display: inline-block;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     color: #444;
-    margin-bottom: 1.5rem;
+    text-decoration: none;
+    margin-bottom: 1.2rem;
+    font-size: 0.82rem;
+  }
+  .back-link:hover { color: #888; }
+
+  h1 {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.88rem;
+    font-weight: normal;
+    color: #555;
+    margin-bottom: 2rem;
   }
 
   /* Drop zone */
   .dropzone {
-    border: 1px dashed #333;
-    padding: 2rem 1.5rem;
+    border: 1px dashed #2a2a2e;
+    background: #111113;
+    padding: 2.5rem 2rem;
     cursor: pointer;
-    transition: border-color 0.2s;
-    margin-bottom: 1rem;
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
   }
   .dropzone:hover, .dropzone.dragover {
-    border-color: #ccc;
+    border-color: #5a7a3a;
+    background: rgba(90, 140, 60, 0.04);
   }
   .dropzone input { display: none; }
-  .dropzone-label { color: #555; }
-  .dropzone-label strong { color: #ccc; font-weight: normal; }
+  .dropzone-label { color: #666; }
+  .dropzone-label strong { color: #aaa; font-weight: 500; }
 
   /* File info */
   .file-info {
     display: none;
-    margin-bottom: 1.5rem;
+    background: #111113;
+    border: 1px solid #222225;
+    border-radius: 4px;
+    padding: 0.9rem 1.2rem;
+    margin-bottom: 2rem;
     align-items: center;
     gap: 1rem;
   }
   .file-info.visible { display: flex; }
-  .file-name { color: #ccc; }
-  .file-pages { color: #555; }
+  .file-name {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #ccc;
+    font-size: 0.85rem;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .file-pages {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #5a7a3a;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
   .btn-clear {
     background: none;
     border: none;
     color: #555;
     cursor: pointer;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    transition: all 0.15s;
   }
-  .btn-clear:hover { color: #ccc; }
+  .btn-clear:hover { color: #ccc; background: #1a1a1e; }
 
   /* Mode tabs */
   .mode-tabs {
     display: flex;
-    gap: 1.5rem;
-    margin-bottom: 1rem;
+    gap: 0;
+    margin-bottom: 1.5rem;
+    border: 1px solid #222225;
+    border-radius: 4px;
+    overflow: hidden;
+    max-width: 360px;
   }
   .mode-tab {
-    background: none;
+    flex: 1;
+    background: #111113;
     border: none;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 500;
     color: #555;
     cursor: pointer;
-    padding: 0;
+    padding: 0.6rem 1rem;
+    transition: all 0.15s;
   }
-  .mode-tab.active { color: #ccc; }
-  .mode-tab:hover:not(.active) { color: #888; }
+  .mode-tab + .mode-tab { border-left: 1px solid #222225; }
+  .mode-tab.active {
+    color: #ccc;
+    background: #18181c;
+  }
+  .mode-tab:hover:not(.active) { color: #888; background: #141416; }
 
   /* Panels */
-  .panel { display: none; margin-bottom: 1.5rem; }
+  .panel { display: none; margin-bottom: 2rem; }
   .panel.active { display: block; }
 
   .field-label {
     display: block;
-    color: #555;
-    margin-bottom: 0.3rem;
+    color: #666;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.4rem;
   }
 
   .field-hint {
     color: #444;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.7rem;
+    font-size: 0.84rem;
   }
   .field-hint code {
-    color: #666;
-    font-family: inherit;
+    color: #777;
+    font-size: 0.82rem;
   }
 
   input[type="text"], input[type="number"] {
-    background: none;
-    border: none;
-    border-bottom: 1px solid #333;
+    background: #111113;
+    border: 1px solid #222225;
+    border-radius: 4px;
     color: #ccc;
-    font-family: inherit;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.85rem;
-    padding: 0.4rem 0;
+    padding: 0.6rem 0.8rem;
     outline: none;
     width: 100%;
     max-width: 400px;
     transition: border-color 0.2s;
   }
-  input:focus { border-color: #ccc; }
+  input:focus { border-color: #5a7a3a; }
   input::placeholder { color: #333; }
 
   .chunk-row {
@@ -118,22 +172,24 @@
     align-items: center;
     gap: 0.75rem;
   }
-  .chunk-row input { width: 80px; text-align: left; }
+  .chunk-row input { width: 100px; }
   .chunk-row span { color: #555; }
 
   /* Actions */
   .btn-split {
-    background: none;
-    border: 1px solid #333;
-    color: #888;
+    background: #5a7a3a;
+    border: none;
+    color: #e8e8ec;
     font-family: inherit;
-    font-size: 0.85rem;
-    padding: 0.5rem 1.2rem;
+    font-size: 0.84rem;
+    font-weight: 500;
+    padding: 0.65rem 1.8rem;
     cursor: pointer;
     transition: all 0.2s;
-    margin-bottom: 1.5rem;
+    margin-bottom: 2rem;
+    border-radius: 4px;
   }
-  .btn-split:hover { border-color: #ccc; color: #ccc; }
+  .btn-split:hover { background: #6a8e46; }
   .btn-split:disabled { opacity: 0.3; cursor: not-allowed; }
 
   /* Results */
@@ -141,57 +197,69 @@
   .results.visible { display: block; }
 
   .results-header {
-    color: #444;
-    margin-bottom: 0.5rem;
+    color: #555;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.75rem;
   }
 
   .result-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.3rem 0;
+    padding: 0.6rem 1rem;
+    background: #111113;
+    border: 1px solid #1a1a1e;
+    border-radius: 4px;
+    margin-bottom: 0.4rem;
     max-width: 500px;
+    transition: border-color 0.15s;
   }
-  .result-name { color: #888; }
-  .result-pages { color: #444; margin-left: 0.75rem; }
+  .result-item:hover { border-color: #2a2a2e; }
+
+  .result-name {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #aaa;
+    font-size: 0.82rem;
+  }
+  .result-pages { color: #555; margin-left: 0.75rem; font-size: 0.82rem; }
 
   .btn-download {
     background: none;
-    border: none;
-    color: #555;
+    border: 1px solid #222225;
+    color: #777;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
+    padding: 0.3rem 0.8rem;
     cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
   }
-  .btn-download:hover { color: #ccc; }
+  .btn-download:hover { border-color: #5a7a3a; color: #5a7a3a; }
 
   .btn-download-all {
     background: none;
-    border: none;
-    color: #555;
+    border: 1px solid #222225;
+    color: #777;
     font-family: inherit;
-    font-size: 0.85rem;
+    font-size: 0.84rem;
     cursor: pointer;
     margin-top: 0.75rem;
-    padding: 0;
+    padding: 0.55rem 1.2rem;
+    border-radius: 4px;
+    transition: all 0.15s;
   }
-  .btn-download-all:hover { color: #ccc; }
+  .btn-download-all:hover { border-color: #5a7a3a; color: #5a7a3a; }
 
   .error-msg {
-    color: #ff6b6b;
+    color: #c45;
     display: none;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.84rem;
   }
   .error-msg.visible { display: block; }
-
-  .back-link {
-    display: inline-block;
-    color: #333;
-    text-decoration: none;
-    margin-bottom: 1rem;
-    font-size: 0.85rem;
-  }
-  .back-link:hover { color: #555; }
 </style>
 </head>
 <body>
@@ -207,12 +275,12 @@
 <div class="file-info" id="fileInfo">
   <span class="file-name" id="fileName"></span>
   <span class="file-pages" id="filePages"></span>
-  <button class="btn-clear" id="btnClear">[x]</button>
+  <button class="btn-clear" id="btnClear">✕</button>
 </div>
 
 <div class="mode-tabs" id="modeTabs">
-  <button class="mode-tab active" data-mode="ranges">[rangos]</button>
-  <button class="mode-tab" data-mode="chunks">[partes iguales]</button>
+  <button class="mode-tab active" data-mode="ranges">por rangos</button>
+  <button class="mode-tab" data-mode="chunks">partes iguales</button>
 </div>
 
 <div class="panel active" id="panelRanges">
@@ -234,9 +302,9 @@
 <button class="btn-split" id="btnSplit" disabled>fragmentar</button>
 
 <div class="results" id="results">
-  <div class="results-header">fragmentos:</div>
+  <div class="results-header">fragmentos generados</div>
   <div id="resultsList"></div>
-  <button class="btn-download-all" id="btnDownloadAll">[descargar todos]</button>
+  <button class="btn-download-all" id="btnDownloadAll">descargar todos</button>
 </div>
 
 <script>
@@ -404,7 +472,7 @@ function renderResults() {
         <span class="result-name">${f.name}</span>
         <span class="result-pages">${pageCount} pág.</span>
       </div>
-      <button class="btn-download" data-idx="${i}">[descargar]</button>
+      <button class="btn-download" data-idx="${i}">descargar</button>
     `;
     resultsList.appendChild(div);
   });
