@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Toolbox</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: #0a0a0b;
+    color: #e8e8ec;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  main {
+    width: 100%;
+    max-width: 480px;
+    padding: 2rem;
+  }
+
+  h1 {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #555568;
+    margin-bottom: 2.5rem;
+  }
+
+  .tools { list-style: none; }
+
+  .tools li + li { margin-top: 1px; }
+
+  .tools a {
+    display: block;
+    padding: 1.1rem 1.25rem;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 8px;
+    transition: background 0.2s ease;
+  }
+
+  .tools a:hover {
+    background: #141416;
+  }
+
+  .tool-name {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .tool-desc {
+    font-size: 0.85rem;
+    color: #8888a0;
+  }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Toolbox</h1>
+    <ul class="tools">
+      <li>
+        <a href="imageforge.html">
+          <div class="tool-name">ImageForge</div>
+          <div class="tool-desc">Convierte y comprime imágenes</div>
+        </a>
+      </li>
+      <li>
+        <a href="pdf-splitter.html">
+          <div class="tool-name">PDF Splitter</div>
+          <div class="tool-desc">Divide y extrae páginas de un PDF</div>
+        </a>
+      </li>
+      <li>
+        <a href="timer.html">
+          <div class="tool-name">Timer</div>
+          <div class="tool-desc">Temporizador visual con cuenta regresiva</div>
+        </a>
+      </li>
+    </ul>
+  </main>
+</body>
+</html>
