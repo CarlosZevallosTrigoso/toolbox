@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IG Diff — Comparador de listas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;500;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e0e10;
+    --surface: #18181b;
+    --surface-raised: #1e1e22;
+    --border: #2a2a2e;
+    --text: #e4e4e7;
+    --text-dim: #71717a;
+    --accent-gone: #f43f5e;
+    --accent-gone-bg: rgba(244, 63, 94, 0.08);
+    --accent-new: #34d399;
+    --accent-new-bg: rgba(52, 211, 153, 0.08);
+    --accent-stay: #60a5fa;
+    --radius: 10px;
+  }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1.5rem;
+  }
+
+  header {
+    text-align: center;
+    margin-bottom: 2.5rem;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 0.3rem;
+  }
+
+  header h1 span {
+    font-family: 'DM Mono', monospace;
+    font-weight: 500;
+    color: var(--text-dim);
+    font-size: 0.6em;
+    vertical-align: middle;
+    margin-left: 0.4em;
+    border: 1px solid var(--border);
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+  }
+
+  header p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    font-weight: 300;
+  }
+
+  .input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    max-width: 900px;
+    margin: 0 auto 1.5rem;
+  }
+
+  @media (max-width: 640px) {
+    .input-grid { grid-template-columns: 1fr; }
+  }
+
+  .input-col label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 0.5rem;
+  }
+
+  .input-col label .dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 0.4em;
+    vertical-align: middle;
+  }
+
+  .dot-old { background: var(--accent-gone); }
+  .dot-new { background: var(--accent-new); }
+
+  textarea {
+    width: 100%;
+    height: 220px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 0.82rem;
+    padding: 0.9rem 1rem;
+    resize: vertical;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+  }
+
+  textarea:focus {
+    outline: none;
+    border-color: #52525b;
+  }
+
+  textarea::placeholder {
+    color: #3f3f46;
+  }
+
+  .actions {
+    text-align: center;
+    margin-bottom: 2rem;
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  button {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    font-size: 0.85rem;
+    padding: 0.65rem 1.6rem;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--text);
+    color: var(--bg);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(255,255,255,0.1);
+  }
+
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    color: var(--text);
+    border-color: #52525b;
+  }
+
+  /* Results */
+  .results {
+    max-width: 900px;
+    margin: 0 auto;
+    display: none;
+  }
+
+  .results.visible { display: block; }
+
+  .stats {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.7rem 1.2rem;
+    text-align: center;
+    min-width: 120px;
+  }
+
+  .stat .num {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .stat .lbl {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-dim);
+    margin-top: 0.15rem;
+  }
+
+  .stat.gone .num { color: var(--accent-gone); }
+  .stat.new .num { color: var(--accent-new); }
+  .stat.stay .num { color: var(--accent-stay); }
+
+  .result-columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    .result-columns { grid-template-columns: 1fr; }
+  }
+
+  .result-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 0.75rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .panel-header .count {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+  }
+
+  .panel-gone .panel-header {
+    color: var(--accent-gone);
+    background: var(--accent-gone-bg);
+  }
+  .panel-gone .count {
+    background: var(--accent-gone-bg);
+    color: var(--accent-gone);
+    border: 1px solid rgba(244, 63, 94, 0.2);
+  }
+
+  .panel-new .panel-header {
+    color: var(--accent-new);
+    background: var(--accent-new-bg);
+  }
+  .panel-new .count {
+    background: var(--accent-new-bg);
+    color: var(--accent-new);
+    border: 1px solid rgba(52, 211, 153, 0.2);
+  }
+
+  .user-list {
+    padding: 0.5rem;
+    max-height: 400px;
+    overflow-y: auto;
+  }
+
+  .user-list::-webkit-scrollbar { width: 5px; }
+  .user-list::-webkit-scrollbar-track { background: transparent; }
+  .user-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .user-item {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.6rem;
+    border-radius: 5px;
+    cursor: default;
+    transition: background 0.12s;
+    display: flex;
+    align-items: center;
+    gap: 0.5em;
+  }
+
+  .user-item::before {
+    content: '@';
+    color: var(--text-dim);
+    font-size: 0.75em;
+  }
+
+  .panel-gone .user-item:hover { background: var(--accent-gone-bg); }
+  .panel-new .user-item:hover { background: var(--accent-new-bg); }
+
+  .empty-msg {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-dim);
+    font-size: 0.85rem;
+    font-weight: 300;
+  }
+
+  .copy-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    padding: 0.2em 0.6em;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    border-radius: 4px;
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .copy-btn:hover { color: var(--text); border-color: #52525b; }
+
+  .hint {
+    text-align: center;
+    color: #3f3f46;
+    font-size: 0.75rem;
+    margin-top: 1.5rem;
+    font-weight: 300;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>IG Diff <span>v1</span></h1>
+  <p>Pega tus listas de seguidores y compara los cambios</p>
+</header>
+
+<div class="input-grid">
+  <div class="input-col">
+    <label><span class="dot dot-old"></span>Lista anterior</label>
+    <textarea id="oldList" placeholder="Pega aquí los usernames de la lista pasada&#10;&#10;usuario1&#10;usuario2&#10;usuario3&#10;..."></textarea>
+  </div>
+  <div class="input-col">
+    <label><span class="dot dot-new"></span>Lista nueva</label>
+    <textarea id="newList" placeholder="Pega aquí los usernames de la lista nueva&#10;&#10;usuario1&#10;usuario2&#10;usuario4&#10;..."></textarea>
+  </div>
+</div>
+
+<div class="actions">
+  <button class="btn-primary" onclick="compare()">Comparar</button>
+  <button class="btn-secondary" onclick="clearAll()">Limpiar</button>
+</div>
+
+<div class="results" id="results">
+  <div class="stats" id="stats"></div>
+  <div class="result-columns">
+    <div class="result-panel panel-gone">
+      <div class="panel-header">
+        <span>Ya no están</span>
+        <span class="count" id="goneCount">0</span>
+        <button class="copy-btn" onclick="copyList('gone')" title="Copiar lista">copiar</button>
+      </div>
+      <div class="user-list" id="goneList"></div>
+    </div>
+    <div class="result-panel panel-new">
+      <div class="panel-header">
+        <span>Nuevos</span>
+        <span class="count" id="newCount">0</span>
+        <button class="copy-btn" onclick="copyList('new')" title="Copiar lista">copiar</button>
+      </div>
+      <div class="user-list" id="newUserList"></div>
+    </div>
+  </div>
+</div>
+
+<p class="hint">Un username por línea · Se ignoran @, espacios y líneas vacías</p>
+
+<script>
+function parseList(raw) {
+  return [...new Set(
+    raw.split(/[\n,]+/)
+      .map(u => u.trim().replace(/^@/, '').toLowerCase())
+      .filter(Boolean)
+  )];
+}
+
+function compare() {
+  const oldUsers = parseList(document.getElementById('oldList').value);
+  const newUsers = parseList(document.getElementById('newList').value);
+
+  if (!oldUsers.length && !newUsers.length) return;
+
+  const oldSet = new Set(oldUsers);
+  const newSet = new Set(newUsers);
+
+  const gone = oldUsers.filter(u => !newSet.has(u)).sort();
+  const added = newUsers.filter(u => !oldSet.has(u)).sort();
+  const stayed = oldUsers.filter(u => newSet.has(u));
+
+  // Stats
+  document.getElementById('stats').innerHTML = `
+    <div class="stat gone"><div class="num">${gone.length}</div><div class="lbl">Se fueron</div></div>
+    <div class="stat new"><div class="num">${added.length}</div><div class="lbl">Nuevos</div></div>
+    <div class="stat stay"><div class="num">${stayed.length}</div><div class="lbl">Permanecen</div></div>
+    <div class="stat"><div class="num">${oldUsers.length} → ${newUsers.length}</div><div class="lbl">Total</div></div>
+  `;
+
+  // Gone
+  const goneEl = document.getElementById('goneList');
+  goneEl.innerHTML = gone.length
+    ? gone.map(u => `<div class="user-item">${u}</div>`).join('')
+    : '<div class="empty-msg">Nadie se fue</div>';
+  document.getElementById('goneCount').textContent = gone.length;
+
+  // New
+  const newEl = document.getElementById('newUserList');
+  newEl.innerHTML = added.length
+    ? added.map(u => `<div class="user-item">${u}</div>`).join('')
+    : '<div class="empty-msg">No hay nuevos</div>';
+  document.getElementById('newCount').textContent = added.length;
+
+  // Store for copy
+  window._gone = gone;
+  window._added = added;
+
+  document.getElementById('results').classList.add('visible');
+}
+
+function clearAll() {
+  document.getElementById('oldList').value = '';
+  document.getElementById('newList').value = '';
+  document.getElementById('results').classList.remove('visible');
+}
+
+function copyList(type) {
+  const list = type === 'gone' ? window._gone : window._added;
+  if (!list || !list.length) return;
+  navigator.clipboard.writeText(list.join('\n')).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = orig, 1200);
+  });
+}
+</script>
+
+</body>
+</html>
