@@ -5,88 +5,43 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Toolbox</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap');
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     background: #0a0a0b;
-    color: #e8e8ec;
+    color: #888;
     min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  main {
-    width: 100%;
-    max-width: 480px;
-    padding: 2rem;
+    padding: 3rem 2.5rem;
+    font-size: 0.85rem;
+    line-height: 1.8;
   }
 
   h1 {
-    font-family: 'DM Mono', monospace;
-    font-size: 0.8rem;
-    font-weight: 400;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    color: #555568;
-    margin-bottom: 2.5rem;
-  }
-
-  .tools { list-style: none; }
-
-  .tools li + li { margin-top: 1px; }
-
-  .tools a {
-    display: block;
-    padding: 1.1rem 1.25rem;
-    text-decoration: none;
-    color: inherit;
-    border-radius: 8px;
-    transition: background 0.2s ease;
-  }
-
-  .tools a:hover {
-    background: #141416;
-  }
-
-  .tool-name {
-    font-weight: 600;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
-  }
-
-  .tool-desc {
     font-size: 0.85rem;
-    color: #8888a0;
+    font-weight: normal;
+    color: #444;
+    margin-bottom: 1.5rem;
   }
+
+  ul { list-style: none; }
+
+  a {
+    color: #ccc;
+    text-decoration: none;
+  }
+
+  a:hover { color: #fff; }
+
+  .desc { color: #555; }
 </style>
 </head>
 <body>
-  <main>
-    <h1>Toolbox</h1>
-    <ul class="tools">
-      <li>
-        <a href="imageforge.html">
-          <div class="tool-name">ImageForge</div>
-          <div class="tool-desc">Convierte y comprime imágenes</div>
-        </a>
-      </li>
-      <li>
-        <a href="pdf-splitter.html">
-          <div class="tool-name">PDF Splitter</div>
-          <div class="tool-desc">Divide y extrae páginas de un PDF</div>
-        </a>
-      </li>
-      <li>
-        <a href="timer.html">
-          <div class="tool-name">Timer</div>
-          <div class="tool-desc">Temporizador visual con cuenta regresiva</div>
-        </a>
-      </li>
-    </ul>
-  </main>
+<h1>toolbox/</h1>
+<ul>
+  <li>1. <a href="apps/timer.html" target="_blank">timer</a> <span class="desc">— temporizador visual con cuenta regresiva</span></li>
+  <li>2. <a href="apps/pdf-splitter.html" target="_blank">pdf-splitter</a> <span class="desc">— divide y extrae páginas de un pdf</span></li>
+  <li>3. <a href="apps/imageforge.html" target="_blank">imageforge</a> <span class="desc">— convierte y comprime imágenes</span></li>
+</ul>
 </body>
 </html>
