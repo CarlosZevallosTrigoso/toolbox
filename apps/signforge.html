@@ -375,7 +375,7 @@
 
   <div class="pubkey-banner">
     <div class="key-label">Clave pública de Carlos Zevallos Trigoso</div>
-    <div class="key-display" id="author-pubkey">— pendiente: pegar clave pública aquí —</div>
+    <div class="key-display" id="author-pubkey">6Foil2agMBMFJfdaH2DC9gWoiax/i1RvBtev2Cx55YQ=</div>
     <p style="font-size: 11px; color: var(--text-dim); margin-top: 0.5rem; font-family: var(--sans); font-weight: 300;">
       <a href="#" target="_blank" rel="noopener noreferrer" style="color: var(--accent);">Confirma aquí</a> que esta clave es auténtica.
     </p>
@@ -402,6 +402,13 @@
       <div class="field">
         <label>Archivo completo o bloque de firma</label>
         <textarea id="verify-input" placeholder="Sube un archivo o pega el contenido aquí"></textarea>
+      </div>
+      <div class="field">
+        <label>Verificar con otra clave pública (opcional)</label>
+        <input type="text" id="verify-alt-pubkey" placeholder="Por defecto se verifica con la clave de Carlos Zevallos Trigoso">
+        <p id="alt-key-warning" style="display: none; font-size: 11px; color: #c06060; margin-top: 0.4rem; font-family: var(--sans); font-weight: 300;">
+          Estás verificando con una clave distinta. El resultado no confirma autoría de Carlos Zevallos Trigoso.
+        </p>
       </div>
       <div id="verify-btn-row" class="btn-row"></div>
       <div id="verify-result" class="verify-result"></div>
@@ -436,6 +443,46 @@
         fuera de tu navegador. No hay scripts externos: la librería
         criptográfica está embebida directamente en el HTML.
         El algoritmo Ed25519 es el estándar usado por SSH, Signal, Tor y WireGuard.
+
+        <h3>Verificación independiente</h3>
+        La firma no depende de esta herramienta. Cualquier implementación
+        de Ed25519 puede verificarla. Extrae del bloque la firma y la clave
+        pública (ambas en base64), y el contenido firmado es todo lo que
+        está fuera del bloque.
+
+        <h3 style="margin-bottom: 0.8rem;">Python</h3>
+<pre style="background:var(--bg-input);border:1px solid var(--border);padding:0.8rem;font-size:11px;line-height:1.6;color:var(--text);overflow-x:auto;"><code style="background:none;padding:0;">import base64
+from nacl.signing import VerifyKey
+
+pubkey = base64.b64decode("TU_CLAVE_PUBLICA_BASE64")
+signature = base64.b64decode("LA_FIRMA_BASE64")
+content = open("archivo.html").read()
+
+# quitar el bloque de firma del contenido
+import re
+content = re.sub(r'\n&lt;!-- SIG:ED25519[\s\S]*?--&gt;', '', content)
+
+verify_key = VerifyKey(pubkey)
+verify_key.verify(content.encode(), signature)
+print("Firma válida")</code></pre>
+        <code>pip install pynacl</code>
+
+        <h3 style="margin-bottom: 0.8rem;">Node.js</h3>
+<pre style="background:var(--bg-input);border:1px solid var(--border);padding:0.8rem;font-size:11px;line-height:1.6;color:var(--text);overflow-x:auto;"><code style="background:none;padding:0;">const nacl = require('tweetnacl');
+const fs = require('fs');
+
+const pubkey = Buffer.from("TU_CLAVE_PUBLICA_BASE64", 'base64');
+const signature = Buffer.from("LA_FIRMA_BASE64", 'base64');
+let content = fs.readFileSync("archivo.html", "utf8");
+
+// quitar el bloque de firma del contenido
+content = content.replace(/\n&lt;!-- SIG:ED25519[\s\S]*?--&gt;/, '');
+
+const ok = nacl.sign.detached.verify(
+  new TextEncoder().encode(content), signature, pubkey
+);
+console.log(ok ? "Firma válida" : "Firma inválida");</code></pre>
+        <code>npm install tweetnacl</code>
 
         <h3>Verificación de integridad</h3>
         Hash SHA-256 de la librería tweetnacl.js embebida:<br>
@@ -609,6 +656,11 @@ document.querySelector('.tabs').addEventListener('click', function(e) {
 
   var row = document.getElementById('verify-btn-row');
   row.appendChild(mkBtn('Verificar firma', 'btn-primary', verifyContent));
+
+  document.getElementById('verify-alt-pubkey').addEventListener('input', function() {
+    var warn = document.getElementById('alt-key-warning');
+    warn.style.display = this.value.trim() ? 'block' : 'none';
+  });
 })();
 
 // Keys
@@ -817,7 +869,11 @@ function verifyContent() {
     return;
   }
 
-  var pkB64 = parsed.publickey || document.getElementById('author-pubkey').textContent.trim();
+  var altKey = document.getElementById('verify-alt-pubkey').value.trim();
+  var defaultKey = document.getElementById('author-pubkey').textContent.trim();
+  var pkB64 = altKey || parsed.publickey || defaultKey;
+  var usingAltKey = altKey && altKey !== defaultKey;
+
   if (!pkB64 || pkB64.charAt(0) === '\u2014') {
     vResult(res, false, 'Sin clave pública', 'No hay clave pública en la firma ni en el banner.');
     return;
@@ -831,7 +887,11 @@ function verifyContent() {
     );
     if (ok) {
       var info = [parsed.author ? 'Autor: ' + esc(parsed.author) : '', parsed.date ? 'Fecha: ' + parsed.date : ''].filter(Boolean).join(' &middot; ');
-      vResult(res, true, 'Firma válida', info + '<br>Contenido íntegro. Confirma la clave pública en fuentes independientes.');
+      if (usingAltKey) {
+        vResult(res, true, 'Firma válida (clave externa)', info + '<br>Contenido íntegro, pero verificado con una clave distinta a la de Carlos Zevallos Trigoso.');
+      } else {
+        vResult(res, true, 'Firma válida', info + '<br>Contenido íntegro. Confirma la clave pública en fuentes independientes.');
+      }
     } else {
       vResult(res, false, 'Firma inválida', 'El contenido fue alterado o la firma no corresponde a esta clave.');
     }
