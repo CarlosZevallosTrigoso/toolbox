@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>image-id</title>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0b;
+    --surface: #111113;
+    --surface-2: #18181c;
+    --surface-3: #222225;
+    --border: #2a2a2e;
+    --text: #e4e4ec;
+    --text-dim: #7c7c90;
+    --text-mid: #a0a0b0;
+    --accent: #5a7a3a;
+    --accent-dim: rgba(90, 122, 58, 0.10);
+    --accent-mid: rgba(90, 122, 58, 0.25);
+    --red: #c45;
+    --yellow: #b08a3a;
+    --blue: #5580aa;
+    --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    --sans: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    --radius: 6px;
+    --radius-sm: 4px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .logo { display: flex; align-items: center; gap: 0.7rem; }
+
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 7px;
+    display: grid; place-items: center;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .logo-mark::before, .logo-mark::after {
+    content: '';
+    position: absolute;
+    border: 2px solid var(--bg);
+    border-radius: 2px;
+  }
+
+  .logo-mark::before { width: 10px; height: 10px; top: 5px; left: 5px; }
+  .logo-mark::after { width: 8px; height: 8px; bottom: 5px; right: 5px; }
+
+  .logo h1 { font-family: var(--mono); font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; }
+  .logo h1 span { color: var(--accent); }
+
+  .header-right { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--text-dim);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.65rem;
+    border-radius: 100px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+
+  .badge.live { color: var(--accent); border-color: var(--accent-mid); background: var(--accent-dim); }
+
+  main { max-width: 1120px; margin: 0 auto; padding: 1.75rem 2rem 3rem; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-group {
+    display: flex;
+    gap: 3px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px;
+  }
+
+  .tb-btn {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    font-weight: 500;
+    padding: 0.45rem 0.9rem;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+
+  .tb-btn:hover { color: var(--text); background: var(--surface-2); }
+  .tb-btn.active { color: var(--accent); background: var(--accent-dim); }
+  .tb-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .toolbar-sep { width: 1px; height: 24px; background: var(--border); margin: 0 0.25rem; flex-shrink: 0; }
+
+  .model-select-wrap { position: relative; }
+
+  .model-select {
+    font-family: var(--mono);
+    font-size: 0.76rem;
+    font-weight: 500;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    min-width: 200px;
+  }
+
+  .model-select:focus { outline: none; border-color: var(--accent); }
+
+  .model-select-wrap::after {
+    content: '▾';
+    position: absolute;
+    right: 10px; top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    pointer-events: none;
+  }
+
+  .conf-control {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .conf-control input[type="range"] { width: 90px; accent-color: var(--accent); cursor: pointer; }
+  .conf-control .val { color: var(--accent); min-width: 2.2em; text-align: right; font-weight: 600; }
+
+  .viewport-wrap {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 16 / 10;
+    max-height: 68vh;
+  }
+
+  .viewport-wrap video,
+  .viewport-wrap canvas,
+  .viewport-wrap img {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+  }
+
+  .viewport-wrap canvas { z-index: 2; pointer-events: none; }
+  #photoPreview { display: none; }
+
+  .loading-overlay {
+    position: absolute; inset: 0; z-index: 5;
+    background: rgba(10, 10, 11, 0.92);
+    backdrop-filter: blur(12px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+  }
+
+  .loading-overlay.visible { display: flex; }
+
+  .loader-ring {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .load-text {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: var(--text-mid);
+    text-align: center;
+    line-height: 1.7;
+  }
+
+  .load-text strong { color: var(--accent); font-weight: 600; }
+
+  .progress-wrap {
+    width: 260px; height: 4px;
+    background: var(--surface-3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%; background: var(--accent);
+    border-radius: 2px; width: 0%;
+    transition: width 0.3s;
+  }
+
+  .upload-zone {
+    position: absolute; inset: 0; z-index: 3;
+    display: none; place-items: center;
+    background: rgba(10, 10, 11, 0.8);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .upload-zone:hover { background: rgba(10, 10, 11, 0.7); }
+  .upload-zone.drag-over { background: rgba(90, 122, 58, 0.06); }
+  .upload-zone.visible { display: grid; }
+
+  .welcome-screen {
+    position: absolute; inset: 0; z-index: 3;
+    display: none; place-items: center;
+    background: rgba(10, 10, 11, 0.85);
+    backdrop-filter: blur(6px);
+  }
+
+  .welcome-screen.visible { display: grid; }
+  .upload-inner { text-align: center; pointer-events: none; }
+  .upload-inner svg { width: 44px; height: 44px; color: var(--accent); margin-bottom: 0.85rem; opacity: 0.6; }
+  .upload-inner p { font-family: var(--mono); font-size: 0.8rem; color: var(--text-dim); line-height: 1.7; }
+  .upload-inner p strong { color: var(--accent); }
+
+  .status-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 0.75rem; margin-top: 0.85rem;
+    padding: 0.6rem 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    flex-wrap: wrap;
+  }
+
+  .status-left { display: flex; align-items: center; gap: 0.85rem; }
+  .status-indicator { display: flex; align-items: center; gap: 0.4rem; }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+
+  .status-dot.loading { background: var(--yellow); animation: pulse 1s ease infinite; }
+  .status-dot.ready { background: var(--accent); }
+  .status-dot.error { background: var(--red); }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+  .stat { color: var(--text-dim); }
+  .stat strong { color: var(--text); font-weight: 600; }
+
+  .actions { margin-top: 0.85rem; display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+  .act-btn {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.5rem 0.9rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .act-btn:hover { border-color: var(--accent); }
+  .act-btn.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .act-btn.primary:hover { filter: brightness(1.1); }
+  .act-btn.danger { color: var(--red); }
+  .act-btn.danger:hover { border-color: var(--red); }
+
+  .det-panel { margin-top: 0.85rem; }
+
+  .det-header {
+    font-family: var(--mono); font-size: 0.72rem;
+    color: var(--text-dim); margin-bottom: 0.5rem;
+    letter-spacing: 0.04em; text-transform: uppercase;
+    display: none;
+  }
+
+  .det-header.vis { display: block; }
+  .det-grid { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+
+  .det-tag {
+    font-family: var(--mono); font-size: 0.74rem; font-weight: 500;
+    padding: 0.35rem 0.65rem; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface);
+    display: flex; align-items: center; gap: 0.45rem;
+    animation: fadeUp 0.2s ease;
+  }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+
+  .det-tag .cdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .det-tag .sc { font-size: 0.66rem; color: var(--accent); }
+
+  .info { margin-top: 2.25rem; padding-top: 1.75rem; border-top: 1px solid var(--border); }
+  .info h2 { font-family: var(--mono); font-size: 0.78rem; font-weight: 700; color: var(--accent); margin-bottom: 1rem; }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.85rem; }
+  .info-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
+  .info-card h3 { font-family: var(--mono); font-size: 0.74rem; font-weight: 600; margin-bottom: 0.45rem; }
+  .info-card p { font-size: 0.82rem; color: var(--text-dim); line-height: 1.6; }
+  .info-card code { font-family: var(--mono); font-size: 0.72rem; background: var(--surface-2); padding: 0.15rem 0.4rem; border-radius: 3px; color: var(--text-mid); }
+
+  @media (max-width: 700px) {
+    header, main { padding-left: 1.1rem; padding-right: 1.1rem; }
+    .viewport-wrap { aspect-ratio: 4 / 3; }
+    .conf-control { margin-left: 0; width: 100%; margin-top: 0.4rem; }
+    .model-select { min-width: 160px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <a href="../index.html" style="font-family:var(--mono);color:#444;text-decoration:none;font-size:0.82rem;margin-right:0.75rem;">← toolbox/</a>
+    <div class="logo-mark"></div>
+    <h1>image<span>-id</span></h1>
+  </div>
+  <div class="header-right">
+    <span class="badge">transformers.js · onnx · client-side</span>
+    <span class="badge live" id="badgeModel">YOLOS-tiny</span>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="toolbar-group">
+      <button class="tb-btn" id="btnWebcam">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 10 4.553-2.276A1 1 0 0 1 21 8.618v6.764a1 1 0 0 1-1.447.894L15 14"/><rect x="1" y="6" width="14" height="12" rx="2"/></svg>
+        Webcam
+      </button>
+      <button class="tb-btn" id="btnPhoto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        Foto
+      </button>
+    </div>
+    <div class="toolbar-sep"></div>
+    <div class="model-select-wrap">
+      <select class="model-select" id="modelSelect">
+        <option value="Xenova/yolos-tiny">YOLOS-tiny · rápido</option>
+        <option value="Xenova/detr-resnet-50">DETR ResNet-50 · preciso</option>
+      </select>
+    </div>
+    <div class="conf-control">
+      <span>Umbral</span>
+      <input type="range" min="10" max="95" value="40" id="thresholdSlider">
+      <span class="val" id="thresholdVal">40%</span>
+    </div>
+  </div>
+
+  <div class="viewport-wrap" id="viewport">
+    <video id="webcamVideo" autoplay playsinline muted></video>
+    <img id="photoPreview" alt="">
+    <canvas id="drawCanvas"></canvas>
+
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loader-ring"></div>
+      <div class="load-text" id="loadText">Descargando modelo...<br><strong id="loadModelName">YOLOS-tiny</strong></div>
+      <div class="progress-wrap"><div class="progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-inner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <p>Arrastra una imagen aquí<br>o <strong>clic para seleccionar</strong></p>
+      </div>
+    </div>
+
+    <div class="welcome-screen visible" id="welcomeScreen">
+      <div class="upload-inner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width:52px;height:52px;margin-bottom:1rem;opacity:0.5"><rect x="1" y="5" width="22" height="14" rx="2"/><circle cx="12" cy="12" r="3"/><circle cx="18" cy="8" r="1" fill="currentColor"/></svg>
+        <p style="font-size:0.9rem;color:var(--text-mid);margin-bottom:0.3rem;">Selecciona un modo para empezar</p>
+        <p><strong>Webcam</strong> para tiempo real · <strong>Foto</strong> para subir imagen</p>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none">
+  </div>
+
+  <div class="status-bar">
+    <div class="status-left">
+      <div class="status-indicator">
+        <div class="status-dot" id="statusDot"></div>
+        <span id="statusText">Inicializando...</span>
+      </div>
+      <span class="stat" id="statObjects"></span>
+      <span class="stat" id="statTime"></span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="act-btn primary" id="btnToggle" style="display:none">⏸ Detener</button>
+    <button class="act-btn" id="btnCapture" style="display:none">⏺ Capturar</button>
+    <button class="act-btn danger" id="btnClear" style="display:none">✕ Limpiar</button>
+  </div>
+
+  <div class="det-panel">
+    <div class="det-header" id="detHeader">Detecciones</div>
+    <div class="det-grid" id="detGrid"></div>
+  </div>
+
+  <div class="info">
+    <h2>// Sobre esta demo</h2>
+    <div class="info-grid">
+      <div class="info-card">
+        <h3>YOLOS-tiny</h3>
+        <p>Adapta la arquitectura ViT (Vision Transformer) para detección de objetos. Más liviano (~25MB ONNX), buena relación velocidad/precisión. Ideal para demos interactivas.</p>
+      </div>
+      <div class="info-card">
+        <h3>DETR ResNet-50</h3>
+        <p>Transformer end-to-end de Meta. Backbone ResNet-50 con encoder-decoder. Más pesado (~160MB) pero significativamente más preciso en escenas complejas.</p>
+      </div>
+      <div class="info-card">
+        <h3>Arquitectura</h3>
+        <p>Usa <code>Transformers.js</code> con ONNX Runtime. Los modelos se descargan una vez y se cachean en el navegador. Toda la inferencia es local.</p>
+      </div>
+      <div class="info-card">
+        <h3>Deploy</h3>
+        <p>Un solo archivo HTML, cero backend. Compatible con GitHub Pages, Netlify, o cualquier hosting estático. Modelos servidos desde Hugging Face CDN.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.4.1';
+
+env.allowLocalModels = false;
+
+// ── State ──
+let detector = null;
+let isLoading = false;
+let currentModelId = 'Xenova/yolos-tiny';
+let currentMode = 'idle';
+let isDetecting = false;
+let stream = null;
+let threshold = 0.40;
+let rafId = null;
+
+// ── DOM ──
+const $ = id => document.getElementById(id);
+const video = $('webcamVideo');
+const photo = $('photoPreview');
+const canvas = $('drawCanvas');
+const ctx = canvas.getContext('2d');
+const uploadZone = $('uploadZone');
+const welcomeScreen = $('welcomeScreen');
+const fileInput = $('fileInput');
+const loadingOverlay = $('loadingOverlay');
+const loadText = $('loadText');
+const loadModelName = $('loadModelName');
+const progressFill = $('progressFill');
+const statusDot = $('statusDot');
+const statusText = $('statusText');
+const statObjects = $('statObjects');
+const statTime = $('statTime');
+const detHeader = $('detHeader');
+const detGrid = $('detGrid');
+const badgeModel = $('badgeModel');
+const modelSelect = $('modelSelect');
+const thresholdSlider = $('thresholdSlider');
+const thresholdVal = $('thresholdVal');
+const btnWebcam = $('btnWebcam');
+const btnPhoto = $('btnPhoto');
+const btnCapture = $('btnCapture');
+const btnClear = $('btnClear');
+const btnToggle = $('btnToggle');
+
+// ── Colors ──
+const COLORS = [
+  '#6a9a4a','#6a9abb','#cc5566','#ccaa44','#9a7abb',
+  '#cc8844','#44aabb','#bb6688','#88bb44','#aa66bb',
+  '#55aa77','#6699cc','#cc6655','#bbaa44','#8877bb'
+];
+
+function colorFor(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = s.charCodeAt(i) + ((h << 5) - h);
+  return COLORS[Math.abs(h) % COLORS.length];
+}
+
+// ── Helpers ──
+function shortName(id) { return id.includes('yolos') ? 'YOLOS-tiny' : 'DETR ResNet-50'; }
+
+function toDataURL(source) {
+  const c = document.createElement('canvas');
+  c.width = source.videoWidth || source.naturalWidth || source.width;
+  c.height = source.videoHeight || source.naturalHeight || source.height;
+  c.getContext('2d').drawImage(source, 0, 0);
+  return { url: c.toDataURL('image/jpeg', 0.85), w: c.width, h: c.height };
+}
+
+// ── Model ──
+async function loadModel(modelId) {
+  if (isLoading) return;
+  isLoading = true;
+  const name = shortName(modelId);
+  loadModelName.textContent = name;
+  badgeModel.textContent = name;
+  loadingOverlay.classList.add('visible');
+  progressFill.style.width = '0%';
+  statusDot.className = 'status-dot loading';
+  statusText.textContent = 'Cargando modelo...';
+
+  stopLoop();
+  stopCam();
+
+  try {
+    detector = await pipeline('object-detection', modelId, {
+      progress_callback: (p) => {
+        if (p.status === 'progress' && p.total) {
+          const pct = Math.round((p.loaded / p.total) * 100);
+          progressFill.style.width = pct + '%';
+          loadText.innerHTML = `Descargando...<br><strong>${name}</strong> — ${pct}%`;
+        }
+        if (p.status === 'done') {
+          loadText.innerHTML = `Inicializando <strong>${name}</strong>...`;
+          progressFill.style.width = '100%';
+        }
+      }
+    });
+
+    currentModelId = modelId;
+    isLoading = false;
+    loadingOverlay.classList.remove('visible');
+    statusDot.className = 'status-dot ready';
+    if (currentMode === 'webcam') {
+      statusText.textContent = 'Modelo listo';
+      startCam();
+    } else if (currentMode === 'idle') {
+      statusText.textContent = 'Modelo listo — selecciona un modo';
+    } else {
+      statusText.textContent = 'Modelo listo — sube una imagen';
+    }
+  } catch (err) {
+    isLoading = false;
+    loadingOverlay.classList.remove('visible');
+    statusDot.className = 'status-dot error';
+    statusText.textContent = 'Error: ' + err.message;
+    console.error(err);
+  }
+}
+
+// ── Webcam ──
+async function startCam() {
+  if (!detector) return;
+  stopCam();
+  welcomeScreen.classList.remove('visible');
+  video.style.display = 'block';
+  photo.style.display = 'none';
+  uploadZone.classList.remove('visible');
+  btnCapture.style.display = 'flex';
+  btnClear.style.display = 'none';
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = stream;
+    await video.play();
+    statusDot.className = 'status-dot ready';
+    statusText.textContent = 'Detectando...';
+    isDetecting = true;
+    btnToggle.style.display = 'flex';
+    btnToggle.textContent = '⏸ Detener';
+    btnToggle.className = 'act-btn';
+    loop();
+  } catch (err) {
+    statusDot.className = 'status-dot error';
+    statusText.textContent = 'Sin acceso a cámara';
+    console.error(err);
+  }
+}
+
+function stopCam() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  video.srcObject = null;
+}
+
+function stopLoop() {
+  isDetecting = false;
+  if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+}
+
+// ── Detection loop ──
+async function loop() {
+  if (!isDetecting || !detector) return;
+  if (!video.videoWidth) { rafId = requestAnimationFrame(loop); return; }
+
+  const t0 = performance.now();
+
+  try {
+    const { url, w, h } = toDataURL(video);
+    canvas.width = w;
+    canvas.height = h;
+
+    const results = await detector(url, { threshold, percentage: false });
+    const dt = performance.now() - t0;
+
+    draw(results, w, h);
+    tags(results);
+    statObjects.innerHTML = `Objetos: <strong>${results.length}</strong>`;
+    statTime.innerHTML = `Inferencia: <strong>${Math.round(dt)}ms</strong>`;
+  } catch (e) { /* skip frame */ }
+
+  if (isDetecting) rafId = requestAnimationFrame(loop);
+}
+
+// ── Detect on image ──
+async function detectImage(img) {
+  if (!detector) return;
+  statusDot.className = 'status-dot loading';
+  statusText.textContent = 'Analizando...';
+
+  await new Promise(r => { if (img.complete && img.naturalWidth) r(); else img.onload = r; });
+
+  const { url, w, h } = toDataURL(img);
+  canvas.width = w;
+  canvas.height = h;
+
+  const t0 = performance.now();
+  try {
+    const results = await detector(url, { threshold, percentage: false });
+    const dt = performance.now() - t0;
+    draw(results, w, h);
+    tags(results);
+    statusDot.className = 'status-dot ready';
+    statusText.textContent = 'Análisis completo';
+    statObjects.innerHTML = `Objetos: <strong>${results.length}</strong>`;
+    statTime.innerHTML = `Inferencia: <strong>${Math.round(dt)}ms</strong>`;
+  } catch (err) {
+    statusDot.className = 'status-dot error';
+    statusText.textContent = 'Error en detección';
+    console.error(err);
+  }
+}
+
+// ── Normalize box coords ──
+function normalizeResults(preds, w, h) {
+  // Check if ANY box has coords > 1 → pixel mode. Otherwise percentage mode.
+  const isPercentage = preds.length > 0 && preds.every(p =>
+    p.box.xmin <= 1 && p.box.ymin <= 1 && p.box.xmax <= 1 && p.box.ymax <= 1
+  );
+  if (!isPercentage) return preds;
+  return preds.map(p => ({
+    ...p,
+    box: {
+      xmin: p.box.xmin * w,
+      ymin: p.box.ymin * h,
+      xmax: p.box.xmax * w,
+      ymax: p.box.ymax * h
+    }
+  }));
+}
+
+// ── Draw ──
+function draw(preds, w, h) {
+  ctx.clearRect(0, 0, w, h);
+  const normalized = normalizeResults(preds, w, h);
+
+  for (const p of normalized) {
+    const { xmin, ymin, xmax, ymax } = p.box;
+    const bw = xmax - xmin, bh = ymax - ymin;
+    const color = colorFor(p.label);
+    const score = Math.round(p.score * 100);
+    const lw = Math.max(2, Math.min(3.5, w * 0.003));
+
+    // Box
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lw;
+    ctx.strokeRect(xmin, ymin, bw, bh);
+
+    // Fill
+    ctx.fillStyle = color + '12';
+    ctx.fillRect(xmin, ymin, bw, bh);
+
+    // Corners
+    const cl = Math.min(16, bw * 0.15, bh * 0.15);
+    ctx.lineWidth = lw + 1.5;
+    ctx.beginPath();
+    ctx.moveTo(xmin, ymin + cl); ctx.lineTo(xmin, ymin); ctx.lineTo(xmin + cl, ymin);
+    ctx.moveTo(xmax - cl, ymin); ctx.lineTo(xmax, ymin); ctx.lineTo(xmax, ymin + cl);
+    ctx.moveTo(xmax, ymax - cl); ctx.lineTo(xmax, ymax); ctx.lineTo(xmax - cl, ymax);
+    ctx.moveTo(xmin + cl, ymax); ctx.lineTo(xmin, ymax); ctx.lineTo(xmin, ymax - cl);
+    ctx.stroke();
+
+    // Label
+    const label = `${p.label} ${score}%`;
+    const fs = Math.max(13, Math.min(17, w * 0.016));
+    ctx.font = `600 ${fs}px system-ui, sans-serif`;
+    const tw = ctx.measureText(label).width + 14;
+    const lh = fs + 8;
+    const ly = ymin > lh + 2 ? ymin - lh - 2 : ymin + 2;
+
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    rr(ctx, xmin, ly, tw, lh, 4);
+    ctx.fill();
+
+    ctx.fillStyle = '#0a0a0b';
+    ctx.fillText(label, xmin + 7, ly + fs + 1);
+  }
+}
+
+function rr(c, x, y, w, h, r) {
+  c.moveTo(x+r,y); c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+}
+
+// ── Tags ──
+function tags(preds) {
+  if (!preds.length) { detHeader.classList.remove('vis'); detGrid.innerHTML = ''; return; }
+  detHeader.classList.add('vis');
+  const counts = {}, best = {};
+  for (const p of preds) {
+    counts[p.label] = (counts[p.label] || 0) + 1;
+    best[p.label] = Math.max(best[p.label] || 0, p.score);
+  }
+  detGrid.innerHTML = Object.entries(counts).map(([cls, n]) => {
+    const c = colorFor(cls), s = Math.round(best[cls] * 100);
+    return `<div class="det-tag"><span class="cdot" style="background:${c}"></span>${cls}${n>1?' ×'+n:''}<span class="sc">${s}%</span></div>`;
+  }).join('');
+}
+
+function clearAll() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  detGrid.innerHTML = ''; detHeader.classList.remove('vis');
+  statObjects.innerHTML = ''; statTime.innerHTML = '';
+}
+
+// ── File ──
+function handleFile(f) {
+  if (!f || !f.type.startsWith('image/')) return;
+  photo.src = URL.createObjectURL(f);
+  photo.style.display = 'block';
+  video.style.display = 'none';
+  uploadZone.classList.remove('visible');
+  btnClear.style.display = 'flex';
+  photo.onload = () => detectImage(photo);
+}
+
+// ── Mode ──
+function setMode(m) {
+  currentMode = m;
+  btnWebcam.classList.toggle('active', m === 'webcam');
+  btnPhoto.classList.toggle('active', m === 'photo');
+  welcomeScreen.classList.remove('visible');
+  clearAll();
+
+  if (m === 'webcam') {
+    uploadZone.classList.remove('visible');
+    btnCapture.style.display = 'flex';
+    btnClear.style.display = 'none';
+    btnToggle.style.display = 'none';
+    photo.style.display = 'none';
+    if (detector) startCam();
+    else if (!isLoading) loadModel(currentModelId);
+  } else {
+    stopLoop(); stopCam();
+    video.style.display = 'none'; photo.style.display = 'none';
+    btnCapture.style.display = 'none'; btnClear.style.display = 'none';
+    btnToggle.style.display = 'none';
+    uploadZone.classList.add('visible');
+    statusDot.className = 'status-dot ready';
+    statusText.textContent = 'Sube una imagen';
+    statTime.innerHTML = '';
+    if (!detector && !isLoading) loadModel(currentModelId);
+  }
+}
+
+// ── Capture ──
+function capture() {
+  if (!video.videoWidth) return;
+  stopLoop();
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth; c.height = video.videoHeight;
+  c.getContext('2d').drawImage(video, 0, 0);
+  stopCam();
+  photo.src = c.toDataURL();
+  photo.style.display = 'block'; video.style.display = 'none';
+  btnCapture.style.display = 'none'; btnClear.style.display = 'flex';
+  btnToggle.style.display = 'none';
+  photo.onload = () => detectImage(photo);
+}
+
+// ── Events ──
+btnWebcam.addEventListener('click', () => setMode('webcam'));
+btnPhoto.addEventListener('click', () => setMode('photo'));
+btnCapture.addEventListener('click', capture);
+
+btnToggle.addEventListener('click', () => {
+  if (isDetecting) {
+    stopLoop();
+    btnToggle.textContent = '▶ Iniciar';
+    btnToggle.className = 'act-btn primary';
+    statusDot.className = 'status-dot ready';
+    statusText.textContent = 'Detección pausada';
+  } else {
+    isDetecting = true;
+    btnToggle.textContent = '⏸ Detener';
+    btnToggle.className = 'act-btn';
+    statusText.textContent = 'Detectando...';
+    loop();
+  }
+});
+
+btnClear.addEventListener('click', () => {
+  clearAll();
+  if (currentMode === 'webcam') { photo.style.display = 'none'; btnClear.style.display = 'none'; startCam(); }
+  else { photo.style.display = 'none'; uploadZone.classList.add('visible'); btnClear.style.display = 'none'; statusText.textContent = 'Sube una imagen'; }
+});
+
+thresholdSlider.addEventListener('input', e => {
+  threshold = parseInt(e.target.value) / 100;
+  thresholdVal.textContent = e.target.value + '%';
+  if (currentMode === 'photo' && photo.style.display === 'block' && photo.src) detectImage(photo);
+});
+
+modelSelect.addEventListener('change', e => loadModel(e.target.value));
+
+uploadZone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => { e.preventDefault(); uploadZone.classList.remove('drag-over'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+
+// ── Init ──
+statusDot.className = 'status-dot';
+statusText.textContent = 'Selecciona Webcam o Foto para empezar';
+</script>
+
+</body>
+</html>
