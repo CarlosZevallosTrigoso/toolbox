@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>group-maker</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: #0a0a0b;
+    color: #999;
+    min-height: 100vh;
+    padding: 2.5rem 2.5rem 4rem;
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+
+  .back-link {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #444;
+    text-decoration: none;
+    font-size: 0.82rem;
+  }
+  .back-link:hover { color: #888; }
+
+  h1 {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.88rem;
+    font-weight: normal;
+    color: #555;
+  }
+
+  /* ===== OUTPUT ZONE ===== */
+  .output-zone {
+    min-height: 220px;
+    margin-bottom: 2rem;
+  }
+
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    border: 1px dashed #1a1a1e;
+    border-radius: 6px;
+    color: #2a2a2e;
+    font-size: 0.88rem;
+  }
+
+  /* Verbose console: 3-column single line */
+  .console-bar {
+    display: none;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    color: #444;
+    background: #08080a;
+    border: 1px solid #141416;
+    border-radius: 4px;
+    padding: 0.6rem 1.2rem;
+    margin-bottom: 1rem;
+    grid-template-columns: 140px 1fr 160px;
+    gap: 1.5rem;
+    align-items: center;
+    height: 2.4rem;
+    overflow: hidden;
+  }
+  .console-bar.visible { display: grid; }
+  .ccol {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: opacity 0.15s;
+  }
+  .ccol-right { text-align: right; }
+  .console-bar .cdim { color: #333; }
+  .console-bar .cname { color: #999; }
+  .console-bar .cgroup { color: #5a7a3a; }
+  .console-bar .cshuffle { color: #5580aa; }
+  .console-bar .cmerge { color: #b08a3a; }
+
+  /* Name pool */
+  .pool {
+    display: none;
+    margin-bottom: 1.5rem;
+  }
+  .pool.visible { display: block; }
+
+  .pool-label {
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #333;
+    margin-bottom: 0.6rem;
+  }
+
+  .pool-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .pool-tag {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    color: #999;
+    background: #141416;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    padding: 0.3rem 0.65rem;
+    transition: all 0.35s ease;
+  }
+  .pool-tag.picked {
+    opacity: 0;
+    transform: scale(0.8) translateY(-6px);
+    border-color: #5a7a3a;
+    color: #5a7a3a;
+  }
+
+  /* Groups area */
+  .groups-area { display: none; }
+  .groups-area.visible { display: block; }
+
+  .groups-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .groups-title {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    color: #555;
+  }
+
+  .groups-actions { display: flex; gap: 0.5rem; }
+
+  .btn-small {
+    background: none;
+    border: 1px solid #222225;
+    color: #555;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .btn-small:hover { border-color: #5a7a3a; color: #5a7a3a; }
+
+  .groups-box {
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 6px;
+    padding: 1.75rem 2rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .groups-box:hover { border-color: #333; }
+  .groups-box-hint {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    color: #2a2a2e;
+    text-align: right;
+    margin-top: 1rem;
+  }
+
+  .groups-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1.25rem;
+  }
+
+  .group-card {
+    background: #18181c;
+    border: 1px solid #1e1e22;
+    border-radius: 5px;
+    padding: 1rem 1.15rem;
+    transition: border-color 0.15s;
+  }
+  .group-card:hover { border-color: #2a2a2e; }
+
+  .group-title {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    color: #5a7a3a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #1e1e22;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .group-title .member-count { color: #333; font-size: 0.72rem; }
+
+  .group-name-input {
+    background: none;
+    border: none;
+    border-bottom: 1px solid transparent;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    color: #5a7a3a;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    outline: none;
+    padding: 0 0 1px 0;
+    width: auto;
+    min-width: 60px;
+    max-width: 160px;
+    transition: border-color 0.15s;
+  }
+  .group-name-input:hover { border-bottom-color: #333; }
+  .group-name-input:focus {
+    border-bottom-color: #5a7a3a;
+    color: #7a9a5a;
+  }
+
+  .group-member {
+    font-size: 0.88rem;
+    color: #ccc;
+    padding: 0.25rem 0;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.25s ease;
+  }
+  .group-member.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Persistent log */
+  .full-log {
+    display: none;
+    background: #08080a;
+    border: 1px solid #141416;
+    border-radius: 4px;
+    padding: 1rem 1.2rem;
+    margin-top: 1.25rem;
+    max-height: 260px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    line-height: 1.8;
+  }
+  .full-log.visible { display: block; }
+  .full-log::-webkit-scrollbar { width: 4px; }
+  .full-log::-webkit-scrollbar-track { background: transparent; }
+  .full-log::-webkit-scrollbar-thumb { background: #1a1a1e; border-radius: 2px; }
+
+  .full-log .flog-line {
+    display: grid;
+    grid-template-columns: 120px 1fr 140px;
+    gap: 1rem;
+  }
+  .full-log .flog-line .fcol {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .full-log .flog-line .fcol-right { text-align: right; }
+  .full-log .fdim { color: #2a2a2e; }
+  .full-log .fname { color: #666; }
+  .full-log .fgroup { color: #3d5a28; }
+  .full-log .fshuffle { color: #3a5570; }
+  .full-log .fmerge { color: #6b5525; }
+  .full-log .fdone { color: #3d5a28; }
+  .full-log .flog-sep {
+    border: none;
+    border-top: 1px solid #111113;
+    margin: 0.3rem 0;
+  }
+
+  .full-log-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 1.25rem;
+    margin-bottom: 0.4rem;
+  }
+  .full-log-header span {
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #2a2a2e;
+  }
+
+  /* ===== INPUT ZONE ===== */
+  .input-zone {
+    border-top: 1px solid #141416;
+    padding-top: 2rem;
+  }
+
+  .input-layout {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 2rem;
+    align-items: start;
+  }
+  @media (max-width: 640px) {
+    .input-layout { grid-template-columns: 1fr; }
+  }
+
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #444;
+    margin-bottom: 0.4rem;
+  }
+
+  textarea {
+    width: 100%;
+    height: 150px;
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    color: #ccc;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    padding: 0.8rem 1rem;
+    resize: vertical;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+    outline: none;
+  }
+  textarea:focus { border-color: #5a7a3a; }
+  textarea::placeholder { color: #282828; }
+
+  .input-right {
+    display: flex;
+    flex-direction: column;
+    gap: 1.1rem;
+    min-width: 180px;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  /* Mode tabs */
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .mode-tab {
+    flex: 1;
+    background: #111113;
+    border: none;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #444;
+    cursor: pointer;
+    padding: 0.5rem 0.6rem;
+    transition: all 0.15s;
+    text-align: center;
+  }
+  .mode-tab + .mode-tab { border-left: 1px solid #1e1e22; }
+  .mode-tab.active { color: #ccc; background: #18181c; }
+  .mode-tab:hover:not(.active) { color: #888; background: #141416; }
+
+  input[type="number"] {
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    color: #ccc;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.85rem;
+    padding: 0.55rem 0.7rem;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  input[type="number"]:focus { border-color: #5a7a3a; }
+
+  .name-count {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    color: #333;
+    margin-top: 0.3rem;
+  }
+
+  /* Toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .toggle {
+    position: relative;
+    width: 34px;
+    height: 18px;
+    cursor: pointer;
+  }
+  .toggle input { display: none; }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: #1e1e22;
+    border-radius: 9px;
+    transition: background 0.2s;
+  }
+  .toggle input:checked + .toggle-track { background: #5a7a3a; }
+  .toggle-knob {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 12px;
+    height: 12px;
+    background: #666;
+    border-radius: 50%;
+    transition: all 0.2s;
+    pointer-events: none;
+  }
+  .toggle input:checked ~ .toggle-knob { left: 19px; background: #e8e8ec; }
+  .toggle-label {
+    font-size: 0.82rem;
+    color: #555;
+    cursor: pointer;
+  }
+
+  /* Actions */
+  .actions {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .btn-primary {
+    background: #5a7a3a;
+    border: none;
+    color: #e8e8ec;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 500;
+    padding: 0.6rem 1.4rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-primary:hover { background: #6a8e46; }
+  .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: none;
+    border: 1px solid #1e1e22;
+    color: #555;
+    font-family: inherit;
+    font-size: 0.84rem;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: #333; color: #999; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    cursor: pointer;
+  }
+  .lightbox.visible { display: flex; }
+
+  .lightbox-content {
+    background: #111113;
+    border: 1px solid #222225;
+    border-radius: 8px;
+    padding: 3rem 3.5rem;
+    max-width: 1100px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    cursor: default;
+  }
+  .lightbox-content::-webkit-scrollbar { width: 4px; }
+  .lightbox-content::-webkit-scrollbar-track { background: transparent; }
+  .lightbox-content::-webkit-scrollbar-thumb { background: #222225; border-radius: 2px; }
+
+  .lightbox-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2.5rem;
+  }
+  .lightbox-title {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.92rem;
+    color: #555;
+  }
+  .lightbox-close {
+    background: none;
+    border: none;
+    color: #444;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.25rem;
+    transition: color 0.15s;
+  }
+  .lightbox-close:hover { color: #ccc; }
+
+  .lightbox .groups-grid {
+    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    gap: 1.5rem;
+  }
+  .lightbox .group-card {
+    background: #18181c;
+    border: 1px solid #222225;
+    border-radius: 5px;
+    padding: 1.5rem 1.6rem;
+  }
+  .lightbox .group-title {
+    font-size: 0.85rem;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.7rem;
+  }
+  .lightbox .group-name-input {
+    font-size: 0.85rem;
+  }
+  .lightbox .group-member {
+    font-size: 1.1rem;
+    padding: 0.35rem 0;
+    opacity: 1;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="../index.html" class="back-link">← toolbox/</a>
+  <h1>group-maker</h1>
+</div>
+
+<!-- ===== OUTPUT ZONE ===== -->
+<div class="output-zone">
+  <div class="empty-state" id="emptyState">los grupos aparecerán aquí</div>
+
+  <div class="console-bar" id="consoleBar">
+    <div class="ccol" id="ccol1">&nbsp;</div>
+    <div class="ccol" id="ccol2">&nbsp;</div>
+    <div class="ccol ccol-right" id="ccol3">&nbsp;</div>
+  </div>
+
+  <div class="pool" id="pool">
+    <div class="pool-label" id="poolLabel">pool</div>
+    <div class="pool-tags" id="poolTags"></div>
+  </div>
+
+  <div class="groups-area" id="groupsArea">
+    <div class="groups-header">
+      <span class="groups-title" id="groupsTitle"></span>
+      <div class="groups-actions">
+        <button class="btn-small" onclick="copyGroups()">copiar</button>
+      </div>
+    </div>
+    <div class="groups-box" onclick="openLightbox()">
+      <div class="groups-grid" id="groupsGrid"></div>
+      <div class="groups-box-hint">clic para ampliar</div>
+    </div>
+  </div>
+
+  <div class="full-log-header" id="fullLogHeader" style="display:none">
+    <span>log del proceso</span>
+    <button class="btn-small" onclick="downloadLog()">descargar .txt</button>
+  </div>
+  <div class="full-log" id="fullLog"></div>
+</div>
+
+<!-- ===== INPUT ZONE ===== -->
+<div class="input-zone">
+  <div class="input-layout">
+    <div>
+      <label>nombres</label>
+      <textarea id="namesList" placeholder="un nombre por línea" oninput="updateCount()"></textarea>
+    </div>
+    <div class="input-right">
+      <div class="mode-tabs" id="modeTabs">
+        <button class="mode-tab active" data-mode="size" onclick="setMode('size')">por integrantes</button>
+        <button class="mode-tab" data-mode="count" onclick="setMode('count')">por n° de grupos</button>
+      </div>
+      <div class="control-group">
+        <label id="sizeLabel">personas por grupo</label>
+        <input type="number" id="groupSize" min="2" value="3">
+        <div class="name-count" id="nameCount">0 nombres</div>
+      </div>
+      <div class="toggle-row">
+        <label class="toggle">
+          <input type="checkbox" id="verboseToggle" checked>
+          <div class="toggle-track"></div>
+          <div class="toggle-knob"></div>
+        </label>
+        <span class="toggle-label" onclick="document.getElementById('verboseToggle').click()">verbose</span>
+      </div>
+      <div class="actions">
+        <button class="btn-primary" id="btnGenerate" onclick="generate()">generar</button>
+        <button class="btn-secondary" onclick="shuffle()">↻</button>
+        <button class="btn-secondary" onclick="clearAll()">✕</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <div class="lightbox-content" onclick="event.stopPropagation()">
+    <div class="lightbox-header">
+      <span class="lightbox-title" id="lightboxTitle"></span>
+      <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+    </div>
+    <div class="groups-grid" id="lightboxGrid"></div>
+  </div>
+</div>
+
+<script>
+let currentNames = [];
+let currentGroups = [];
+let groupNames = [];
+let isRunning = false;
+let logEntries = [];
+let logMeta = {};
+let currentMode = 'size'; // 'size' = by members, 'count' = by number of groups
+
+function parseNames(raw) {
+  return raw.split(/\n/).map(n => n.trim()).filter(Boolean);
+}
+
+function updateCount() {
+  const names = parseNames(document.getElementById('namesList').value);
+  document.getElementById('nameCount').textContent =
+    names.length + (names.length === 1 ? ' nombre' : ' nombres');
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === mode);
+  });
+  const label = document.getElementById('sizeLabel');
+  const input = document.getElementById('groupSize');
+  if (mode === 'size') {
+    label.textContent = 'personas por grupo';
+    input.value = 3;
+    input.min = 2;
+  } else {
+    label.textContent = 'número de grupos';
+    input.value = 3;
+    input.min = 2;
+  }
+}
+
+function fisherYatesShuffle(arr) {
+  const a = [...arr];
+  const steps = [];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    steps.push({ i, j, nameI: a[i], nameJ: a[j] });
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return { shuffled: a, steps };
+}
+
+function makeGroupsFromShuffled(shuffled, value, mode) {
+  let size;
+  if (mode === 'count') {
+    const numGroups = Math.max(2, Math.min(value, shuffled.length));
+    size = Math.ceil(shuffled.length / numGroups);
+  } else {
+    size = value;
+  }
+
+  const groups = [];
+  const order = [];
+  for (let i = 0; i < shuffled.length; i++) {
+    const g = Math.floor(i / size);
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(shuffled[i]);
+    order.push({ name: shuffled[i], groupIdx: g });
+  }
+  if (groups.length > 1 && groups[groups.length - 1].length === 1) {
+    const loner = groups.pop()[0];
+    groups[groups.length - 1].push(loner);
+    order[order.length - 1].groupIdx = groups.length - 1;
+    order[order.length - 1].merged = true;
+  }
+  return { groups, order };
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function clog(c1, c2, c3) {
+  if (c1 !== undefined) document.getElementById('ccol1').innerHTML = c1;
+  if (c2 !== undefined) document.getElementById('ccol2').innerHTML = c2;
+  if (c3 !== undefined) document.getElementById('ccol3').innerHTML = c3 || '&nbsp;';
+}
+
+function flog(c1, c2, c3) {
+  logEntries.push([c1 || '', c2 || '', c3 || '']);
+}
+
+function flogSep() {
+  logEntries.push('---');
+}
+
+function renderFullLog() {
+  const el = document.getElementById('fullLog');
+  el.innerHTML = '';
+  logEntries.forEach(entry => {
+    if (entry === '---') {
+      const hr = document.createElement('hr');
+      hr.className = 'flog-sep';
+      el.appendChild(hr);
+    } else {
+      const line = document.createElement('div');
+      line.className = 'flog-line';
+      const map = (html) => html
+        .replace(/cdim/g, 'fdim').replace(/cname/g, 'fname')
+        .replace(/cgroup/g, 'fgroup').replace(/cshuffle/g, 'fshuffle')
+        .replace(/cmerge/g, 'fmerge');
+      line.innerHTML = `
+        <div class="fcol">${map(entry[0])}</div>
+        <div class="fcol">${map(entry[1])}</div>
+        <div class="fcol fcol-right">${map(entry[2])}</div>
+      `;
+      el.appendChild(line);
+    }
+  });
+  document.getElementById('fullLogHeader').style.display = 'flex';
+  el.classList.add('visible');
+  el.scrollTop = el.scrollHeight;
+}
+
+function initGroupNames(count) {
+  groupNames = [];
+  for (let i = 0; i < count; i++) {
+    groupNames.push('grupo ' + (i + 1));
+  }
+}
+
+function renameGroup(idx, newName) {
+  if (newName.trim()) {
+    groupNames[idx] = newName.trim();
+  }
+}
+
+async function generate() {
+  if (isRunning) return;
+  const names = parseNames(document.getElementById('namesList').value);
+  const value = parseInt(document.getElementById('groupSize').value) || 3;
+  if (names.length < 2) return;
+
+  currentNames = names;
+  const verbose = document.getElementById('verboseToggle').checked;
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('groupsArea').classList.remove('visible');
+
+  if (verbose) {
+    isRunning = true;
+    document.getElementById('btnGenerate').disabled = true;
+    await runAnimated(names, value);
+    document.getElementById('btnGenerate').disabled = false;
+    isRunning = false;
+  } else {
+    document.getElementById('consoleBar').classList.remove('visible');
+    document.getElementById('pool').classList.remove('visible');
+    document.getElementById('fullLog').classList.remove('visible');
+    document.getElementById('fullLogHeader').style.display = 'none';
+    const { shuffled } = fisherYatesShuffle(names);
+    const { groups } = makeGroupsFromShuffled(shuffled, value, currentMode);
+    currentGroups = groups;
+    initGroupNames(groups.length);
+    renderGroupsFinal(groups);
+  }
+}
+
+async function runAnimated(names, value) {
+  const bar = document.getElementById('consoleBar');
+  const poolEl = document.getElementById('pool');
+  const poolTags = document.getElementById('poolTags');
+  const poolLabel = document.getElementById('poolLabel');
+
+  bar.classList.add('visible');
+  poolEl.classList.add('visible');
+  document.getElementById('groupsArea').classList.remove('visible');
+  document.getElementById('fullLog').classList.remove('visible');
+  document.getElementById('fullLogHeader').style.display = 'none';
+  logEntries = [];
+  logMeta = {
+    timestamp: new Date().toISOString(),
+    algorithm: 'Fisher-Yates (Knuth) shuffle',
+    prng: 'Math.random() — V8 xorshift128+ PRNG',
+    mode: currentMode === 'count' ? 'por número de grupos' : 'por número de integrantes',
+    modeValue: value,
+    inputNames: [...names],
+    swaps: [],
+    shuffledOrder: [],
+    assignments: [],
+    merges: []
+  };
+
+  const speed = names.length > 25 ? 40 : names.length > 15 ? 70 : 100;
+
+  // Phase 1: show pool
+  poolTags.innerHTML = '';
+  clog(`<span class="cdim">cargando</span>`, `<span class="cdim">${names.length} nombres...</span>`, '&nbsp;');
+  flog(`<span class="cdim">pool</span>`, `<span class="cdim">${names.length} nombres cargados</span>`, '');
+
+  for (let i = 0; i < names.length; i++) {
+    const tag = document.createElement('span');
+    tag.className = 'pool-tag';
+    tag.textContent = names[i];
+    tag.id = 'ptag-' + i;
+    poolTags.appendChild(tag);
+    await delay(speed / 2);
+  }
+
+  poolLabel.textContent = `pool · ${names.length}`;
+  await delay(speed * 3);
+
+  // Phase 2: shuffle
+  flogSep();
+  clog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">fisher-yates</span>`, `<span class="cdim">mezclando...</span>`);
+  flog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">fisher-yates</span>`, `<span class="cdim">inicio</span>`);
+  await delay(speed * 2);
+
+  const { shuffled, steps } = fisherYatesShuffle(names);
+
+  for (const step of steps) {
+    if (step.i !== step.j) {
+      logMeta.swaps.push({ pos: [step.i, step.j], names: [step.nameI, step.nameJ] });
+      clog(
+        `<span class="cshuffle">swap</span> <span class="cdim">[${step.i}↔${step.j}]</span>`,
+        `<span class="cname">${step.nameI}</span>`,
+        `<span class="cdim">↔</span> <span class="cname">${step.nameJ}</span>`
+      );
+      flog(
+        `<span class="cshuffle">swap</span> <span class="cdim">[${step.i}↔${step.j}]</span>`,
+        `<span class="cname">${step.nameI}</span>`,
+        `<span class="cdim">↔</span> <span class="cname">${step.nameJ}</span>`
+      );
+    }
+    await delay(speed / 2);
+  }
+
+  const modeLabel = currentMode === 'count' ? `${value} grupos` : `grupos de ${value}`;
+  clog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">completo</span>`, `<span class="cdim">${modeLabel}</span>`);
+  flog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">completo</span>`, `<span class="cdim">${steps.length} swaps</span>`);
+  await delay(speed * 3);
+
+  // Phase 3: build group cards (empty)
+  const { groups, order } = makeGroupsFromShuffled(shuffled, value, currentMode);
+  logMeta.shuffledOrder = shuffled.map((n, i) => `[${i}] ${n}`);
+  logMeta.groupCount = groups.length;
+  logMeta.groupSizes = groups.map(g => g.length);
+  initGroupNames(groups.length);
+  const grid = document.getElementById('groupsGrid');
+  grid.innerHTML = '';
+
+  groups.forEach((group, i) => {
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.innerHTML = `
+      <div class="group-title">
+        <input class="group-name-input" value="${groupNames[i]}" onchange="renameGroup(${i}, this.value)" onclick="event.stopPropagation()">
+        <span class="member-count" id="gcount-${i}">0</span>
+      </div>
+      <div id="gmembers-${i}"></div>
+    `;
+    grid.appendChild(card);
+  });
+
+  const total = groups.reduce((s, g) => s + g.length, 0);
+  document.getElementById('groupsTitle').textContent = `${groups.length} grupos · ${total} personas`;
+  document.getElementById('groupsArea').classList.add('visible');
+
+  // Phase 4: pick names one by one
+  flogSep();
+  const nameToPoolIdx = {};
+  names.forEach((n, i) => { nameToPoolIdx[n] = i; });
+  const countPerGroup = new Array(groups.length).fill(0);
+
+  for (const item of order) {
+    const poolIdx = nameToPoolIdx[item.name];
+    const tag = document.getElementById('ptag-' + poolIdx);
+
+    if (item.merged) {
+      logMeta.merges.push({ name: item.name, toGroup: item.groupIdx + 1 });
+      logMeta.assignments.push({ name: item.name, group: item.groupIdx + 1, merged: true });
+      clog(
+        `<span class="cmerge">merge</span>`,
+        `<span class="cname">${item.name}</span>`,
+        `<span class="cgroup">${groupNames[item.groupIdx]}</span> <span class="cdim">(fusionado)</span>`
+      );
+      flog(
+        `<span class="cmerge">merge</span>`,
+        `<span class="cname">${item.name}</span>`,
+        `<span class="cgroup">${groupNames[item.groupIdx]}</span> <span class="cdim">(fusionado)</span>`
+      );
+    } else {
+      logMeta.assignments.push({ name: item.name, group: item.groupIdx + 1, merged: false });
+      clog(
+        `<span class="cdim">asignar</span>`,
+        `<span class="cname">${item.name}</span>`,
+        `<span class="cgroup">${groupNames[item.groupIdx]}</span>`
+      );
+      flog(
+        `<span class="cdim">asignar</span>`,
+        `<span class="cname">${item.name}</span>`,
+        `<span class="cgroup">${groupNames[item.groupIdx]}</span>`
+      );
+    }
+
+    if (tag) tag.classList.add('picked');
+
+    const container = document.getElementById('gmembers-' + item.groupIdx);
+    const memberEl = document.createElement('div');
+    memberEl.className = 'group-member';
+    memberEl.textContent = item.name;
+    container.appendChild(memberEl);
+
+    countPerGroup[item.groupIdx]++;
+    document.getElementById('gcount-' + item.groupIdx).textContent = countPerGroup[item.groupIdx];
+
+    await delay(speed * 0.5);
+    memberEl.classList.add('show');
+
+    await delay(speed * 1.5);
+  }
+
+  poolLabel.textContent = `pool · 0`;
+
+  flogSep();
+  clog(
+    `<span class="cgroup">✓ listo</span>`,
+    `<span class="cdim">${groups.length} grupos</span>`,
+    `<span class="cdim">${names.length} nombres</span>`
+  );
+  flog(
+    `<span class="cgroup">✓ listo</span>`,
+    `<span class="cdim">${groups.length} grupos</span>`,
+    `<span class="cdim">${names.length} nombres</span>`
+  );
+
+  await delay(speed * 4);
+  bar.classList.remove('visible');
+  poolEl.classList.remove('visible');
+
+  currentGroups = groups;
+  renderFullLog();
+}
+
+function shuffle() {
+  if (!currentNames.length || isRunning) return;
+  generate();
+}
+
+function renderGroupsFinal(groups) {
+  const grid = document.getElementById('groupsGrid');
+  grid.innerHTML = '';
+
+  groups.forEach((group, i) => {
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.innerHTML = `
+      <div class="group-title">
+        <input class="group-name-input" value="${groupNames[i]}" onchange="renameGroup(${i}, this.value)" onclick="event.stopPropagation()">
+        <span class="member-count">${group.length}</span>
+      </div>
+      ${group.map(n => `<div class="group-member show">${n}</div>`).join('')}
+    `;
+    grid.appendChild(card);
+  });
+
+  const total = groups.reduce((s, g) => s + g.length, 0);
+  document.getElementById('groupsTitle').textContent = `${groups.length} grupos · ${total} personas`;
+  document.getElementById('groupsArea').classList.add('visible');
+
+  currentGroups = groups;
+}
+
+function openLightbox() {
+  if (!currentGroups.length) return;
+  const grid = document.getElementById('lightboxGrid');
+  grid.innerHTML = '';
+
+  currentGroups.forEach((group, i) => {
+    const card = document.createElement('div');
+    card.className = 'group-card';
+    card.innerHTML = `
+      <div class="group-title">
+        <input class="group-name-input" value="${groupNames[i]}" onchange="renameGroup(${i}, this.value); syncGroupName(${i}, this.value)">
+        <span class="member-count">${group.length}</span>
+      </div>
+      ${group.map(n => `<div class="group-member show">${n}</div>`).join('')}
+    `;
+    grid.appendChild(card);
+  });
+
+  const total = currentGroups.reduce((s, g) => s + g.length, 0);
+  document.getElementById('lightboxTitle').textContent =
+    `${currentGroups.length} grupos · ${total} personas`;
+  document.getElementById('lightbox').classList.add('visible');
+}
+
+function syncGroupName(idx, value) {
+  // Sync name back to the main grid
+  const mainInputs = document.getElementById('groupsGrid').querySelectorAll('.group-name-input');
+  if (mainInputs[idx]) mainInputs[idx].value = value;
+}
+
+function closeLightbox(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('lightbox').classList.remove('visible');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+});
+
+function clearAll() {
+  document.getElementById('namesList').value = '';
+  document.getElementById('groupsArea').classList.remove('visible');
+  document.getElementById('consoleBar').classList.remove('visible');
+  document.getElementById('pool').classList.remove('visible');
+  document.getElementById('lightbox').classList.remove('visible');
+  document.getElementById('fullLog').classList.remove('visible');
+  document.getElementById('fullLogHeader').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'flex';
+  currentNames = [];
+  currentGroups = [];
+  groupNames = [];
+  logEntries = [];
+  logMeta = {};
+  updateCount();
+}
+
+function copyGroups() {
+  if (!currentGroups.length) return;
+  let text = '';
+  currentGroups.forEach((group, i) => {
+    text += `${groupNames[i]}\n`;
+    group.forEach(m => { text += `  ${m}\n`; });
+    text += '\n';
+  });
+  navigator.clipboard.writeText(text.trim()).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✓';
+    setTimeout(() => btn.textContent = orig, 1200);
+  });
+}
+
+function downloadLog() {
+  if (!logMeta.timestamp || !currentGroups.length) return;
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const d = new Date(logMeta.timestamp);
+  const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+  const divider = '='.repeat(64);
+  const dividerThin = '-'.repeat(64);
+  const lines = [];
+
+  // Header
+  lines.push('EVIDENCIA DE ALEATORIZACIÓN — GROUP-MAKER');
+  lines.push(divider);
+  lines.push('');
+  lines.push('METADATOS DE EJECUCIÓN');
+  lines.push(dividerThin);
+  lines.push(`Fecha y hora:        ${dateStr} (hora local)`);
+  lines.push(`Timestamp ISO:       ${logMeta.timestamp}`);
+  lines.push(`Algoritmo:           ${logMeta.algorithm}`);
+  lines.push(`Fuente PRNG:         ${logMeta.prng}`);
+  lines.push(`Modo de agrupación:  ${logMeta.mode}`);
+  if (logMeta.mode.includes('integrantes')) {
+    lines.push(`Integrantes/grupo:   ${logMeta.modeValue}`);
+  } else {
+    lines.push(`Nro. grupos:         ${logMeta.modeValue}`);
+  }
+  lines.push(`Total de nombres:    ${logMeta.inputNames.length}`);
+  lines.push(`Grupos generados:    ${logMeta.groupCount}`);
+  lines.push(`Tamaño por grupo:    ${logMeta.groupSizes.join(', ')}`);
+  lines.push(`Total de swaps:      ${logMeta.swaps.length}`);
+  if (logMeta.merges.length > 0) {
+    lines.push(`Fusiones:            ${logMeta.merges.length} (grupo residual < 2 integrantes)`);
+  }
+  lines.push('');
+
+  // Algorithmic description
+  lines.push('DESCRIPCIÓN DEL ALGORITMO');
+  lines.push(dividerThin);
+  lines.push('El algoritmo Fisher-Yates (también conocido como Knuth shuffle) genera');
+  lines.push('una permutación uniformemente aleatoria de la lista de entrada. Itera');
+  lines.push('desde la última posición (n-1) hasta la primera (1), y en cada paso i');
+  lines.push('selecciona un índice aleatorio j en el rango [0, i] e intercambia los');
+  lines.push('elementos en las posiciones i y j. Cada una de las n! permutaciones');
+  lines.push('posibles tiene exactamente la misma probabilidad de ser generada.');
+  lines.push('');
+  lines.push('La fuente de aleatoriedad es Math.random(), que en motores V8 (Chrome,');
+  lines.push('Edge, Node.js) implementa el algoritmo xorshift128+ con estado interno');
+  lines.push('de 128 bits. No es criptográficamente seguro, pero proporciona una');
+  lines.push('distribución estadísticamente uniforme adecuada para este propósito.');
+  lines.push('');
+  lines.push('La asignación a grupos es secuencial: el primer bloque de k nombres del');
+  lines.push('array mezclado se asigna al grupo 1, el segundo bloque al grupo 2, etc.');
+  lines.push('Si el último grupo queda con un solo integrante, se fusiona con el grupo');
+  lines.push('anterior para evitar asignaciones individuales.');
+  lines.push('');
+
+  // Pool de entrada
+  lines.push('FASE 0: POOL DE ENTRADA (orden original)');
+  lines.push(dividerThin);
+  logMeta.inputNames.forEach((name, i) => {
+    lines.push(`  [${String(i).padStart(3)}]  ${name}`);
+  });
+  lines.push('');
+
+  // Shuffle
+  lines.push(`FASE 1: FISHER-YATES SHUFFLE (${logMeta.swaps.length} intercambios)`);
+  lines.push(dividerThin);
+  if (logMeta.swaps.length === 0) {
+    lines.push('  (sin intercambios — la lista ya estaba en orden aleatorio)');
+  } else {
+    logMeta.swaps.forEach((s, i) => {
+      lines.push(`  ${String(i + 1).padStart(3)}.  swap [${s.pos[0]} ↔ ${s.pos[1]}]    ${s.names[0]}  ↔  ${s.names[1]}`);
+    });
+  }
+  lines.push('');
+
+  // Resultado post-shuffle
+  lines.push('FASE 1 RESULTADO: ARRAY POST-SHUFFLE');
+  lines.push(dividerThin);
+  logMeta.shuffledOrder.forEach(entry => {
+    lines.push(`  ${entry}`);
+  });
+  lines.push('');
+
+  // Asignación
+  lines.push(`FASE 2: ASIGNACIÓN SECUENCIAL A ${logMeta.groupCount} GRUPOS`);
+  lines.push(dividerThin);
+  logMeta.assignments.forEach((a, i) => {
+    const suffix = a.merged ? '  ← fusionado (grupo residual)' : '';
+    lines.push(`  ${String(i + 1).padStart(3)}.  ${a.name}  →  grupo ${a.group}${suffix}`);
+  });
+  lines.push('');
+
+  // Resultado final
+  lines.push('RESULTADO FINAL');
+  lines.push(divider);
+  currentGroups.forEach((group, i) => {
+    lines.push(`${groupNames[i].toUpperCase()} (${group.length} integrantes)`);
+    group.forEach(m => {
+      lines.push(`    ${m}`);
+    });
+    lines.push('');
+  });
+
+  // Footer
+  lines.push(dividerThin);
+  lines.push(`Generado por group-maker — ${window.location.href}`);
+  lines.push(`Este documento certifica que la conformación de grupos se realizó`);
+  lines.push(`mediante un proceso algorítmico aleatorio sin intervención manual.`);
+
+  const text = lines.join('\n');
+  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fileDate = `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
+  a.href = url;
+  a.download = `group-maker_log_${fileDate}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+</script>
+
+</body>
+</html>
