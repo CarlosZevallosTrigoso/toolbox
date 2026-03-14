@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>qr-gen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: #0a0a0b;
+    color: #999;
+    min-height: 100vh;
+    padding: 2.5rem 2.5rem 4rem;
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+
+  .back-link {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #444;
+    text-decoration: none;
+    font-size: 0.82rem;
+  }
+  .back-link:hover { color: #888; }
+
+  h1 {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.88rem;
+    font-weight: normal;
+    color: #555;
+  }
+
+  /* Layout */
+  .main-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    max-width: 900px;
+    align-items: start;
+  }
+  @media (max-width: 700px) {
+    .main-layout {
+      grid-template-columns: 1fr;
+      gap: 2rem;
+    }
+  }
+
+  /* Input side */
+  label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #444;
+    margin-bottom: 0.4rem;
+  }
+
+  textarea {
+    width: 100%;
+    height: 120px;
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    color: #ccc;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    padding: 0.8rem 1rem;
+    resize: vertical;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+    outline: none;
+    margin-bottom: 1rem;
+  }
+  textarea:focus { border-color: #5a7a3a; }
+  textarea::placeholder { color: #282828; }
+
+  .char-count {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.75rem;
+    color: #333;
+    margin-top: -0.7rem;
+    margin-bottom: 1rem;
+    text-align: right;
+  }
+  .char-count.warn { color: #b08a3a; }
+  .char-count.over { color: #c45; }
+
+  .options-row {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+  }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  select {
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    color: #ccc;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.84rem;
+    padding: 0.5rem 0.7rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  select:focus { border-color: #5a7a3a; }
+  select option { background: #111113; color: #ccc; }
+
+  .actions {
+    display: flex;
+    gap: 0.6rem;
+  }
+
+  .btn-primary {
+    background: #5a7a3a;
+    border: none;
+    color: #e8e8ec;
+    font-family: inherit;
+    font-size: 0.84rem;
+    font-weight: 500;
+    padding: 0.6rem 1.4rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-primary:hover { background: #6a8e46; }
+
+  .btn-secondary {
+    background: none;
+    border: 1px solid #1e1e22;
+    color: #555;
+    font-family: inherit;
+    font-size: 0.84rem;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: #333; color: #999; }
+
+  /* Output side */
+  .qr-output {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .qr-empty {
+    width: 280px;
+    height: 280px;
+    border: 1px dashed #1a1a1e;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2a2a2e;
+    font-size: 0.85rem;
+  }
+
+  .qr-container {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+  }
+  .qr-container.visible { display: flex; }
+
+  .qr-box {
+    background: #fff;
+    padding: 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+    line-height: 0;
+  }
+  .qr-box:hover { box-shadow: 0 0 30px rgba(90, 122, 58, 0.15); }
+
+  .qr-box canvas, .qr-box img {
+    display: block;
+  }
+
+  .qr-text-preview {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.75rem;
+    color: #444;
+    max-width: 280px;
+    text-align: center;
+    word-break: break-all;
+    line-height: 1.5;
+  }
+
+  .qr-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-small {
+    background: none;
+    border: 1px solid #222225;
+    color: #555;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.75rem;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .btn-small:hover { border-color: #5a7a3a; color: #5a7a3a; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.97);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    cursor: pointer;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  .lightbox.visible { display: flex; }
+
+  .lightbox .qr-lightbox-box {
+    background: #fff;
+    line-height: 0;
+  }
+
+  .lightbox .qr-lightbox-box canvas, .lightbox .qr-lightbox-box img {
+    display: block;
+    width: 420px;
+    height: 420px;
+    image-rendering: pixelated;
+  }
+
+  .lightbox-hint {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    color: #aaa;
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="../index.html" class="back-link">← toolbox/</a>
+  <h1>qr-gen</h1>
+</div>
+
+<div class="main-layout">
+  <div class="input-side">
+    <label>texto o url</label>
+    <textarea id="qrInput" placeholder="https://..." oninput="onInput()"></textarea>
+    <div class="char-count" id="charCount">0 / 2953</div>
+
+    <div class="options-row">
+      <div class="control-group">
+        <label>tamaño</label>
+        <select id="qrSize">
+          <option value="200">200px</option>
+          <option value="280" selected>280px</option>
+          <option value="400">400px</option>
+          <option value="600">600px</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>corrección</label>
+        <select id="qrLevel">
+          <option value="L">L — 7%</option>
+          <option value="M" selected>M — 15%</option>
+          <option value="Q">Q — 25%</option>
+          <option value="H">H — 30%</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" onclick="generateQR()">generar</button>
+      <button class="btn-secondary" onclick="clearAll()">✕</button>
+    </div>
+  </div>
+
+  <div class="qr-output">
+    <div class="qr-empty" id="qrEmpty">el qr aparecerá aquí</div>
+
+    <div class="qr-container" id="qrContainer">
+      <div class="qr-box" id="qrBox" onclick="openLightbox()"></div>
+      <div class="qr-text-preview" id="qrPreview"></div>
+      <div class="qr-actions">
+        <button class="btn-small" onclick="downloadQR()">descargar .png</button>
+        <button class="btn-small" onclick="openLightbox()">ampliar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <div class="qr-lightbox-box" id="lightboxQR"></div>
+  <div class="lightbox-hint">clic para cerrar · proyecta para escanear</div>
+</div>
+
+<script>
+let qrInstance = null;
+let currentText = '';
+
+function onInput() {
+  const val = document.getElementById('qrInput').value;
+  const el = document.getElementById('charCount');
+  const len = val.length;
+  el.textContent = `${len} / 2953`;
+  el.className = 'char-count' + (len > 2953 ? ' over' : len > 2500 ? ' warn' : '');
+}
+
+function generateQR() {
+  const text = document.getElementById('qrInput').value.trim();
+  if (!text) return;
+
+  const size = parseInt(document.getElementById('qrSize').value);
+  const level = document.getElementById('qrLevel').value;
+
+  currentText = text;
+
+  // Clear previous
+  const box = document.getElementById('qrBox');
+  box.innerHTML = '';
+
+  qrInstance = new QRCode(box, {
+    text: text,
+    width: size,
+    height: size,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel[level]
+  });
+
+  // Preview
+  const preview = document.getElementById('qrPreview');
+  preview.textContent = text.length > 80 ? text.substring(0, 80) + '...' : text;
+
+  document.getElementById('qrEmpty').style.display = 'none';
+  document.getElementById('qrContainer').classList.add('visible');
+}
+
+function clearAll() {
+  document.getElementById('qrInput').value = '';
+  document.getElementById('qrBox').innerHTML = '';
+  document.getElementById('qrContainer').classList.remove('visible');
+  document.getElementById('qrEmpty').style.display = 'flex';
+  document.getElementById('charCount').textContent = '0 / 2953';
+  document.getElementById('charCount').className = 'char-count';
+  qrInstance = null;
+  currentText = '';
+}
+
+function downloadQR() {
+  const canvas = document.getElementById('qrBox').querySelector('canvas');
+  if (!canvas) {
+    // fallback to img
+    const img = document.getElementById('qrBox').querySelector('img');
+    if (!img) return;
+    const a = document.createElement('a');
+    a.href = img.src;
+    a.download = 'qr-code.png';
+    a.click();
+    return;
+  }
+
+  // Render at high res for download
+  const size = 1024;
+  const level = document.getElementById('qrLevel').value;
+  const tmpDiv = document.createElement('div');
+  tmpDiv.style.position = 'absolute';
+  tmpDiv.style.left = '-9999px';
+  document.body.appendChild(tmpDiv);
+
+  new QRCode(tmpDiv, {
+    text: currentText,
+    width: size,
+    height: size,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel[level]
+  });
+
+  setTimeout(() => {
+    const hiCanvas = tmpDiv.querySelector('canvas');
+    if (hiCanvas) {
+      const a = document.createElement('a');
+      a.href = hiCanvas.toDataURL('image/png');
+      a.download = 'qr-code.png';
+      a.click();
+    }
+    document.body.removeChild(tmpDiv);
+  }, 200);
+}
+
+function openLightbox() {
+  if (!currentText) return;
+  const container = document.getElementById('lightboxQR');
+  container.innerHTML = '';
+
+  const tmpDiv = document.createElement('div');
+  tmpDiv.style.position = 'absolute';
+  tmpDiv.style.left = '-9999px';
+  document.body.appendChild(tmpDiv);
+
+  const level = document.getElementById('qrLevel').value;
+  new QRCode(tmpDiv, {
+    text: currentText,
+    width: 420,
+    height: 420,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel[level]
+  });
+
+  setTimeout(() => {
+    const canvas = tmpDiv.querySelector('canvas');
+    if (canvas) {
+      const img = document.createElement('img');
+      img.src = canvas.toDataURL('image/png');
+      img.style.width = '420px';
+      img.style.height = '420px';
+      img.style.imageRendering = 'pixelated';
+      container.appendChild(img);
+    }
+    document.body.removeChild(tmpDiv);
+  }, 200);
+
+  document.getElementById('lightbox').classList.add('visible');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('visible');
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeLightbox();
+  if (e.key === 'Enter' && !e.shiftKey && document.activeElement.id === 'qrInput') {
+    e.preventDefault();
+    generateQR();
+  }
+});
+</script>
+
+</body>
+</html>
