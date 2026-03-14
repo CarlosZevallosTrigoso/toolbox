@@ -393,19 +393,12 @@
     <div class="card">
       <div class="card-title">Verificar autoría</div>
       <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 1rem; font-family: var(--sans); font-weight: 300;">
-        Pega el contenido original y el bloque de firma para comprobar autenticidad e integridad.
+        Pega el archivo completo (con la firma incluida) o solo el bloque de firma.
+        La herramienta separa contenido y firma automáticamente.
       </p>
       <div class="field">
-        <label>Contenido original</label>
-        <textarea id="verify-content" placeholder="Pega aquí el contenido que fue firmado"></textarea>
-      </div>
-      <div class="field">
-        <label>Bloque de firma</label>
-        <textarea id="verify-sig" class="compact" placeholder="Pega el bloque &lt;!-- SIG:ED25519 ... --&gt; completo"></textarea>
-      </div>
-      <div class="field">
-        <label>Clave pública (opcional — se usa la del banner si no está en el bloque)</label>
-        <input type="text" id="verify-pubkey" placeholder="Se extrae del bloque o se usa la del banner">
+        <label>Archivo completo o bloque de firma</label>
+        <textarea id="verify-input" placeholder="Pega aquí el archivo completo o solo el bloque &lt;!-- SIG:ED25519 ... --&gt;"></textarea>
       </div>
       <div id="verify-btn-row" class="btn-row"></div>
       <div id="verify-result" class="verify-result"></div>
@@ -423,10 +416,10 @@
         Si un solo carácter fue alterado, la verificación falla.
 
         <h3>¿Cómo verifico?</h3>
-        Pega el contenido exacto que fue firmado en el primer campo.
-        Pega el bloque de firma (el comentario <code>&lt;!-- SIG:ED25519 ... --&gt;</code>)
-        en el segundo. La clave pública se toma del bloque o del banner superior.
-        Pulsa verificar.
+        Pega el archivo completo (con la firma incluida) en el campo de verificación.
+        La herramienta separa automáticamente el contenido del bloque de firma
+        <code>&lt;!-- SIG:ED25519 ... --&gt;</code> y verifica la autenticidad.
+        La clave pública se extrae del bloque o se usa la del banner.
 
         <h3>¿Cómo sé que la clave pública es auténtica?</h3>
         Contrasta la clave con la publicada en múltiples fuentes independientes
@@ -504,7 +497,7 @@
       <div class="card-title">Bloque de firma</div>
       <div class="sig-block" id="sig-output"></div>
       <p style="font-size: 11px; color: var(--text-dim); margin-top: 0.8rem; font-family: var(--sans);">
-        Copia este bloque como comentario en tu código fuente.
+        Pega este bloque al final de tu archivo, en una línea nueva.
       </p>
     </div>
   </div>
@@ -725,22 +718,40 @@ function copySignature() {
 
 // ─── Verify (public) ───
 function verifyContent() {
-  var content = document.getElementById('verify-content').value;
-  var sigBlock = document.getElementById('verify-sig').value;
-  var manualPK = document.getElementById('verify-pubkey').value.trim();
+  var raw = document.getElementById('verify-input').value;
   var res = document.getElementById('verify-result');
 
-  if (!content.trim() || !sigBlock.trim()) {
-    vResult(res, false, 'Faltan datos', 'Ingresa contenido y bloque de firma.');
+  if (!raw.trim()) {
+    vResult(res, false, 'Sin datos', 'Pega el archivo completo o el bloque de firma.');
     return;
   }
 
-  var parsed = parseSig(sigBlock);
-  if (!parsed) { vResult(res, false, 'Formato inválido', 'No se pudo leer el bloque.'); return; }
+  // Find sig block in input
+  var sigMatch = raw.match(/<!--\s*SIG:ED25519[\s\S]*?-->/);
+  if (!sigMatch) {
+    vResult(res, false, 'Sin firma', 'No se encontró un bloque SIG:ED25519 en el texto.');
+    return;
+  }
 
-  var pkB64 = manualPK || parsed.publickey || document.getElementById('author-pubkey').textContent.trim();
+  var sigBlockText = sigMatch[0];
+  var parsed = parseSig(sigBlockText);
+  if (!parsed) {
+    vResult(res, false, 'Formato inválido', 'El bloque de firma no se pudo leer.');
+    return;
+  }
+
+  // Content = everything except the sig block (try removing with preceding newline first)
+  var contentA = raw.replace('\n' + sigBlockText, '');
+  var content = (contentA !== raw) ? contentA : raw.replace(sigBlockText, '').replace(/\n$/, '');
+
+  if (!content.length) {
+    vResult(res, false, 'Sin contenido', 'Solo hay firma, falta el contenido del archivo. Pega el archivo completo.');
+    return;
+  }
+
+  var pkB64 = parsed.publickey || document.getElementById('author-pubkey').textContent.trim();
   if (!pkB64 || pkB64.charAt(0) === '\u2014') {
-    vResult(res, false, 'Sin clave pública', 'No hay clave pública para verificar.');
+    vResult(res, false, 'Sin clave pública', 'No hay clave pública en la firma ni en el banner.');
     return;
   }
 
