@@ -482,9 +482,18 @@
   <div id="sign" class="panel forge-only">
     <div class="card">
       <div class="card-title">Firmar contenido</div>
+      <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 1rem; font-family: var(--sans); font-weight: 300;">
+        Sube un archivo de texto o pega su contenido directamente.
+        Se admite cualquier archivo basado en texto: .html, .css, .js, .json, .txt, .md, .xml, .svg, .csv, .py, .sh, .yml, .toml, .tex, .rs, .go y similares.
+        No se pueden firmar archivos binarios (imágenes, PDFs, videos, etc.).
+      </p>
+      <div class="field">
+        <div id="sign-file-row" class="btn-row" style="margin-top: 0; margin-bottom: 0.8rem;"></div>
+        <span id="sign-file-name" style="font-size: 11px; color: var(--text-dim);"></span>
+      </div>
       <div class="field">
         <label>Contenido a firmar</label>
-        <textarea id="sign-content" placeholder="Pega el contenido que quieres firmar"></textarea>
+        <textarea id="sign-content" placeholder="Sube un archivo o pega el contenido aquí"></textarea>
       </div>
       <div class="field">
         <label>Autor</label>
@@ -496,8 +505,9 @@
     <div class="card" id="sig-output-card" style="display: none;">
       <div class="card-title">Bloque de firma</div>
       <div class="sig-block" id="sig-output"></div>
+      <div id="sig-download-row" class="btn-row"></div>
       <p style="font-size: 11px; color: var(--text-dim); margin-top: 0.8rem; font-family: var(--sans);">
-        Pega este bloque al final de tu archivo, en una línea nueva.
+        Pega este bloque al final de tu archivo, en una línea nueva. O descarga el archivo ya firmado.
       </p>
     </div>
   </div>
@@ -560,14 +570,14 @@ function mkBtn(label, cls, handler) {
   return b;
 }
 
-function mkFileBtn(label, handler) {
+function mkFileBtn(label, handler, accept) {
   const lbl = document.createElement('label');
   lbl.className = 'btn';
   lbl.style.cssText = 'margin:0; cursor:pointer;';
   lbl.textContent = label;
   const inp = document.createElement('input');
   inp.type = 'file';
-  inp.accept = '.txt,.key';
+  inp.accept = accept || '.txt,.key';
   inp.style.display = 'none';
   inp.addEventListener('change', handler);
   lbl.appendChild(inp);
@@ -613,9 +623,16 @@ document.querySelector('.tabs').addEventListener('click', function(e) {
 
 // Sign
 (function() {
-  const row = document.getElementById('sign-btn-row');
+  var row = document.getElementById('sign-btn-row');
   row.appendChild(mkBtn('Firmar', 'btn-primary', signContent));
   row.appendChild(mkBtn('Copiar firma', '', copySignature));
+
+  var fileRow = document.getElementById('sign-file-row');
+  fileRow.appendChild(mkFileBtn('Subir archivo', loadSignFile, '.html,.css,.js,.json,.txt,.md,.xml,.svg,.csv,.py,.sh,.yml,.toml,.tex,.rs,.go,.jsx,.tsx,.vue,.rb,.php,.java,.c,.cpp,.h,.r,.sql,.bat,.ps1,.ini,.cfg,.conf,.env,.gitignore,.htaccess,.dockerfile'));
+
+  var dlRow = document.getElementById('sig-download-row');
+  dlRow.appendChild(mkBtn('Descargar archivo firmado', 'btn-primary', downloadSigned));
+  dlRow.appendChild(mkBtn('Copiar firma', '', copySignature));
 })();
 
 // ─── Keys (forge) ───
@@ -686,16 +703,36 @@ async function showActiveKey() {
 }
 
 // ─── Sign (forge) ───
+var signedFileName = '';
+var lastSigBlock = '';
+
+function loadSignFile(ev) {
+  var f = ev.target.files[0];
+  if (!f) return;
+  var r = new FileReader();
+  r.onload = function(e) {
+    document.getElementById('sign-content').value = e.target.result;
+    document.getElementById('sign-file-name').textContent = f.name;
+    signedFileName = f.name;
+  };
+  r.onerror = function() {
+    showStatus('sign-status', 'No se pudo leer el archivo. ¿Es un archivo de texto?', 'error');
+  };
+  r.readAsText(f);
+}
+
 function signContent() {
   if (!activeKP) { showStatus('sign-status', 'Carga una clave primero.', 'error'); return; }
   var content = document.getElementById('sign-content').value;
-  if (!content.trim()) { showStatus('sign-status', 'Ingresa contenido.', 'error'); return; }
+  if (!content.trim()) { showStatus('sign-status', 'Ingresa o sube contenido para firmar.', 'error'); return; }
 
   var sig = nacl.sign.detached(new TextEncoder().encode(content), activeKP.secretKey);
   var author = document.getElementById('sign-author').value.trim() || 'anonymous';
   var date = new Date().toISOString();
   var pub = toB64(activeKP.publicKey);
   var s = toB64(sig);
+
+  lastSigBlock = '<!-- SIG:ED25519\nauthor: ' + author + '\ndate: ' + date + '\npublickey: ' + pub + '\nsignature: ' + s + '\n-->';
 
   document.getElementById('sig-output').innerHTML =
     '<span class="sig-val">&lt;!-- SIG:ED25519</span>\n' +
@@ -705,7 +742,20 @@ function signContent() {
     '<span class="sig-key">signature:</span> <span class="sig-val">' + s + '</span>\n' +
     '<span class="sig-val">--&gt;</span>';
   document.getElementById('sig-output-card').style.display = 'block';
+  document.getElementById('sig-output-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
   showStatus('sign-status', 'Firmado.', 'success');
+}
+
+function downloadSigned() {
+  if (!lastSigBlock) return;
+  var content = document.getElementById('sign-content').value;
+  var signed = content + '\n' + lastSigBlock;
+  var name = signedFileName || 'signed.txt';
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([signed], { type: 'text/plain' }));
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }
 
 function copySignature() {
@@ -726,7 +776,6 @@ function verifyContent() {
     return;
   }
 
-  // Find sig block in input
   var sigMatch = raw.match(/<!--\s*SIG:ED25519[\s\S]*?-->/);
   if (!sigMatch) {
     vResult(res, false, 'Sin firma', 'No se encontró un bloque SIG:ED25519 en el texto.');
@@ -740,7 +789,6 @@ function verifyContent() {
     return;
   }
 
-  // Content = everything except the sig block (try removing with preceding newline first)
   var contentA = raw.replace('\n' + sigBlockText, '');
   var content = (contentA !== raw) ? contentA : raw.replace(sigBlockText, '').replace(/\n$/, '');
 
