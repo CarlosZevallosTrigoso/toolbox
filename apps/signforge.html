@@ -393,12 +393,15 @@
     <div class="card">
       <div class="card-title">Verificar autoría</div>
       <p style="font-size: 12px; color: var(--text-dim); margin-bottom: 1rem; font-family: var(--sans); font-weight: 300;">
-        Pega el archivo completo (con la firma incluida) o solo el bloque de firma.
-        La herramienta separa contenido y firma automáticamente.
+        Sube el archivo firmado o pega su contenido. La herramienta separa contenido y firma automáticamente.
       </p>
       <div class="field">
+        <div id="verify-file-row" class="btn-row" style="margin-top: 0; margin-bottom: 0.8rem;"></div>
+        <span id="verify-file-name" style="font-size: 11px; color: var(--text-dim);"></span>
+      </div>
+      <div class="field">
         <label>Archivo completo o bloque de firma</label>
-        <textarea id="verify-input" placeholder="Pega aquí el archivo completo o solo el bloque &lt;!-- SIG:ED25519 ... --&gt;"></textarea>
+        <textarea id="verify-input" placeholder="Sube un archivo o pega el contenido aquí"></textarea>
       </div>
       <div id="verify-btn-row" class="btn-row"></div>
       <div id="verify-result" class="verify-result"></div>
@@ -416,7 +419,7 @@
         Si un solo carácter fue alterado, la verificación falla.
 
         <h3>¿Cómo verifico?</h3>
-        Pega el archivo completo (con la firma incluida) en el campo de verificación.
+        Sube el archivo firmado o pega su contenido en el campo de verificación.
         La herramienta separa automáticamente el contenido del bloque de firma
         <code>&lt;!-- SIG:ED25519 ... --&gt;</code> y verifica la autenticidad.
         La clave pública se extrae del bloque o se usa la del banner.
@@ -601,7 +604,10 @@ document.querySelector('.tabs').addEventListener('click', function(e) {
 // ─── Wire buttons via JS (no inline handlers) ───
 // Verify
 (function() {
-  const row = document.getElementById('verify-btn-row');
+  var fileRow = document.getElementById('verify-file-row');
+  fileRow.appendChild(mkFileBtn('Subir archivo', loadVerifyFile, '.html,.css,.js,.json,.txt,.md,.xml,.svg,.csv,.py,.sh,.yml,.toml,.tex,.rs,.go,.jsx,.tsx,.vue,.rb,.php,.java,.c,.cpp,.h,.r,.sql,.bat,.ps1,.ini,.cfg,.conf,.env'));
+
+  var row = document.getElementById('verify-btn-row');
   row.appendChild(mkBtn('Verificar firma', 'btn-primary', verifyContent));
 })();
 
@@ -767,6 +773,20 @@ function copySignature() {
 }
 
 // ─── Verify (public) ───
+function loadVerifyFile(ev) {
+  var f = ev.target.files[0];
+  if (!f) return;
+  var r = new FileReader();
+  r.onload = function(e) {
+    document.getElementById('verify-input').value = e.target.result;
+    document.getElementById('verify-file-name').textContent = f.name;
+  };
+  r.onerror = function() {
+    vResult(document.getElementById('verify-result'), false, 'Error', 'No se pudo leer el archivo. ¿Es un archivo de texto?');
+  };
+  r.readAsText(f);
+}
+
 function verifyContent() {
   var raw = document.getElementById('verify-input').value;
   var res = document.getElementById('verify-result');
