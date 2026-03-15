@@ -515,6 +515,19 @@
     vertical-align: middle;
   }
 
+  /* Simulation canvas */
+  .sim-canvas {
+    display: none;
+    width: 100%;
+    height: 280px;
+    background: #08080a;
+    border: 1px solid #1e1e22;
+    border-radius: 5px;
+    margin-bottom: 1rem;
+    image-rendering: pixelated;
+  }
+  .sim-canvas.visible { display: block; }
+
   /* Actions */
   .actions {
     display: flex;
@@ -648,6 +661,8 @@
     <div class="pool-tags" id="poolTags"></div>
   </div>
 
+  <canvas id="simCanvas" class="sim-canvas"></canvas>
+
   <div class="groups-area" id="groupsArea">
     <div class="groups-header">
       <span class="groups-title" id="groupsTitle"></span>
@@ -702,6 +717,11 @@
             <option value="sort-random-key">Sort by random key</option>
             <option value="round-robin">Round-robin pick</option>
             <option value="csprng">Fisher-Yates CSPRNG</option>
+            <option value="rule30">⬡ Autómata celular (Rule 30)</option>
+            <option value="particles">⬡ Partículas (Clustering)</option>
+            <option value="gravity">⬡ Gravedad orbital</option>
+            <option value="voronoi">⬡ Voronoi cristalización</option>
+            <option value="boids">⬡ Flocking (Boids)</option>
           </select>
           <div class="algo-desc" id="algoDesc"></div>
         </div>
@@ -771,6 +791,41 @@ const algoInfo = {
     tags: ['O(n)', 'criptográfico', 'uniforme'],
     desc: 'Idéntico al Fisher-Yates clásico, pero usa crypto.getRandomValues() como fuente de aleatoriedad criptográficamente segura. Para contextos donde se necesita evidencia de que el resultado no pudo ser predecido ni manipulado.',
     logDesc: 'El algoritmo Fisher-Yates con CSPRNG genera una permutación uniformemente aleatoria usando crypto.getRandomValues() como fuente criptográficamente segura. Es computacionalmente inviable predecir o reproducir la secuencia generada. La asignación a grupos es secuencial por bloques.'
+  },
+  'rule30': {
+    name: 'Autómata celular (Rule 30)',
+    prng: 'Rule 30 — Wolfram elementary CA',
+    tags: ['experimental', 'caótico', 'determinista'],
+    desc: 'Cada nombre se hashea a un bit para crear el estado inicial. Se ejecuta la Regla 30 de Wolfram por N generaciones. La columna central del autómata genera una secuencia pseudoaleatoria de bits que determina el orden de asignación. Produce caos a partir de reglas simples.',
+    logDesc: 'El autómata celular Rule 30 (Wolfram) toma como estado inicial un vector de bits derivado del hash de los nombres de entrada. Se ejecutan N generaciones aplicando la regla 30 (L XOR (C OR R)). La columna central produce una secuencia de bits pseudoaleatorios que determinan el orden de asignación a grupos. La Regla 30 es conocida por generar comportamiento caótico a partir de reglas deterministas simples.'
+  },
+  'particles': {
+    name: 'Simulación de partículas (Clustering)',
+    prng: 'Math.random() + dinámica caótica',
+    tags: ['experimental', 'emergente', 'k-means'],
+    desc: 'Cada nombre es una partícula con posición y velocidad aleatoria en un plano 2D. Se simula física con rebotes durante varias iteraciones. Al detenerse, se aplica k-means para agrupar por proximidad espacial. La aleatoriedad emerge de la dinámica caótica del sistema.',
+    logDesc: 'El algoritmo de simulación de partículas asigna a cada nombre una partícula con posición y velocidad aleatorias en un espacio 2D. Se simula dinámica de colisiones y rebotes contra los bordes durante múltiples iteraciones. Al finalizar, se aplica el algoritmo k-means sobre las posiciones finales para formar clusters. La aleatoriedad emerge de la sensibilidad a condiciones iniciales del sistema dinámico.'
+  },
+  'gravity': {
+    name: 'Gravedad orbital',
+    prng: 'Math.random() + dinámica gravitacional',
+    tags: ['experimental', 'orbital', 'visual'],
+    desc: 'Se colocan K pozos gravitacionales (uno por grupo). Los nombres son partículas que orbitan y espiralizan hacia el pozo más cercano, dejando estelas luminosas. Cuando una partícula cruza el umbral de captura, queda asignada. Los pozos se cierran al llenarse.',
+    logDesc: 'El algoritmo de gravedad orbital coloca K pozos gravitacionales en posiciones aleatorias. Cada nombre es una partícula con posición y velocidad aleatoria que es atraída gravitacionalmente por los pozos. Las partículas espiralizan hacia el pozo más cercano y quedan capturadas al cruzar un umbral de proximidad. Los pozos se cierran al alcanzar su capacidad, redistribuyendo las fuerzas.'
+  },
+  'voronoi': {
+    name: 'Voronoi cristalización',
+    prng: 'Math.random() + expansión de frentes',
+    tags: ['experimental', 'cristalino', 'visual'],
+    desc: 'Se plantan K semillas aleatorias que crecen como cristales, expandiendo regiones de color. Los nombres dispersos en el plano son absorbidos por la región que los alcanza primero. La animación muestra frentes de onda expandiéndose hasta llenar el espacio.',
+    logDesc: 'El algoritmo de Voronoi cristalización planta K semillas en posiciones aleatorias. Cada semilla expande un frente de onda circular a velocidad constante. Los nombres, ubicados en coordenadas aleatorias, quedan asignados al grupo cuyo frente los alcanza primero. El resultado es equivalente a un diagrama de Voronoi con balanceo de tamaño de grupo.'
+  },
+  'boids': {
+    name: 'Flocking (Boids)',
+    prng: 'Math.random() + comportamiento emergente',
+    tags: ['experimental', 'emergente', 'orgánico'],
+    desc: 'Los nombres son pájaros (boids) con reglas de separación, alineación y cohesión. Empiezan caóticos y gradualmente forman bandadas. Cuando las bandadas se estabilizan, se aplica clustering espacial para asignar los grupos. Comportamiento emergente puro.',
+    logDesc: 'El algoritmo Flocking (Boids) modela cada nombre como un agente autónomo con tres reglas: separación (evitar colisiones), alineación (igualar dirección de vecinos) y cohesión (acercarse al centro del grupo local). Tras N iteraciones, los agentes forman bandadas emergentes que se segmentan mediante k-means balanceado para formar los grupos finales.'
   }
 };
 
@@ -915,6 +970,636 @@ function roundRobinAssign(names, value, mode) {
   return { groups, order };
 }
 
+// --- Algorithm: Rule 30 Cellular Automaton ---
+function hashName(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) {
+    h = ((h << 5) - h + name.charCodeAt(i)) | 0;
+  }
+  return h;
+}
+
+function rule30Step(row) {
+  const n = row.length;
+  const next = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    const L = i > 0 ? row[i - 1] : 0;
+    const C = row[i];
+    const R = i < n - 1 ? row[i + 1] : 0;
+    next[i] = L ^ (C | R);
+  }
+  return next;
+}
+
+function rule30Assign(names, value, mode) {
+  const width = Math.max(names.length * 3, 61);
+  // Create initial row from name hashes
+  let row = new Uint8Array(width);
+  names.forEach((name, i) => {
+    const h = Math.abs(hashName(name));
+    const pos = Math.floor((i / names.length) * width);
+    row[pos % width] = (h & 1);
+    row[(pos + 1) % width] = ((h >> 1) & 1);
+    row[(pos + 2) % width] = ((h >> 2) & 1);
+  });
+  // Ensure at least one cell is alive
+  if (!row.some(c => c)) row[Math.floor(width / 2)] = 1;
+
+  const generations = [new Uint8Array(row)];
+  const centerBits = [];
+  const center = Math.floor(width / 2);
+  const needed = names.length * 8; // enough bits for permutation
+
+  for (let g = 0; g < Math.max(needed, 60); g++) {
+    row = rule30Step(row);
+    generations.push(new Uint8Array(row));
+    centerBits.push(row[center]);
+  }
+
+  // Use center bits to build permutation via selection
+  const pool = [...names];
+  const shuffled = [];
+  let bitIdx = 0;
+
+  while (pool.length > 1) {
+    // Read enough bits for an index
+    let bits = 0;
+    const bitsNeeded = Math.ceil(Math.log2(pool.length)) || 1;
+    for (let b = 0; b < bitsNeeded; b++) {
+      bits = (bits << 1) | (centerBits[bitIdx % centerBits.length] || 0);
+      bitIdx++;
+    }
+    const idx = bits % pool.length;
+    shuffled.push(pool.splice(idx, 1)[0]);
+  }
+  shuffled.push(pool[0]);
+
+  // Now make groups from shuffled
+  let numGroups, size;
+  if (mode === 'count') {
+    numGroups = Math.max(2, Math.min(value, shuffled.length));
+    size = Math.ceil(shuffled.length / numGroups);
+  } else {
+    size = value;
+    numGroups = Math.ceil(shuffled.length / size);
+  }
+
+  const groups = [];
+  const order = [];
+  for (let i = 0; i < shuffled.length; i++) {
+    const g = Math.floor(i / size);
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(shuffled[i]);
+    order.push({ name: shuffled[i], groupIdx: g });
+  }
+  if (groups.length > 1 && groups[groups.length - 1].length === 1) {
+    const loner = groups.pop()[0];
+    groups[groups.length - 1].push(loner);
+    const entry = order.find(o => o.name === loner);
+    if (entry) { entry.groupIdx = groups.length - 1; entry.merged = true; }
+  }
+
+  return { groups, order, generations, width, centerBits: centerBits.slice(0, bitIdx) };
+}
+
+// --- Algorithm: Particle Clustering ---
+function particleClusterAssign(names, value, mode) {
+  let numGroups;
+  if (mode === 'count') {
+    numGroups = Math.max(2, Math.min(value, names.length));
+  } else {
+    numGroups = Math.ceil(names.length / value);
+  }
+
+  const W = 600, H = 280;
+  // Init particles
+  const particles = names.map((name, i) => ({
+    name,
+    x: 30 + Math.random() * (W - 60),
+    y: 30 + Math.random() * (H - 60),
+    vx: (Math.random() - 0.5) * 6,
+    vy: (Math.random() - 0.5) * 6,
+    r: 6
+  }));
+
+  const STEPS = 200;
+  const snapshots = [];
+
+  // Physics simulation
+  for (let s = 0; s < STEPS; s++) {
+    for (const p of particles) {
+      p.x += p.vx;
+      p.y += p.vy;
+      // Wall bounce
+      if (p.x < p.r) { p.x = p.r; p.vx *= -0.9; }
+      if (p.x > W - p.r) { p.x = W - p.r; p.vx *= -0.9; }
+      if (p.y < p.r) { p.y = p.r; p.vy *= -0.9; }
+      if (p.y > H - p.r) { p.y = H - p.r; p.vy *= -0.9; }
+      // Friction
+      p.vx *= 0.995;
+      p.vy *= 0.995;
+    }
+    // Particle-particle collisions
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const a = particles[i], b = particles[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = a.r + b.r;
+        if (dist < minDist && dist > 0) {
+          const nx = dx / dist, ny = dy / dist;
+          const overlap = minDist - dist;
+          a.x -= nx * overlap * 0.5;
+          a.y -= ny * overlap * 0.5;
+          b.x += nx * overlap * 0.5;
+          b.y += ny * overlap * 0.5;
+          // Elastic collision
+          const dvx = a.vx - b.vx, dvy = a.vy - b.vy;
+          const dot = dvx * nx + dvy * ny;
+          a.vx -= dot * nx;
+          a.vy -= dot * ny;
+          b.vx += dot * nx;
+          b.vy += dot * ny;
+        }
+      }
+    }
+    if (s % 5 === 0) snapshots.push(particles.map(p => ({ x: p.x, y: p.y })));
+  }
+
+  // K-means to find centroids (spatial structure)
+  let centroids = [];
+  const sorted = [...particles].sort((a, b) => a.x - b.x);
+  for (let k = 0; k < numGroups; k++) {
+    const idx = Math.floor((k + 0.5) * sorted.length / numGroups);
+    centroids.push({ x: sorted[idx].x, y: sorted[idx].y });
+  }
+
+  let assignments = new Array(particles.length).fill(0);
+  for (let iter = 0; iter < 30; iter++) {
+    for (let i = 0; i < particles.length; i++) {
+      let minD = Infinity, minK = 0;
+      for (let k = 0; k < numGroups; k++) {
+        const dx = particles[i].x - centroids[k].x;
+        const dy = particles[i].y - centroids[k].y;
+        const d = dx * dx + dy * dy;
+        if (d < minD) { minD = d; minK = k; }
+      }
+      assignments[i] = minK;
+    }
+    const sums = Array.from({ length: numGroups }, () => ({ sx: 0, sy: 0, n: 0 }));
+    for (let i = 0; i < particles.length; i++) {
+      const k = assignments[i];
+      sums[k].sx += particles[i].x;
+      sums[k].sy += particles[i].y;
+      sums[k].n++;
+    }
+    for (let k = 0; k < numGroups; k++) {
+      if (sums[k].n > 0) {
+        centroids[k].x = sums[k].sx / sums[k].n;
+        centroids[k].y = sums[k].sy / sums[k].n;
+      }
+    }
+  }
+
+  // Balanced assignment: respect group size while preferring proximity
+  let groupSize;
+  if (mode === 'count') {
+    groupSize = Math.ceil(names.length / numGroups);
+  } else {
+    groupSize = value;
+  }
+
+  // Build all (particle, centroid, distance) pairs, sort by distance
+  const pairs = [];
+  for (let i = 0; i < particles.length; i++) {
+    for (let k = 0; k < numGroups; k++) {
+      const dx = particles[i].x - centroids[k].x;
+      const dy = particles[i].y - centroids[k].y;
+      pairs.push({ i, k, d: dx * dx + dy * dy });
+    }
+  }
+  pairs.sort((a, b) => a.d - b.d);
+
+  // Greedy assign: closest pair first, skip if particle taken or group full
+  const balanced = new Array(particles.length).fill(-1);
+  const groupCounts = new Array(numGroups).fill(0);
+
+  for (const pair of pairs) {
+    if (balanced[pair.i] !== -1) continue;
+    if (groupCounts[pair.k] >= groupSize) continue;
+    balanced[pair.i] = pair.k;
+    groupCounts[pair.k]++;
+  }
+  // Fallback: any unassigned particle goes to group with space
+  for (let i = 0; i < balanced.length; i++) {
+    if (balanced[i] === -1) {
+      for (let k = 0; k < numGroups; k++) {
+        if (groupCounts[k] < groupSize) {
+          balanced[i] = k;
+          groupCounts[k]++;
+          break;
+        }
+      }
+      // absolute fallback
+      if (balanced[i] === -1) {
+        balanced[i] = numGroups - 1;
+        groupCounts[numGroups - 1]++;
+      }
+    }
+  }
+
+  // Merge last group if only 1 member
+  const groups = Array.from({ length: numGroups }, () => []);
+  const order = [];
+  for (let i = 0; i < particles.length; i++) {
+    groups[balanced[i]].push(particles[i].name);
+    order.push({ name: particles[i].name, groupIdx: balanced[i] });
+  }
+
+  // Remove empty groups and re-index
+  const finalGroups = groups.filter(g => g.length > 0);
+  if (finalGroups.length < groups.length) {
+    const reindex = order.map(o => {
+      const newIdx = finalGroups.findIndex(g => g.includes(o.name));
+      return { ...o, groupIdx: newIdx };
+    });
+    // Merge lone last group
+    if (finalGroups.length > 1 && finalGroups[finalGroups.length - 1].length === 1) {
+      const loner = finalGroups.pop()[0];
+      finalGroups[finalGroups.length - 1].push(loner);
+      const entry = reindex.find(o => o.name === loner);
+      if (entry) { entry.groupIdx = finalGroups.length - 1; entry.merged = true; }
+    }
+    return { groups: finalGroups, order: reindex, particles, snapshots, centroids, W, H };
+  }
+
+  if (finalGroups.length > 1 && finalGroups[finalGroups.length - 1].length === 1) {
+    const loner = finalGroups.pop()[0];
+    finalGroups[finalGroups.length - 1].push(loner);
+    const entry = order.find(o => o.name === loner);
+    if (entry) { entry.groupIdx = finalGroups.length - 1; entry.merged = true; }
+  }
+
+  return { groups: finalGroups, order, particles, snapshots, centroids, W, H };
+}
+
+// --- Shared: balanced spatial assignment from positions + centroids ---
+function balancedSpatialAssign(agents, centroids, numGroups, groupSize) {
+  const pairs = [];
+  for (let i = 0; i < agents.length; i++) {
+    for (let k = 0; k < numGroups; k++) {
+      const dx = agents[i].x - centroids[k].x, dy = agents[i].y - centroids[k].y;
+      pairs.push({ i, k, d: dx * dx + dy * dy });
+    }
+  }
+  pairs.sort((a, b) => a.d - b.d);
+
+  const assigned = new Array(agents.length).fill(-1);
+  const counts = new Array(numGroups).fill(0);
+
+  for (const p of pairs) {
+    if (assigned[p.i] !== -1) continue;
+    if (counts[p.k] >= groupSize) continue;
+    assigned[p.i] = p.k;
+    counts[p.k]++;
+  }
+  for (let i = 0; i < assigned.length; i++) {
+    if (assigned[i] === -1) {
+      for (let k = 0; k < numGroups; k++) {
+        if (counts[k] < groupSize) { assigned[i] = k; counts[k]++; break; }
+      }
+      if (assigned[i] === -1) { assigned[i] = numGroups - 1; counts[numGroups - 1]++; }
+    }
+  }
+
+  const groups = Array.from({ length: numGroups }, () => []);
+  const order = [];
+  for (let i = 0; i < agents.length; i++) {
+    groups[assigned[i]].push(agents[i].name);
+    order.push({ name: agents[i].name, groupIdx: assigned[i] });
+  }
+  // Remove empties + merge loners
+  const final = groups.filter(g => g.length > 0);
+  if (final.length > 1 && final[final.length - 1].length === 1) {
+    const loner = final.pop()[0];
+    final[final.length - 1].push(loner);
+    const e = order.find(o => o.name === loner);
+    if (e) { e.groupIdx = final.length - 1; e.merged = true; }
+  }
+  // Re-index order for removed empties
+  const reorder = order.map(o => {
+    const idx = final.findIndex(g => g.includes(o.name));
+    return { ...o, groupIdx: idx >= 0 ? idx : o.groupIdx };
+  });
+  return { groups: final, order: reorder };
+}
+
+// --- Algorithm: Gravity orbital ---
+function gravityAssign(names, value, mode) {
+  let numGroups, groupSize;
+  if (mode === 'count') {
+    numGroups = Math.max(2, Math.min(value, names.length));
+    groupSize = Math.ceil(names.length / numGroups);
+  } else {
+    groupSize = value;
+    numGroups = Math.ceil(names.length / groupSize);
+  }
+
+  const W = 600, H = 280;
+  const palette = ['#7da252', '#72a0cc', '#d4a94e', '#cc7272', '#9a72cc', '#52a29a', '#cc9a52', '#7272cc'];
+
+  // Place gravity wells
+  const wells = [];
+  for (let k = 0; k < numGroups; k++) {
+    const angle = (k / numGroups) * Math.PI * 2;
+    const rx = W * 0.3, ry = H * 0.35;
+    wells.push({
+      x: W / 2 + Math.cos(angle) * rx + (Math.random() - 0.5) * 40,
+      y: H / 2 + Math.sin(angle) * ry + (Math.random() - 0.5) * 20,
+      color: palette[k % palette.length],
+      captured: 0
+    });
+  }
+
+  // Init particles
+  const particles = names.map(name => ({
+    name,
+    x: 40 + Math.random() * (W - 80),
+    y: 40 + Math.random() * (H - 80),
+    vx: (Math.random() - 0.5) * 3,
+    vy: (Math.random() - 0.5) * 3,
+    captured: -1,
+    trail: []
+  }));
+
+  const STEPS = 300;
+  const snapshots = [];
+  const G = 0.15;
+  const captureRadius = 18;
+
+  for (let s = 0; s < STEPS; s++) {
+    for (const p of particles) {
+      if (p.captured >= 0) continue;
+
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > 12) p.trail.shift();
+
+      // Gravity from all open wells
+      for (let k = 0; k < wells.length; k++) {
+        if (wells[k].captured >= groupSize) continue;
+        const dx = wells[k].x - p.x, dy = wells[k].y - p.y;
+        const dist = Math.max(10, Math.sqrt(dx * dx + dy * dy));
+        const force = G / (dist * 0.1);
+        p.vx += (dx / dist) * force;
+        p.vy += (dy / dist) * force;
+      }
+
+      // Damping
+      p.vx *= 0.98;
+      p.vy *= 0.98;
+      const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      if (speed > 5) { p.vx *= 5 / speed; p.vy *= 5 / speed; }
+
+      p.x += p.vx;
+      p.y += p.vy;
+
+      // Walls
+      if (p.x < 5) { p.x = 5; p.vx *= -0.5; }
+      if (p.x > W - 5) { p.x = W - 5; p.vx *= -0.5; }
+      if (p.y < 5) { p.y = 5; p.vy *= -0.5; }
+      if (p.y > H - 5) { p.y = H - 5; p.vy *= -0.5; }
+
+      // Check capture
+      for (let k = 0; k < wells.length; k++) {
+        if (wells[k].captured >= groupSize) continue;
+        const dx = wells[k].x - p.x, dy = wells[k].y - p.y;
+        if (Math.sqrt(dx * dx + dy * dy) < captureRadius) {
+          p.captured = k;
+          p.x = wells[k].x;
+          p.y = wells[k].y;
+          wells[k].captured++;
+          break;
+        }
+      }
+    }
+    if (s % 3 === 0) {
+      snapshots.push(particles.map(p => ({ x: p.x, y: p.y, captured: p.captured, trail: [...p.trail] })));
+    }
+  }
+
+  // Force-assign any uncaptured via proximity
+  const agents = particles.map(p => ({ name: p.name, x: p.x, y: p.y }));
+  const centroidsForAssign = wells.map(w => ({ x: w.x, y: w.y }));
+  const { groups, order } = balancedSpatialAssign(agents, centroidsForAssign, numGroups, groupSize);
+
+  return { groups, order, particles, wells, snapshots, W, H, palette };
+}
+
+// --- Algorithm: Voronoi cristalización ---
+function voronoiAssign(names, value, mode) {
+  let numGroups, groupSize;
+  if (mode === 'count') {
+    numGroups = Math.max(2, Math.min(value, names.length));
+    groupSize = Math.ceil(names.length / numGroups);
+  } else {
+    groupSize = value;
+    numGroups = Math.ceil(names.length / groupSize);
+  }
+
+  const W = 600, H = 280;
+  const palette = ['#7da252', '#72a0cc', '#d4a94e', '#cc7272', '#9a72cc', '#52a29a', '#cc9a52', '#7272cc'];
+
+  // Plant seeds
+  const seeds = [];
+  for (let k = 0; k < numGroups; k++) {
+    seeds.push({
+      x: 40 + Math.random() * (W - 80),
+      y: 40 + Math.random() * (H - 80),
+      color: palette[k % palette.length]
+    });
+  }
+
+  // Place name points
+  const points = names.map(name => ({
+    name,
+    x: 20 + Math.random() * (W - 40),
+    y: 20 + Math.random() * (H - 40),
+    assignedSeed: -1
+  }));
+
+  // Precompute Voronoi grid for animation
+  const gridScale = 4; // 1 pixel = 4 canvas pixels
+  const gw = Math.ceil(W / gridScale), gh = Math.ceil(H / gridScale);
+  const grid = new Int8Array(gw * gh).fill(-1);
+
+  // BFS expansion from seeds
+  const queue = [];
+  const growthFrames = [];
+  for (let k = 0; k < seeds.length; k++) {
+    const gx = Math.floor(seeds[k].x / gridScale);
+    const gy = Math.floor(seeds[k].y / gridScale);
+    if (gx >= 0 && gx < gw && gy >= 0 && gy < gh) {
+      grid[gy * gw + gx] = k;
+      queue.push({ gx, gy, k });
+    }
+  }
+
+  let frameCounter = 0;
+  const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[1,-1],[-1,1],[1,1]];
+  let qi = 0;
+  while (qi < queue.length) {
+    const batch = Math.min(queue.length - qi, 40);
+    for (let b = 0; b < batch; b++) {
+      const { gx, gy, k } = queue[qi++];
+      for (const [dx, dy] of dirs) {
+        const nx = gx + dx, ny = gy + dy;
+        if (nx >= 0 && nx < gw && ny >= 0 && ny < gh && grid[ny * gw + nx] === -1) {
+          grid[ny * gw + nx] = k;
+          queue.push({ gx: nx, gy: ny, k });
+        }
+      }
+    }
+    frameCounter++;
+    if (frameCounter % 3 === 0) {
+      growthFrames.push(new Int8Array(grid));
+    }
+  }
+  growthFrames.push(new Int8Array(grid));
+
+  // Assign points by voronoi cell
+  for (const p of points) {
+    const gx = Math.min(gw - 1, Math.max(0, Math.floor(p.x / gridScale)));
+    const gy = Math.min(gh - 1, Math.max(0, Math.floor(p.y / gridScale)));
+    p.assignedSeed = grid[gy * gw + gx];
+    if (p.assignedSeed === -1) p.assignedSeed = 0;
+  }
+
+  // Balanced assignment
+  const agents = points.map(p => ({ name: p.name, x: p.x, y: p.y }));
+  const centroidsForAssign = seeds.map(s => ({ x: s.x, y: s.y }));
+  const { groups, order } = balancedSpatialAssign(agents, centroidsForAssign, numGroups, groupSize);
+
+  return { groups, order, points, seeds, growthFrames, gw, gh, gridScale, W, H, palette };
+}
+
+// --- Algorithm: Flocking (Boids) ---
+function boidsAssign(names, value, mode) {
+  let numGroups, groupSize;
+  if (mode === 'count') {
+    numGroups = Math.max(2, Math.min(value, names.length));
+    groupSize = Math.ceil(names.length / numGroups);
+  } else {
+    groupSize = value;
+    numGroups = Math.ceil(names.length / groupSize);
+  }
+
+  const W = 600, H = 280;
+  const palette = ['#7da252', '#72a0cc', '#d4a94e', '#cc7272', '#9a72cc', '#52a29a', '#cc9a52', '#7272cc'];
+
+  const boids = names.map(name => ({
+    name,
+    x: 30 + Math.random() * (W - 60),
+    y: 30 + Math.random() * (H - 60),
+    vx: (Math.random() - 0.5) * 4,
+    vy: (Math.random() - 0.5) * 4,
+    trail: []
+  }));
+
+  const STEPS = 250;
+  const snapshots = [];
+  const neighborDist = 80;
+  const sepDist = 25;
+  const maxSpeed = 3.5;
+
+  for (let s = 0; s < STEPS; s++) {
+    for (const b of boids) {
+      let sepX = 0, sepY = 0; // separation
+      let aliVx = 0, aliVy = 0, aliN = 0; // alignment
+      let cohX = 0, cohY = 0, cohN = 0; // cohesion
+
+      for (const other of boids) {
+        if (other === b) continue;
+        const dx = other.x - b.x, dy = other.y - b.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < sepDist && dist > 0) {
+          sepX -= dx / dist;
+          sepY -= dy / dist;
+        }
+        if (dist < neighborDist) {
+          aliVx += other.vx;
+          aliVy += other.vy;
+          aliN++;
+          cohX += other.x;
+          cohY += other.y;
+          cohN++;
+        }
+      }
+
+      // Apply forces
+      b.vx += sepX * 0.15;
+      b.vy += sepY * 0.15;
+
+      if (aliN > 0) {
+        b.vx += ((aliVx / aliN) - b.vx) * 0.05;
+        b.vy += ((aliVy / aliN) - b.vy) * 0.05;
+      }
+      if (cohN > 0) {
+        b.vx += ((cohX / cohN - b.x)) * 0.008;
+        b.vy += ((cohY / cohN - b.y)) * 0.008;
+      }
+
+      // Speed limit
+      const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+      if (speed > maxSpeed) { b.vx *= maxSpeed / speed; b.vy *= maxSpeed / speed; }
+
+      b.x += b.vx;
+      b.y += b.vy;
+
+      // Wrap edges
+      if (b.x < 0) b.x += W;
+      if (b.x > W) b.x -= W;
+      if (b.y < 0) b.y += H;
+      if (b.y > H) b.y -= H;
+
+      b.trail.push({ x: b.x, y: b.y });
+      if (b.trail.length > 8) b.trail.shift();
+    }
+
+    if (s % 2 === 0) {
+      snapshots.push(boids.map(b => ({ x: b.x, y: b.y, vx: b.vx, vy: b.vy, trail: b.trail.map(t => ({...t})) })));
+    }
+  }
+
+  // K-means to find centroids from final positions
+  const agents = boids.map(b => ({ name: b.name, x: b.x, y: b.y }));
+  const sortedX = [...agents].sort((a, b) => a.x - b.x);
+  const centroids = [];
+  for (let k = 0; k < numGroups; k++) {
+    const idx = Math.floor((k + 0.5) * sortedX.length / numGroups);
+    centroids.push({ x: sortedX[idx].x, y: sortedX[idx].y });
+  }
+  // Refine centroids
+  for (let iter = 0; iter < 20; iter++) {
+    const sums = Array.from({ length: numGroups }, () => ({ sx: 0, sy: 0, n: 0 }));
+    for (const a of agents) {
+      let minD = Infinity, minK = 0;
+      for (let k = 0; k < numGroups; k++) {
+        const dx = a.x - centroids[k].x, dy = a.y - centroids[k].y;
+        const d = dx * dx + dy * dy;
+        if (d < minD) { minD = d; minK = k; }
+      }
+      sums[minK].sx += a.x; sums[minK].sy += a.y; sums[minK].n++;
+    }
+    for (let k = 0; k < numGroups; k++) {
+      if (sums[k].n > 0) { centroids[k].x = sums[k].sx / sums[k].n; centroids[k].y = sums[k].sy / sums[k].n; }
+    }
+  }
+
+  const { groups, order } = balancedSpatialAssign(agents, centroids, numGroups, groupSize);
+  return { groups, order, boids, snapshots, centroids, W, H, palette };
+}
+
 function makeGroupsFromShuffled(shuffled, value, mode) {
   let size;
   if (mode === 'count') {
@@ -1021,12 +1706,23 @@ async function generate() {
     document.getElementById('pool').classList.remove('visible');
     document.getElementById('fullLog').classList.remove('visible');
     document.getElementById('fullLogHeader').style.display = 'none';
+    document.getElementById('simCanvas').classList.remove('visible');
 
     let groups;
     if (currentAlgo === 'random-bucket') {
       ({ groups } = randomBucketAssign(names, value, currentMode));
     } else if (currentAlgo === 'round-robin') {
       ({ groups } = roundRobinAssign(names, value, currentMode));
+    } else if (currentAlgo === 'rule30') {
+      ({ groups } = rule30Assign(names, value, currentMode));
+    } else if (currentAlgo === 'particles') {
+      ({ groups } = particleClusterAssign(names, value, currentMode));
+    } else if (currentAlgo === 'gravity') {
+      ({ groups } = gravityAssign(names, value, currentMode));
+    } else if (currentAlgo === 'voronoi') {
+      ({ groups } = voronoiAssign(names, value, currentMode));
+    } else if (currentAlgo === 'boids') {
+      ({ groups } = boidsAssign(names, value, currentMode));
     } else {
       const shuffleFn = currentAlgo === 'csprng' ? csprngShuffle :
                          currentAlgo === 'sort-random-key' ? sortRandomKeyShuffle : fisherYatesShuffle;
@@ -1051,6 +1747,7 @@ async function runAnimated(names, value) {
   document.getElementById('groupsArea').classList.remove('visible');
   document.getElementById('fullLog').classList.remove('visible');
   document.getElementById('fullLogHeader').style.display = 'none';
+  document.getElementById('simCanvas').classList.remove('visible');
   logEntries = [];
   logMeta = {
     timestamp: new Date().toISOString(),
@@ -1181,6 +1878,434 @@ async function runAnimated(names, value) {
     const result = roundRobinAssign(names, value, currentMode);
     groups = result.groups;
     order = result.order;
+
+  } else if (currentAlgo === 'rule30') {
+    // --- Rule 30 Cellular Automaton ---
+    flogSep();
+    clog(`<span class="cshuffle">rule30</span>`, `<span class="cdim">generando autómata celular...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">rule30</span>`, `<span class="cdim">autómata celular (Rule 30)</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const result = rule30Assign(names, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+
+    // Animate the automaton on canvas
+    const canvas = document.getElementById('simCanvas');
+    canvas.classList.add('visible');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const cw = rect.width, ch = rect.height;
+
+    const gens = result.generations;
+    const w = result.width;
+    const cellW = Math.max(1, Math.floor(cw / w));
+    const cellH = Math.max(2, Math.floor(ch / Math.min(gens.length, Math.floor(ch / 2))));
+    const maxRows = Math.floor(ch / cellH);
+    const drawGens = gens.slice(0, maxRows);
+
+    ctx.fillStyle = '#08080a';
+    ctx.fillRect(0, 0, cw, ch);
+
+    const centerCol = Math.floor(w / 2);
+
+    for (let g = 0; g < drawGens.length; g++) {
+      const row = drawGens[g];
+      for (let c = 0; c < w; c++) {
+        if (row[c]) {
+          const isCenterCol = (c === centerCol);
+          ctx.fillStyle = isCenterCol ? '#7da252' : '#3a5570';
+          ctx.fillRect(c * cellW, g * cellH, cellW - (cellW > 2 ? 1 : 0), cellH - (cellH > 2 ? 1 : 0));
+        }
+      }
+
+      if (g % 3 === 0) {
+        clog(
+          `<span class="cshuffle">gen ${g}</span>`,
+          `<span class="cdim">bit central: ${row[centerCol]}</span>`,
+          `<span class="cdim">${row.reduce((s, v) => s + v, 0)} celdas vivas</span>`
+        );
+        await delay(speed * 0.3);
+      }
+    }
+
+    // Log center bits used
+    result.centerBits.forEach((bit, i) => {
+      flog(
+        `<span class="cshuffle">bit</span> <span class="cdim">[gen ${i}]</span>`,
+        `<span class="cdim">columna central</span>`,
+        `<span class="cname">${bit}</span>`
+      );
+    });
+
+    clog(`<span class="cshuffle">rule30</span>`, `<span class="cdim">${gens.length} generaciones</span>`, `<span class="cdim">${result.centerBits.length} bits extraídos</span>`);
+    flog(`<span class="cshuffle">rule30</span>`, `<span class="cdim">${gens.length} generaciones</span>`, `<span class="cdim">${result.centerBits.length} bits</span>`);
+    await delay(speed * 4);
+
+    canvas.classList.remove('visible');
+
+  } else if (currentAlgo === 'particles') {
+    // --- Particle Clustering ---
+    flogSep();
+    clog(`<span class="cshuffle">physics</span>`, `<span class="cdim">simulando partículas...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">physics</span>`, `<span class="cdim">simulación de partículas</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const result = particleClusterAssign(names, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+
+    // Animate particles on canvas
+    const canvas = document.getElementById('simCanvas');
+    canvas.classList.add('visible');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const cw = rect.width, ch = rect.height;
+    const scaleX = cw / result.W, scaleY = ch / result.H;
+
+    // Color palette for groups
+    const palette = ['#7da252', '#72a0cc', '#d4a94e', '#cc7272', '#9a72cc', '#52a29a', '#cc9a52', '#7272cc'];
+
+    // Replay snapshots
+    for (let s = 0; s < result.snapshots.length; s++) {
+      ctx.fillStyle = '#08080a';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const snap = result.snapshots[s];
+      for (let i = 0; i < snap.length; i++) {
+        ctx.beginPath();
+        ctx.arc(snap[i].x * scaleX, snap[i].y * scaleY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#666';
+        ctx.fill();
+      }
+
+      if (s % 4 === 0) {
+        const step = s * 5;
+        clog(
+          `<span class="cshuffle">step ${step}</span>`,
+          `<span class="cdim">${names.length} partículas</span>`,
+          `<span class="cdim">simulando...</span>`
+        );
+      }
+      await delay(16);
+    }
+
+    // Draw final state with cluster colors
+    ctx.fillStyle = '#08080a';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Draw centroid regions (soft)
+    for (let k = 0; k < result.centroids.length; k++) {
+      ctx.beginPath();
+      ctx.arc(result.centroids[k].x * scaleX, result.centroids[k].y * scaleY, 30, 0, Math.PI * 2);
+      ctx.fillStyle = (palette[k % palette.length]) + '18';
+      ctx.fill();
+      ctx.strokeStyle = (palette[k % palette.length]) + '40';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Draw particles colored by cluster
+    for (let i = 0; i < result.particles.length; i++) {
+      const p = result.particles[i];
+      const k = order[i].groupIdx;
+      ctx.beginPath();
+      ctx.arc(p.x * scaleX, p.y * scaleY, 6, 0, Math.PI * 2);
+      ctx.fillStyle = palette[k % palette.length];
+      ctx.fill();
+      // Label
+      ctx.fillStyle = '#ddd';
+      ctx.font = '9px monospace';
+      ctx.textAlign = 'center';
+      const shortName = p.name.length > 8 ? p.name.slice(0, 7) + '…' : p.name;
+      ctx.fillText(shortName, p.x * scaleX, p.y * scaleY - 10);
+    }
+
+    clog(`<span class="cshuffle">k-means</span>`, `<span class="cdim">clustering completo</span>`, `<span class="cdim">${groups.length} clusters</span>`);
+    flog(`<span class="cshuffle">k-means</span>`, `<span class="cdim">${groups.length} clusters formados</span>`, `<span class="cdim">${names.length} partículas</span>`);
+
+    // Log particle positions
+    result.particles.forEach((p, i) => {
+      flog(
+        `<span class="cshuffle">pos</span> <span class="cdim">[${i}]</span>`,
+        `<span class="cname">${p.name}</span>`,
+        `<span class="cdim">(${p.x.toFixed(1)}, ${p.y.toFixed(1)})</span>`
+      );
+    });
+
+    await delay(2000);
+    canvas.classList.remove('visible');
+
+  } else if (currentAlgo === 'gravity') {
+    // --- Gravity orbital ---
+    flogSep();
+    clog(`<span class="cshuffle">gravity</span>`, `<span class="cdim">posicionando pozos gravitacionales...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">gravity</span>`, `<span class="cdim">gravedad orbital</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const result = gravityAssign(names, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+
+    const canvas = document.getElementById('simCanvas');
+    canvas.classList.add('visible');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const cw = rect.width, ch = rect.height;
+    const sx = cw / result.W, sy = ch / result.H;
+
+    for (let s = 0; s < result.snapshots.length; s++) {
+      ctx.fillStyle = 'rgba(8,8,10,0.3)';
+      ctx.fillRect(0, 0, cw, ch);
+
+      // Draw wells
+      for (let k = 0; k < result.wells.length; k++) {
+        const w = result.wells[k];
+        ctx.beginPath();
+        ctx.arc(w.x * sx, w.y * sy, 20, 0, Math.PI * 2);
+        ctx.fillStyle = w.color + '25';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(w.x * sx, w.y * sy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = w.color;
+        ctx.fill();
+      }
+
+      // Draw particles with trails
+      const snap = result.snapshots[s];
+      for (let i = 0; i < snap.length; i++) {
+        const p = snap[i];
+        const color = p.captured >= 0 ? result.palette[p.captured % result.palette.length] : '#888';
+
+        // Trail
+        if (p.trail.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(p.trail[0].x * sx, p.trail[0].y * sy);
+          for (let t = 1; t < p.trail.length; t++) {
+            ctx.lineTo(p.trail[t].x * sx, p.trail[t].y * sy);
+          }
+          ctx.strokeStyle = color + '40';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.arc(p.x * sx, p.y * sy, p.captured >= 0 ? 4 : 3, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
+
+      if (s % 5 === 0) {
+        clog(`<span class="cshuffle">orbit</span>`, `<span class="cdim">step ${s * 3}</span>`, `<span class="cdim">simulando...</span>`);
+      }
+      await delay(20);
+    }
+
+    clog(`<span class="cshuffle">gravity</span>`, `<span class="cdim">captura completa</span>`, `<span class="cdim">${groups.length} pozos</span>`);
+    flog(`<span class="cshuffle">gravity</span>`, `<span class="cdim">${groups.length} pozos gravitacionales</span>`, `<span class="cdim">${names.length} partículas capturadas</span>`);
+    await delay(2000);
+    canvas.classList.remove('visible');
+
+  } else if (currentAlgo === 'voronoi') {
+    // --- Voronoi cristalización ---
+    flogSep();
+    clog(`<span class="cshuffle">voronoi</span>`, `<span class="cdim">plantando semillas cristalinas...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">voronoi</span>`, `<span class="cdim">voronoi cristalización</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const result = voronoiAssign(names, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+
+    const canvas = document.getElementById('simCanvas');
+    canvas.classList.add('visible');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const cw = rect.width, ch = rect.height;
+    const cellW = cw / result.gw, cellH = ch / result.gh;
+
+    ctx.fillStyle = '#08080a';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Animate growth frames
+    for (let f = 0; f < result.growthFrames.length; f++) {
+      const frame = result.growthFrames[f];
+      for (let y = 0; y < result.gh; y++) {
+        for (let x = 0; x < result.gw; x++) {
+          const k = frame[y * result.gw + x];
+          if (k >= 0) {
+            ctx.fillStyle = result.palette[k % result.palette.length] + '35';
+            ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+          }
+        }
+      }
+
+      if (f % 5 === 0) {
+        clog(`<span class="cshuffle">crystal</span>`, `<span class="cdim">frente ${f}</span>`, `<span class="cdim">expandiendo...</span>`);
+      }
+      await delay(12);
+    }
+
+    // Draw final: borders between regions
+    const finalGrid = result.growthFrames[result.growthFrames.length - 1];
+    for (let y = 0; y < result.gh; y++) {
+      for (let x = 0; x < result.gw; x++) {
+        const k = finalGrid[y * result.gw + x];
+        // Check if border
+        let isBorder = false;
+        for (const [dx, dy] of [[-1,0],[1,0],[0,-1],[0,1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (nx >= 0 && nx < result.gw && ny >= 0 && ny < result.gh) {
+            if (finalGrid[ny * result.gw + nx] !== k) { isBorder = true; break; }
+          }
+        }
+        if (isBorder && k >= 0) {
+          ctx.fillStyle = result.palette[k % result.palette.length] + '90';
+          ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+        }
+      }
+    }
+
+    // Draw seeds
+    const sx = cw / result.W, sy = ch / result.H;
+    for (let k = 0; k < result.seeds.length; k++) {
+      ctx.beginPath();
+      ctx.arc(result.seeds[k].x * sx, result.seeds[k].y * sy, 5, 0, Math.PI * 2);
+      ctx.fillStyle = result.palette[k % result.palette.length];
+      ctx.fill();
+    }
+
+    // Draw name points
+    for (const p of result.points) {
+      ctx.beginPath();
+      ctx.arc(p.x * sx, p.y * sy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = '#ddd';
+      ctx.fill();
+      ctx.fillStyle = '#ddd';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      const short = p.name.length > 8 ? p.name.slice(0, 7) + '…' : p.name;
+      ctx.fillText(short, p.x * sx, p.y * sy - 7);
+    }
+
+    clog(`<span class="cshuffle">voronoi</span>`, `<span class="cdim">cristalización completa</span>`, `<span class="cdim">${result.seeds.length} regiones</span>`);
+    flog(`<span class="cshuffle">voronoi</span>`, `<span class="cdim">${result.seeds.length} semillas, ${result.growthFrames.length} frentes</span>`, `<span class="cdim">${names.length} nombres asignados</span>`);
+    await delay(2000);
+    canvas.classList.remove('visible');
+
+  } else if (currentAlgo === 'boids') {
+    // --- Flocking (Boids) ---
+    flogSep();
+    clog(`<span class="cshuffle">boids</span>`, `<span class="cdim">liberando bandada...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">boids</span>`, `<span class="cdim">flocking (boids)</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const result = boidsAssign(names, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+
+    const canvas = document.getElementById('simCanvas');
+    canvas.classList.add('visible');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr; canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    const cw = rect.width, ch = rect.height;
+    const sx = cw / result.W, sy = ch / result.H;
+
+    for (let s = 0; s < result.snapshots.length; s++) {
+      ctx.fillStyle = 'rgba(8,8,10,0.35)';
+      ctx.fillRect(0, 0, cw, ch);
+
+      const snap = result.snapshots[s];
+      for (let i = 0; i < snap.length; i++) {
+        const b = snap[i];
+
+        // Trail
+        if (b.trail.length > 1) {
+          ctx.beginPath();
+          ctx.moveTo(b.trail[0].x * sx, b.trail[0].y * sy);
+          for (let t = 1; t < b.trail.length; t++) {
+            ctx.lineTo(b.trail[t].x * sx, b.trail[t].y * sy);
+          }
+          ctx.strokeStyle = '#88888830';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+
+        // Boid as triangle pointing in direction of velocity
+        const angle = Math.atan2(b.vy, b.vx);
+        const px = b.x * sx, py = b.y * sy;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(6, 0);
+        ctx.lineTo(-3, -3);
+        ctx.lineTo(-3, 3);
+        ctx.closePath();
+        ctx.fillStyle = s > result.snapshots.length * 0.8 ? '#bbb' : '#777';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      if (s % 8 === 0) {
+        clog(`<span class="cshuffle">flock</span>`, `<span class="cdim">step ${s * 2}</span>`, `<span class="cdim">emergiendo...</span>`);
+      }
+      await delay(16);
+    }
+
+    // Final frame: colored by group
+    ctx.fillStyle = '#08080a';
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Find group index for each boid via order
+    const boidGroupMap = {};
+    for (const o of order) boidGroupMap[o.name] = o.groupIdx;
+
+    for (const b of result.boids) {
+      const k = boidGroupMap[b.name] || 0;
+      const color = result.palette[k % result.palette.length];
+      const angle = Math.atan2(b.vy, b.vx);
+      const px = b.x * sx, py = b.y * sy;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.moveTo(8, 0);
+      ctx.lineTo(-4, -4);
+      ctx.lineTo(-4, 4);
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = '#ddd';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'center';
+      const short = b.name.length > 8 ? b.name.slice(0, 7) + '…' : b.name;
+      ctx.fillText(short, b.x * sx, b.y * sy - 10);
+    }
+
+    clog(`<span class="cshuffle">boids</span>`, `<span class="cdim">bandadas formadas</span>`, `<span class="cdim">${groups.length} clusters</span>`);
+    flog(`<span class="cshuffle">boids</span>`, `<span class="cdim">${result.snapshots.length * 2} iteraciones</span>`, `<span class="cdim">${groups.length} bandadas</span>`);
+    await delay(2000);
+    canvas.classList.remove('visible');
   }
 
   // ====== COMMON: build cards and animate assignment ======
@@ -1359,6 +2484,7 @@ function clearAll() {
   document.getElementById('lightbox').classList.remove('visible');
   document.getElementById('fullLog').classList.remove('visible');
   document.getElementById('fullLogHeader').style.display = 'none';
+  document.getElementById('simCanvas').classList.remove('visible');
   document.getElementById('emptyState').style.display = 'flex';
   currentNames = [];
   currentGroups = [];
