@@ -74,6 +74,25 @@
         .pct-50 { background-color: var(--color-50); }
         .pct-25 { background-color: var(--color-25); }
         .pct-0  { background-color: var(--color-0); }
+
+        /* Unit selector */
+        .unit-selector {
+            position: fixed; bottom: 16px; right: 16px;
+            display: flex; gap: 4px; opacity: 0.4;
+            transition: opacity 0.3s;
+        }
+        .unit-selector:hover { opacity: 1; }
+        .unit-selector label {
+            font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; cursor: pointer; padding: 4px 8px;
+            border-radius: 3px; border: 1.5px solid var(--text-color);
+            user-select: none; transition: all 0.2s;
+            color: var(--text-color); background: transparent;
+        }
+        .unit-selector label.active {
+            background: var(--text-color); color: white;
+        }
+        .unit-selector input { display: none; }
     </style>
 </head>
 <body>
@@ -98,23 +117,43 @@
         </div>
     </div>
 
+    <div class="unit-selector">
+        <label class="active" onclick="toggleUnit(this,'h')"><input type="checkbox" checked>h</label>
+        <label class="active" onclick="toggleUnit(this,'m')"><input type="checkbox" checked>m</label>
+        <label class="active" onclick="toggleUnit(this,'s')"><input type="checkbox" checked>s</label>
+        <label onclick="toggleUnit(this,'ms')"><input type="checkbox">ms</label>
+    </div>
+
     <script>
         let countdown;
-        let timeLeft = 0;
-        let totalTimeAtStart = 0;
+        let timeLeftMs = 0; // now in milliseconds
+        let totalTimeAtStart = 0; // in ms
         let isPaused = true;
         let targetTime = null;
+        let lastTick = null;
+
+        const showUnits = { h: true, m: true, s: true, ms: false };
 
         const display = document.querySelector('#timer-display');
         const progressBar = document.querySelector('#progress-bar');
         const btnStart = document.querySelector('#btn-start');
         const body = document.body;
 
+        function toggleUnit(label, unit) {
+            const cb = label.querySelector('input');
+            cb.checked = !cb.checked;
+            showUnits[unit] = cb.checked;
+            label.classList.toggle('active', cb.checked);
+            updateUI();
+            // Switch interval rate based on ms visibility
+            if (!isPaused) { runTimer(); }
+        }
+
         function setTime(seconds) {
             resetTimer();
             targetTime = null;
-            timeLeft = seconds;
-            totalTimeAtStart = seconds;
+            timeLeftMs = seconds * 1000;
+            totalTimeAtStart = timeLeftMs;
             updateUI();
         }
 
@@ -133,64 +172,108 @@
             targetTime.setHours(h, m, 0, 0);
             if (targetTime < new Date()) targetTime.setDate(targetTime.getDate() + 1);
 
-            timeLeft = Math.floor((targetTime - new Date()) / 1000);
-            totalTimeAtStart = timeLeft;
+            timeLeftMs = targetTime - new Date();
+            totalTimeAtStart = timeLeftMs;
             updateUI();
         }
 
         function toggleTimer() {
-            if (timeLeft <= 0 && !targetTime) return;
+            if (timeLeftMs <= 0 && !targetTime) return;
             isPaused = !isPaused;
             btnStart.textContent = isPaused ? "Continuar" : "Pausar";
-            if (!isPaused) runTimer();
-            else clearInterval(countdown);
+            if (!isPaused) {
+                lastTick = performance.now();
+                runTimer();
+            } else {
+                cancelAnimationFrame(countdown);
+                clearInterval(countdown);
+            }
         }
 
         function runTimer() {
+            cancelAnimationFrame(countdown);
             clearInterval(countdown);
-            countdown = setInterval(() => {
-                if (targetTime) {
-                    timeLeft = Math.floor((targetTime - new Date()) / 1000);
-                } else {
-                    timeLeft--;
-                }
 
-                if (timeLeft <= 0) {
-                    timeLeft = 0;
-                    clearInterval(countdown);
-                    isPaused = true;
-                    btnStart.textContent = "Iniciar";
-                    body.classList.add('finished');
+            if (showUnits.ms) {
+                // Use requestAnimationFrame for smooth ms display
+                function tick() {
+                    const now = performance.now();
+                    if (targetTime) {
+                        timeLeftMs = targetTime - new Date();
+                    } else {
+                        timeLeftMs -= (now - lastTick);
+                    }
+                    lastTick = now;
+
+                    if (timeLeftMs <= 0) {
+                        timeLeftMs = 0;
+                        isPaused = true;
+                        btnStart.textContent = "Iniciar";
+                        body.classList.add('finished');
+                        updateUI();
+                        return;
+                    }
+                    updateUI();
+                    countdown = requestAnimationFrame(tick);
                 }
-                updateUI();
-            }, 1000);
+                lastTick = performance.now();
+                countdown = requestAnimationFrame(tick);
+            } else {
+                // 1-second interval when ms not shown
+                countdown = setInterval(() => {
+                    if (targetTime) {
+                        timeLeftMs = targetTime - new Date();
+                    } else {
+                        timeLeftMs -= 1000;
+                    }
+
+                    if (timeLeftMs <= 0) {
+                        timeLeftMs = 0;
+                        clearInterval(countdown);
+                        isPaused = true;
+                        btnStart.textContent = "Iniciar";
+                        body.classList.add('finished');
+                    }
+                    updateUI();
+                }, 1000);
+            }
         }
 
         function resetTimer() {
+            cancelAnimationFrame(countdown);
             clearInterval(countdown);
-            timeLeft = 0;
+            timeLeftMs = 0;
             totalTimeAtStart = 0;
             targetTime = null;
             isPaused = true;
             btnStart.textContent = "Iniciar";
-            body.className = ''; 
+            body.className = '';
             updateUI();
         }
 
         function updateUI() {
-            const h = Math.floor(timeLeft / 3600);
-            const m = Math.floor((timeLeft % 3600) / 60);
-            const s = timeLeft % 60;
-            display.textContent = h > 0 ? 
-                `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}` : 
-                `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
+            const totalSec = Math.max(0, timeLeftMs) / 1000;
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = Math.floor(totalSec % 60);
+            const ms = Math.floor((totalSec % 1) * 100); // centiseconds
 
-            const pct = totalTimeAtStart > 0 ? (timeLeft / totalTimeAtStart) * 100 : 0;
+            const parts = [];
+            if (showUnits.h) parts.push(parts.length ? String(h).padStart(2, '0') : String(h));
+            if (showUnits.m) parts.push(parts.length ? String(m).padStart(2, '0') : String(m).padStart(2, '0'));
+            if (showUnits.s) parts.push(String(s).padStart(2, '0'));
+
+            let text = parts.join(':') || '00';
+            if (showUnits.ms) text += '.' + String(ms).padStart(2, '0');
+
+            display.textContent = text;
+
+            const pct = totalTimeAtStart > 0 ? (Math.max(0, timeLeftMs) / totalTimeAtStart) * 100 : 0;
             progressBar.style.width = `${pct}%`;
 
             if (!body.classList.contains('finished')) {
                 body.className = '';
-                if (timeLeft <= 0 && totalTimeAtStart > 0) body.classList.add('pct-0');
+                if (timeLeftMs <= 0 && totalTimeAtStart > 0) body.classList.add('pct-0');
                 else if (pct <= 25) body.classList.add('pct-25');
                 else if (pct <= 50) body.classList.add('pct-50');
                 else if (pct <= 75) body.classList.add('pct-75');
