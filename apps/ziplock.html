@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ziplock</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+    background: #0a0a0b;
+    color: #999;
+    min-height: 100vh;
+    padding: 2.5rem 2.5rem 4rem;
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  code, .mono {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+  }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+  }
+
+  .back-link {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #444;
+    text-decoration: none;
+    font-size: 0.82rem;
+  }
+  .back-link:hover { color: #888; }
+
+  h1 {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.88rem;
+    font-weight: normal;
+    color: #555;
+  }
+
+  .container {
+    max-width: 560px;
+  }
+
+  /* Dropzone */
+  .dropzone {
+    border: 1px dashed #2a2a2e;
+    background: #111113;
+    padding: 2.5rem 2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: #5a7a3a;
+    background: rgba(90, 140, 60, 0.04);
+  }
+  .dropzone input[type="file"] { display: none; }
+  .dropzone-icon { font-size: 1.8rem; margin-bottom: 0.6rem; opacity: 0.5; }
+  .dropzone-text { color: #666; font-size: 0.84rem; }
+  .dropzone-text strong { color: #5a7a3a; cursor: pointer; font-weight: 500; }
+
+  /* File info */
+  .file-info {
+    display: none;
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    padding: 0.9rem 1.2rem;
+    margin-bottom: 1.5rem;
+  }
+  .file-info.show { display: block; }
+
+  .file-count {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.8rem;
+    color: #5a7a3a;
+    margin-bottom: 0.3rem;
+  }
+
+  .file-size {
+    font-size: 0.8rem;
+    color: #555;
+  }
+
+  .file-list-toggle {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    color: #444;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    user-select: none;
+  }
+  .file-list-toggle:hover { color: #5a7a3a; }
+
+  .file-list {
+    display: none;
+    margin-top: 0.5rem;
+    max-height: 180px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.7rem;
+    color: #555;
+    line-height: 1.6;
+    padding-left: 0.5rem;
+    border-left: 2px solid #1e1e22;
+  }
+  .file-list.show { display: block; }
+  .file-list::-webkit-scrollbar { width: 4px; }
+  .file-list::-webkit-scrollbar-track { background: transparent; }
+  .file-list::-webkit-scrollbar-thumb { background: #1a1a1e; border-radius: 2px; }
+
+  /* Password */
+  .password-section { margin-bottom: 1.5rem; }
+
+  .password-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .password-row + .password-row { margin-top: 0.5rem; }
+
+  .password-row input {
+    flex: 1;
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    padding: 0.6rem 0.8rem;
+    color: #ccc;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.84rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .password-row input:focus { border-color: #5a7a3a; }
+  .password-row input::placeholder { color: #333; }
+  .password-row input.mismatch { border-color: #c45; }
+
+  .password-match {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    margin-top: 0.35rem;
+    min-height: 1rem;
+  }
+  .password-match.ok { color: #5a7a3a; }
+  .password-match.no { color: #c45; }
+
+  .toggle-vis {
+    background: #18181c;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    color: #555;
+    padding: 0.6rem 0.7rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .toggle-vis:hover { color: #999; border-color: #5a7a3a; }
+
+  /* Zip button */
+  .zip-btn {
+    width: 100%;
+    padding: 0.65rem;
+    border: none;
+    border-radius: 4px;
+    background: #5a7a3a;
+    color: #e8e8ec;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-weight: 500;
+    font-size: 0.84rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .zip-btn:hover:not(:disabled) { background: #6a8e46; }
+  .zip-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Progress */
+  .progress-wrap {
+    margin-top: 1rem;
+    display: none;
+  }
+  .progress-wrap.show { display: block; }
+
+  .progress-bar-bg {
+    height: 3px;
+    background: #1e1e22;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #5a7a3a;
+    border-radius: 2px;
+    transition: width 0.15s;
+  }
+  .progress-text {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    color: #555;
+    margin-top: 0.4rem;
+    text-align: center;
+  }
+
+  /* Status */
+  .status {
+    margin-top: 1rem;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.82rem;
+    text-align: center;
+    min-height: 1.3rem;
+  }
+  .status.error { color: #c45; }
+  .status.success { color: #5a7a3a; }
+
+  /* Log */
+  .log-section {
+    margin-top: 1.25rem;
+    display: none;
+  }
+  .log-section.show { display: block; }
+
+  .log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.4rem;
+  }
+
+  .log-title {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #333;
+  }
+
+  .log-clear {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.7rem;
+    color: #444;
+    cursor: pointer;
+    background: none;
+    border: 1px solid #1e1e22;
+    border-radius: 3px;
+    padding: 0.15rem 0.5rem;
+    transition: all 0.15s;
+  }
+  .log-clear:hover { color: #5a7a3a; border-color: #5a7a3a; }
+
+  .log-box {
+    background: #08080a;
+    border: 1px solid #141416;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    max-height: 260px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.68rem;
+    line-height: 1.8;
+    color: #555;
+  }
+  .log-box::-webkit-scrollbar { width: 4px; }
+  .log-box::-webkit-scrollbar-track { background: transparent; }
+  .log-box::-webkit-scrollbar-thumb { background: #1a1a1e; border-radius: 2px; }
+
+  .log-box .ok { color: #5a7a3a; }
+  .log-box .err { color: #c45; }
+  .log-box .warn { color: #b08a3a; }
+  .log-box .dim { color: #2a2a2e; }
+
+  /* Encryption note */
+  .encryption-note {
+    margin-top: 1.5rem;
+    padding: 0.65rem 1rem;
+    background: #111113;
+    border-left: 2px solid #5a7a3a;
+    border-radius: 0 4px 4px 0;
+    font-size: 0.75rem;
+    color: #444;
+    line-height: 1.6;
+  }
+  .encryption-note code {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #5a7a3a;
+    font-size: 0.72rem;
+  }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="../index.html" class="back-link">← toolbox/</a>
+  <h1>ziplock</h1>
+</div>
+
+<div class="container">
+  <div class="dropzone" id="dropzone">
+    <div class="dropzone-icon">📁</div>
+    <div class="dropzone-text">
+      arrastra una carpeta aquí o <strong id="browseBtn">busca archivos</strong>
+    </div>
+    <input type="file" id="fileInput" webkitdirectory multiple>
+  </div>
+
+  <div class="file-info" id="fileInfo">
+    <div class="file-count" id="fileCount"></div>
+    <div class="file-size" id="fileSize"></div>
+    <div class="file-list-toggle" id="listToggle">▸ ver archivos</div>
+    <div class="file-list" id="fileList"></div>
+  </div>
+
+  <div class="password-section">
+    <div class="password-row">
+      <input type="password" id="password" placeholder="contraseña" autocomplete="off">
+      <button class="toggle-vis" id="toggleVis" title="mostrar/ocultar">👁</button>
+    </div>
+    <div class="password-row">
+      <input type="password" id="passwordConfirm" placeholder="confirmar contraseña" autocomplete="off">
+    </div>
+    <div class="password-match" id="passwordMatch"></div>
+  </div>
+
+  <button class="zip-btn" id="zipBtn" disabled>crear zip</button>
+
+  <div class="progress-wrap" id="progressWrap">
+    <div class="progress-bar-bg">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="progress-text" id="progressText">preparando...</div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="log-section" id="logSection">
+    <div class="log-header">
+      <span class="log-title">log</span>
+      <button class="log-clear" id="logClear">limpiar</button>
+    </div>
+    <div class="log-box" id="logBox"></div>
+  </div>
+
+  <div class="encryption-note">
+    todo se procesa localmente en tu navegador. nada se sube a ningún servidor.<br>
+    cifrado: <code>AES-256</code> · modo STORE (sin compresión, ideal para video/media).<br>
+    compatible con 7-Zip, WinRAR, macOS Archive Utility.
+  </div>
+</div>
+
+<script>
+(async function init() {
+  const $ = id => document.getElementById(id);
+  const dropzone = $('dropzone');
+  const fileInput = $('fileInput');
+  const fileInfo = $('fileInfo');
+  const fileCount = $('fileCount');
+  const fileSize = $('fileSize');
+  const listToggle = $('listToggle');
+  const fileList = $('fileList');
+  const pw1 = $('password');
+  const pw2 = $('passwordConfirm');
+  const pwMatch = $('passwordMatch');
+  const toggleVis = $('toggleVis');
+  const zipBtn = $('zipBtn');
+  const progressWrap = $('progressWrap');
+  const progressBar = $('progressBar');
+  const progressText = $('progressText');
+  const status = $('status');
+  const logSection = $('logSection');
+  const logBox = $('logBox');
+
+  let selectedFiles = [];
+  let folderName = 'archive';
+
+  function formatBytes(bytes) {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  function errMsg(e) {
+    if (!e) return 'Error desconocido (objeto nulo)';
+    if (typeof e === 'string') return e;
+    if (e.message) return e.message;
+    if (e.name) return e.name;
+    try { return JSON.stringify(e); } catch { return String(e); }
+  }
+
+  function log(msg, cls = '') {
+    const ts = new Date().toLocaleTimeString('es-PE', { hour12: false });
+    logBox.innerHTML += `<span class="dim">${ts}</span> <span class="${cls}">${msg}</span><br>`;
+    logBox.scrollTop = logBox.scrollHeight;
+    logSection.classList.add('show');
+  }
+
+  $('logClear').addEventListener('click', () => { logBox.innerHTML = ''; });
+
+  // Load zip.js
+  log('cargando zip.js...');
+  try {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/@zip.js/zip.js@2.7.52/dist/zip-full.min.js';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('No se pudo cargar zip.js'));
+      document.head.appendChild(s);
+    });
+    log('zip.js cargado ✓', 'ok');
+  } catch (e) {
+    log('ERROR: no se pudo cargar zip.js. ¿estás offline?', 'err');
+    status.textContent = 'error: no se pudo cargar zip.js';
+    status.className = 'status error';
+    return;
+  }
+
+  zip.configure({
+    useWebWorkers: false,
+    useCompressionStream: false,
+  });
+  log('configurado: workers=off, compressionStream=off');
+
+  function checkPasswords() {
+    const p1 = pw1.value;
+    const p2 = pw2.value;
+
+    if (!p1 || !p2) {
+      pwMatch.textContent = '';
+      pwMatch.className = 'password-match';
+      pw2.classList.remove('mismatch');
+      return false;
+    }
+
+    if (p1 === p2) {
+      pwMatch.textContent = '✓ contraseñas coinciden';
+      pwMatch.className = 'password-match ok';
+      pw2.classList.remove('mismatch');
+      return true;
+    } else {
+      pwMatch.textContent = '✗ no coinciden';
+      pwMatch.className = 'password-match no';
+      pw2.classList.add('mismatch');
+      return false;
+    }
+  }
+
+  function updateState() {
+    const match = checkPasswords();
+    zipBtn.disabled = selectedFiles.length === 0 || !pw1.value || !match;
+  }
+
+  pw1.addEventListener('input', updateState);
+  pw2.addEventListener('input', updateState);
+
+  // Drag and drop
+  dropzone.addEventListener('dragover', e => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+
+  dropzone.addEventListener('dragleave', () => {
+    dropzone.classList.remove('dragover');
+  });
+
+  dropzone.addEventListener('drop', async e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+
+    const items = e.dataTransfer.items;
+    if (!items) return;
+
+    selectedFiles = [];
+    const entries = [];
+
+    for (const item of items) {
+      const entry = item.webkitGetAsEntry?.();
+      if (entry) entries.push(entry);
+    }
+
+    if (entries.length === 1 && entries[0].isDirectory) {
+      folderName = entries[0].name;
+    } else {
+      folderName = 'archive';
+    }
+
+    for (const entry of entries) {
+      await traverseEntry(entry, '');
+    }
+
+    showFileInfo();
+  });
+
+  async function traverseEntry(entry, path) {
+    if (entry.isFile) {
+      const file = await new Promise(r => entry.file(r));
+      file._relativePath = path + entry.name;
+      selectedFiles.push(file);
+    } else if (entry.isDirectory) {
+      const dirReader = entry.createReader();
+      let allEntries = [];
+      let batch;
+      do {
+        batch = await new Promise(r => dirReader.readEntries(r));
+        allEntries = allEntries.concat(batch);
+      } while (batch.length > 0);
+
+      for (const child of allEntries) {
+        await traverseEntry(child, path + entry.name + '/');
+      }
+    }
+  }
+
+  // Browse
+  $('browseBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    fileInput.click();
+  });
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    selectedFiles = Array.from(fileInput.files);
+    if (selectedFiles.length > 0) {
+      const first = selectedFiles[0].webkitRelativePath || '';
+      folderName = first.split('/')[0] || 'archive';
+      selectedFiles.forEach(f => {
+        f._relativePath = f.webkitRelativePath || f.name;
+      });
+    }
+    showFileInfo();
+  });
+
+  function showFileInfo() {
+    const total = selectedFiles.reduce((s, f) => s + f.size, 0);
+    fileCount.textContent = `${selectedFiles.length} archivos`;
+    fileSize.textContent = `tamaño total: ${formatBytes(total)}`;
+    fileList.innerHTML = selectedFiles.map(f =>
+      `${f._relativePath || f.name} <span style="color:#555">(${formatBytes(f.size)})</span>`
+    ).join('<br>');
+    fileInfo.classList.add('show');
+    status.textContent = '';
+    status.className = 'status';
+    log(`carpeta: <span class="ok">${folderName}</span> — ${selectedFiles.length} archivos, ${formatBytes(total)}`);
+
+    if (total > 2 * 1024 * 1024 * 1024) {
+      log(`<span class="warn">⚠ archivos grandes detectados. se usará modo STORE (sin compresión) + AES-256.</span>`);
+    }
+
+    updateState();
+  }
+
+  listToggle.addEventListener('click', () => {
+    const showing = fileList.classList.toggle('show');
+    listToggle.textContent = showing ? '▾ ocultar archivos' : '▸ ver archivos';
+  });
+
+  toggleVis.addEventListener('click', () => {
+    const isPass = pw1.type === 'password';
+    pw1.type = isPass ? 'text' : 'password';
+    pw2.type = isPass ? 'text' : 'password';
+    toggleVis.textContent = isPass ? '🔒' : '👁';
+  });
+
+  // ZIP creation
+  zipBtn.addEventListener('click', async () => {
+    if (selectedFiles.length === 0 || !pw1.value || pw1.value !== pw2.value) return;
+
+    zipBtn.disabled = true;
+    progressWrap.classList.add('show');
+    progressBar.style.width = '0%';
+    progressText.textContent = 'comprimiendo...';
+    status.textContent = '';
+    status.className = 'status';
+
+    log('─'.repeat(40));
+    log('iniciando ZIP con cifrado AES-256');
+    log(`password: ${'•'.repeat(pw1.value.length)} (${pw1.value.length} chars)`);
+    log(`modo: STORE (level=0) + AES-256 encrypt`);
+
+    const t0 = performance.now();
+
+    try {
+      const blobWriter = new zip.BlobWriter('application/zip');
+
+      const writer = new zip.ZipWriter(blobWriter, {
+        password: pw1.value,
+        encryptionStrength: 3,
+        bufferedWrite: true,
+        dataDescriptor: true,
+        level: 0,
+      });
+
+      let added = 0;
+      let skipped = 0;
+      let totalBytes = 0;
+
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const filePath = file._relativePath || file.name;
+        const pct = Math.round(((i + 1) / selectedFiles.length) * 100);
+
+        progressBar.style.width = pct + '%';
+        progressText.textContent = `${i + 1}/${selectedFiles.length} — ${filePath.split('/').pop()} (${formatBytes(file.size)})`;
+
+        if (file.size === 0) {
+          log(`⊘ ${filePath} (vacío, omitido)`, 'warn');
+          skipped++;
+          continue;
+        }
+
+        try {
+          const t1 = performance.now();
+          log(`↳ ${filePath} (${formatBytes(file.size)})`);
+
+          await writer.add(filePath, new zip.BlobReader(file), {
+            level: 0,
+            bufferedWrite: true,
+          });
+
+          totalBytes += file.size;
+          added++;
+          const dt = ((performance.now() - t1) / 1000).toFixed(1);
+          log(`  <span class="ok">✓ ok</span> (${dt}s)`);
+        } catch (fileErr) {
+          const msg = errMsg(fileErr);
+          log(`  <span class="err">✗ ${msg}</span>`);
+          console.error('File error:', filePath, fileErr);
+          skipped++;
+        }
+      }
+
+      log('finalizando zip...');
+      const blob = await writer.close();
+      const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = folderName + '.zip';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+      progressBar.style.width = '100%';
+      progressText.textContent = `listo — ${formatBytes(blob.size)} en ${elapsed}s`;
+
+      const skipNote = skipped > 0 ? ` (${skipped} omitidos)` : '';
+      status.textContent = `✓ ${folderName}.zip descargado${skipNote}`;
+      status.className = 'status success';
+
+      log('─'.repeat(40));
+      log(`<span class="ok">RESUMEN</span>`);
+      log(`  añadidos: <span class="ok">${added}</span>`);
+      if (skipped > 0) log(`  omitidos: <span class="err">${skipped}</span>`);
+      log(`  original: ${formatBytes(totalBytes)}`);
+      log(`  zip: ${formatBytes(blob.size)}`);
+      log(`  tiempo: ${elapsed}s`);
+      log(`  → <span class="ok">${folderName}.zip</span>`);
+    } catch (err) {
+      const msg = errMsg(err);
+      status.textContent = 'error: ' + msg;
+      status.className = 'status error';
+      log(`ERROR FATAL: ${msg}`, 'err');
+      console.error('Fatal error:', err);
+    }
+
+    zipBtn.disabled = false;
+    updateState();
+  });
+
+})();
+</script>
+</body>
+</html>
