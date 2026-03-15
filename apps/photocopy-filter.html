@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>photocopy-filter</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0a0a0b;
+    --surface: #111113;
+    --border: #1e1e22;
+    --text: #bbb;
+    --text-dim: #555;
+    --accent: #ccc;
+    --green: #5a7a3a;
+  }
+
+  body {
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  .app { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  .back-link {
+    color: #444;
+    text-decoration: none;
+    font-size: 0.82rem;
+  }
+  .back-link:hover { color: #888; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;
+  }
+  .header-left { display: flex; align-items: baseline; gap: 12px; }
+  header h1 { font-size: 0.88rem; font-weight: normal; color: #888; letter-spacing: 0.02em; }
+  header span { font-size: 11px; color: var(--text-dim); }
+
+  .workspace { display: grid; grid-template-columns: 1fr 280px; gap: 24px; }
+
+  .canvas-area {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; display: flex; flex-direction: column; min-height: 500px; overflow: hidden;
+  }
+  .canvas-toolbar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 11px;
+  }
+  .canvas-toolbar .tab {
+    padding: 4px 10px; border-radius: 3px; cursor: pointer;
+    color: var(--text-dim); transition: all 0.15s;
+  }
+  .canvas-toolbar .tab.active { background: #18181c; color: var(--accent); }
+  .canvas-toolbar .tab:hover:not(.active) { color: var(--text); }
+
+  .canvas-container {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    padding: 16px; position: relative; overflow: auto;
+  }
+  .canvas-container canvas { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+  .drop-zone {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer; border: 1px dashed var(--border); margin: 16px; border-radius: 4px;
+    transition: border-color 0.2s; gap: 8px;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color: var(--green); }
+  .drop-zone .label { color: var(--text-dim); font-size: 11px; }
+  .drop-zone .sublabel { color: var(--text-dim); font-size: 10px; opacity: 0.6; }
+
+  .controls { display: flex; flex-direction: column; gap: 2px; max-height: calc(100vh - 80px); overflow-y: auto; }
+  .controls::-webkit-scrollbar { width: 4px; }
+  .controls::-webkit-scrollbar-track { background: transparent; }
+  .controls::-webkit-scrollbar-thumb { background: #1a1a1e; border-radius: 2px; }
+
+  .control-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; overflow: visible;
+  }
+  .control-section + .control-section { margin-top: 2px; }
+
+  .section-header {
+    padding: 8px 12px; font-size: 10px; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+    border-radius: 4px 4px 0 0;
+    background: #0e0e10;
+  }
+  .section-header .reset-btn {
+    cursor: pointer; color: var(--text-dim); opacity: 0.5;
+    transition: opacity 0.15s; font-size: 10px;
+  }
+  .section-header .reset-btn:hover { opacity: 1; }
+
+  .control-group { padding: 10px 12px 14px; }
+  .control-group + .control-group { border-top: 1px solid var(--border); }
+
+  .control-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .control-row label { font-size: 11px; color: var(--text); }
+  .control-row .value { font-size: 10px; color: var(--green); min-width: 32px; text-align: right; }
+
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 3px;
+    background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px;
+    background: var(--green); border-radius: 50%; cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px; background: var(--green);
+    border-radius: 50%; border: none; cursor: pointer;
+  }
+
+  .preset-row { display: flex; gap: 4px; flex-wrap: wrap; padding: 10px 12px; }
+  .preset-btn {
+    font-family: inherit; font-size: 10px; padding: 4px 8px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-dim); border-radius: 3px; cursor: pointer; transition: all 0.15s;
+  }
+  .preset-btn:hover { border-color: var(--text-dim); color: var(--text); }
+  .preset-btn.active { border-color: var(--green); color: var(--accent); background: rgba(90, 122, 58, 0.15); }
+
+  .action-row { padding: 10px 12px; display: flex; gap: 6px; }
+  .action-btn {
+    flex: 1; font-family: inherit; font-size: 11px; padding: 8px 12px;
+    background: var(--green); border: none; color: #fff;
+    border-radius: 3px; cursor: pointer; transition: opacity 0.15s; font-weight: 500;
+  }
+  .action-btn:hover { opacity: 0.85; }
+  .action-btn:disabled { opacity: 0.3; cursor: default; }
+  .action-btn.secondary { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+  .action-btn.secondary:hover { border-color: var(--text-dim); color: var(--text); opacity: 1; }
+
+  .processing-info {
+    padding: 8px 12px; font-size: 10px; color: var(--text-dim);
+    border-top: 1px solid var(--border); text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .workspace { grid-template-columns: 1fr; }
+    .canvas-area { min-height: 350px; }
+    .controls { max-height: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="header-left">
+      <a href="../index.html" class="back-link">← toolbox/</a>
+      <h1>photocopy-filter</h1>
+    </div>
+    <span>v0.3 — hybrid grain</span>
+  </header>
+
+  <div class="workspace">
+    <div class="canvas-area">
+      <div class="canvas-toolbar">
+        <div class="tab active" data-view="result">resultado</div>
+        <div class="tab" data-view="original">original</div>
+        <div class="tab" data-view="split">split</div>
+      </div>
+      <div class="canvas-container" id="canvasContainer">
+        <div class="drop-zone" id="dropZone">
+          <span class="label">arrastra una imagen o haz clic</span>
+          <span class="sublabel">PNG, JPG — cualquier tamaño</span>
+        </div>
+        <canvas id="outputCanvas" style="display:none;"></canvas>
+      </div>
+    </div>
+
+    <div class="controls">
+      <!-- Presets -->
+      <div class="control-section">
+        <div class="section-header">Presets</div>
+        <div class="preset-row">
+          <button class="preset-btn active" data-preset="xerox90s">Xerox 90s</button>
+          <button class="preset-btn" data-preset="hardCopy">Hard copy</button>
+          <button class="preset-btn" data-preset="risograph">Riso-ish</button>
+          <button class="preset-btn" data-preset="degraded">Degraded</button>
+          <button class="preset-btn" data-preset="halftone">Halftone</button>
+        </div>
+      </div>
+
+      <!-- Threshold -->
+      <div class="control-section">
+        <div class="section-header">Threshold <span class="reset-btn" data-reset="threshold">reset</span></div>
+        <div class="control-group">
+          <div class="control-row"><label>Level</label><span class="value" id="thresholdVal">128</span></div>
+          <input type="range" id="threshold" min="0" max="255" value="128">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Softness</label><span class="value" id="softnessVal">12</span></div>
+          <input type="range" id="softness" min="0" max="60" value="12">
+        </div>
+      </div>
+
+      <!-- Pre-processing -->
+      <div class="control-section">
+        <div class="section-header">Pre-process <span class="reset-btn" data-reset="preprocess">reset</span></div>
+        <div class="control-group">
+          <div class="control-row"><label>Pre-blur</label><span class="value" id="preBlurVal">1.2</span></div>
+          <input type="range" id="preBlur" min="0" max="50" value="12">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Contrast</label><span class="value" id="contrastVal">20</span></div>
+          <input type="range" id="contrast" min="-100" max="100" value="20">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Brightness</label><span class="value" id="brightnessVal">0</span></div>
+          <input type="range" id="brightness" min="-100" max="100" value="0">
+        </div>
+      </div>
+
+      <!-- Grain -->
+      <div class="control-section">
+        <div class="section-header">Grain <span class="reset-btn" data-reset="texture">reset</span></div>
+        <div class="control-group">
+          <div class="control-row"><label>Amount</label><span class="value" id="grainVal">25</span></div>
+          <input type="range" id="grain" min="0" max="100" value="25">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Organic ↔ Raw</label><span class="value" id="organicVal">40</span></div>
+          <input type="range" id="organic" min="0" max="100" value="40">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Cluster scale</label><span class="value" id="clusterVal">25</span></div>
+          <input type="range" id="cluster" min="4" max="80" value="25">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Paper fiber</label><span class="value" id="fiberVal">15</span></div>
+          <input type="range" id="fiber" min="0" max="100" value="15">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Edge roughness</label><span class="value" id="edgeRoughVal">18</span></div>
+          <input type="range" id="edgeRough" min="0" max="60" value="18">
+        </div>
+      </div>
+
+      <!-- Halftone -->
+      <div class="control-section">
+        <div class="section-header">Halftone <span class="reset-btn" data-reset="halftone">reset</span></div>
+        <div class="control-group">
+          <div class="control-row"><label>Mix</label><span class="value" id="halftoneVal">0%</span></div>
+          <input type="range" id="halftoneMix" min="0" max="100" value="0">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Dot size</label><span class="value" id="halftoneSizeVal">4</span></div>
+          <input type="range" id="halftoneSize" min="2" max="12" value="4">
+        </div>
+        <div class="control-group">
+          <div class="control-row"><label>Angle</label><span class="value" id="halftoneAngleVal">45°</span></div>
+          <input type="range" id="halftoneAngle" min="0" max="90" value="45">
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="control-section">
+        <div class="action-row">
+          <button class="action-btn secondary" id="btnLoadImage">cargar</button>
+          <button class="action-btn" id="btnDownload" disabled>descargar</button>
+        </div>
+        <div class="processing-info" id="processingInfo">sin imagen</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" style="display:none;">
+
+<script>
+// ============================================================
+// PERLIN NOISE (used for spatial probability, not direct grain)
+// ============================================================
+class PerlinNoise {
+  constructor(seed) {
+    this.perm = new Uint8Array(512);
+    this.grad = [[1,1],[-1,1],[1,-1],[-1,-1],[1,0],[-1,0],[0,1],[0,-1]];
+    const p = new Uint8Array(256);
+    for (let i = 0; i < 256; i++) p[i] = i;
+    let s = seed || 0;
+    for (let i = 255; i > 0; i--) {
+      s = (s * 16807) % 2147483647;
+      const j = s % (i + 1);
+      [p[i], p[j]] = [p[j], p[i]];
+    }
+    for (let i = 0; i < 512; i++) this.perm[i] = p[i & 255];
+  }
+  fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+  dot2(gi, x, y) { const g = this.grad[gi % 8]; return g[0]*x + g[1]*y; }
+  lerp(a, b, t) { return a + t * (b - a); }
+  noise2D(x, y) {
+    const X = Math.floor(x) & 255, Y = Math.floor(y) & 255;
+    const xf = x - Math.floor(x), yf = y - Math.floor(y);
+    const u = this.fade(xf), v = this.fade(yf);
+    const aa = this.perm[this.perm[X]+Y], ab = this.perm[this.perm[X]+Y+1];
+    const ba = this.perm[this.perm[X+1]+Y], bb = this.perm[this.perm[X+1]+Y+1];
+    return this.lerp(
+      this.lerp(this.dot2(aa,xf,yf), this.dot2(ba,xf-1,yf), u),
+      this.lerp(this.dot2(ab,xf,yf-1), this.dot2(bb,xf-1,yf-1), u), v
+    );
+  }
+  fbm(x, y, oct, lac, gain) {
+    let sum=0, amp=1, freq=1, mx=0;
+    for (let i=0; i<oct; i++) { sum += this.noise2D(x*freq, y*freq)*amp; mx+=amp; amp*=gain; freq*=lac; }
+    return sum/mx;
+  }
+}
+
+const pnCluster = new PerlinNoise(42);
+const pnFiber  = new PerlinNoise(137);
+const pnEdge   = new PerlinNoise(777);
+const pnDensity = new PerlinNoise(2023);
+
+// ============================================================
+// STATE
+// ============================================================
+const state = { sourceImage:null, width:0, height:0, view:'result', processing:false };
+const outputCanvas = document.getElementById('outputCanvas');
+const ctx = outputCanvas.getContext('2d', { willReadFrequently: true });
+let srcCanvas, srcCtx, workCanvas, workCtx, htCanvas, htCtx;
+
+function initOffscreen(w, h) {
+  srcCanvas = document.createElement('canvas'); srcCanvas.width=w; srcCanvas.height=h;
+  srcCtx = srcCanvas.getContext('2d', { willReadFrequently: true });
+  workCanvas = document.createElement('canvas'); workCanvas.width=w; workCanvas.height=h;
+  workCtx = workCanvas.getContext('2d', { willReadFrequently: true });
+  htCanvas = document.createElement('canvas'); htCanvas.width=w; htCanvas.height=h;
+  htCtx = htCanvas.getContext('2d', { willReadFrequently: true });
+}
+
+function getParams() {
+  return {
+    threshold: +document.getElementById('threshold').value,
+    softness: +document.getElementById('softness').value,
+    preBlur: +document.getElementById('preBlur').value / 10,
+    contrast: +document.getElementById('contrast').value,
+    brightness: +document.getElementById('brightness').value,
+    grain: +document.getElementById('grain').value,
+    organic: +document.getElementById('organic').value,     // 0=pure random, 100=pure perlin
+    cluster: +document.getElementById('cluster').value,
+    fiber: +document.getElementById('fiber').value,
+    edgeRough: +document.getElementById('edgeRough').value,
+    halftoneMix: +document.getElementById('halftoneMix').value / 100,
+    halftoneSize: +document.getElementById('halftoneSize').value,
+    halftoneAngle: +document.getElementById('halftoneAngle').value,
+  };
+}
+
+// ============================================================
+// PROCESSING
+// ============================================================
+function processImage() {
+  if (!state.sourceImage || state.processing) return;
+  state.processing = true;
+  const p = getParams(), w = state.width, h = state.height;
+
+  // Step 1: Source
+  workCtx.drawImage(state.sourceImage, 0, 0, w, h);
+
+  // Step 2: Pre-blur
+  if (p.preBlur > 0) {
+    srcCtx.clearRect(0, 0, w, h);
+    srcCtx.filter = `blur(${p.preBlur}px)`;
+    srcCtx.drawImage(workCanvas, 0, 0);
+    srcCtx.filter = 'none';
+    workCtx.drawImage(srcCanvas, 0, 0);
+  }
+
+  // Step 3: Grayscale + contrast + brightness
+  let imgData = workCtx.getImageData(0, 0, w, h);
+  let px = imgData.data;
+  const cf = (259*(p.contrast+255))/(255*(259-p.contrast));
+  for (let i=0; i<px.length; i+=4) {
+    let g = 0.299*px[i] + 0.587*px[i+1] + 0.114*px[i+2];
+    g = cf * (g + p.brightness*1.5 - 128) + 128;
+    px[i] = px[i+1] = px[i+2] = Math.max(0, Math.min(255, g));
+  }
+  workCtx.putImageData(imgData, 0, 0);
+
+  // Step 4: Edge roughness — hybrid: Perlin shape + random bite
+  if (p.edgeRough > 0) {
+    imgData = workCtx.getImageData(0, 0, w, h);
+    px = imgData.data;
+    const rAmt = p.edgeRough * 1.0;
+    for (let y=0; y<h; y++) {
+      for (let x=0; x<w; x++) {
+        const i = (y*w+x)*4;
+        const v = px[i];
+        const dist = Math.abs(v - p.threshold);
+        if (dist < 65) {
+          const influence = 1 - dist/65;
+          // Perlin gives the contour shape, random adds bite
+          const perlinPart = pnEdge.fbm(x*0.018, y*0.018, 2, 2.2, 0.5);
+          const randomPart = (Math.random() - 0.5);
+          const mixed = perlinPart * 0.65 + randomPart * 0.35;
+          const nv = v + mixed * rAmt * influence;
+          px[i] = px[i+1] = px[i+2] = Math.max(0, Math.min(255, nv));
+        }
+      }
+    }
+    workCtx.putImageData(imgData, 0, 0);
+  }
+
+  // Step 5: Threshold
+  imgData = workCtx.getImageData(0, 0, w, h);
+  px = imgData.data;
+  if (p.softness === 0) {
+    for (let i=0; i<px.length; i+=4)
+      px[i] = px[i+1] = px[i+2] = px[i] >= p.threshold ? 255 : 0;
+  } else {
+    for (let i=0; i<px.length; i+=4) {
+      const sig = 1/(1+Math.exp((-(px[i]-p.threshold)/p.softness)*3));
+      px[i] = px[i+1] = px[i+2] = Math.max(0, Math.min(255, sig*255));
+    }
+  }
+  workCtx.putImageData(imgData, 0, 0);
+
+  // ================================================================
+  // Step 6: HYBRID GRAIN — Perlin probability × random particles
+  // ================================================================
+  // Strategy:
+  //   - Perlin noise generates a "probability field" (where grain clusters)
+  //   - Math.random() decides individual particle placement
+  //   - The `organic` slider blends between pure random (v0.1 feel)
+  //     and Perlin-modulated (v0.2 feel)
+  //   - Result: organic spatial distribution with sharp individual specks
+  // ================================================================
+  if (p.grain > 0) {
+    imgData = workCtx.getImageData(0, 0, w, h);
+    px = imgData.data;
+
+    const grainAmt = p.grain / 100;
+    const organicMix = p.organic / 100;  // 0 = pure random, 1 = pure perlin
+    const clusterFreq = 1 / Math.max(4, p.cluster);
+    const fiberAmt = p.fiber / 100;
+
+    for (let y=0; y<h; y++) {
+      for (let x=0; x<w; x++) {
+        const i = (y*w+x)*4;
+        const v = px[i];
+
+        // --- Perlin probability field ---
+        // This doesn't directly modify the pixel; it modulates the
+        // CHANCE that a random particle will appear here
+        const clusterField = pnCluster.fbm(x*clusterFreq, y*clusterFreq, 3, 2.0, 0.45);
+        // Map from [-1,1] to [0,1] probability boost
+        const clusterProb = (clusterField + 1) * 0.5;
+
+        // --- Fiber field (anisotropic, subtle) ---
+        let fiberMod = 0;
+        if (fiberAmt > 0) {
+          // Slight horizontal elongation (paper grain direction ~5°)
+          const rx = x * 0.012 + y * 0.001;
+          const ry = y * 0.003;
+          fiberMod = pnFiber.noise2D(rx, ry) * fiberAmt * 0.3;
+        }
+
+        // --- Density field (very low freq macro variation) ---
+        const densityMod = pnDensity.noise2D(x*0.002, y*0.002) * 0.15;
+
+        // --- Combined probability modifier ---
+        // At organic=0: probability is flat (pure random, like v0.1)
+        // At organic=100: probability shaped entirely by Perlin
+        const probField = organicMix * (clusterProb + fiberMod + densityMod) +
+                          (1 - organicMix) * 0.5;
+
+        // --- Generate grain based on zone ---
+        const rawRoll = Math.random();  // the actual particle roll
+
+        if (v < 10) {
+          // BLACK ZONE: white specks (toner miss)
+          // Base chance scales with grain amount
+          const baseChance = 0.02 + grainAmt * 0.04;
+          // Perlin modulates WHERE these cluster
+          const finalChance = baseChance * (0.3 + probField * 1.4);
+          if (rawRoll < finalChance) {
+            px[i] = px[i+1] = px[i+2] = 255;
+          }
+        } else if (v > 245) {
+          // WHITE ZONE: dark specks (stray toner)
+          const baseChance = 0.025 + grainAmt * 0.05;
+          const finalChance = baseChance * (0.3 + (1 - probField) * 1.4);
+          if (rawRoll < finalChance) {
+            px[i] = px[i+1] = px[i+2] = 0;
+          }
+        } else {
+          // MIDTONE / EDGE ZONE: the richest grain area
+          // Random noise (sharp) + Perlin bias (organic placement)
+          const randomNoise = (Math.random() - 0.5) * grainAmt * 60;
+          const perlinBias = (clusterField + fiberMod) * grainAmt * 50;
+          const noise = randomNoise * (1 - organicMix * 0.6) + perlinBias * organicMix;
+
+          let nv = v + noise;
+          // Push toward binary but keep some grit
+          if (nv > 155) nv = Math.min(255, nv + 35);
+          else if (nv < 100) nv = Math.max(0, nv - 35);
+          px[i] = px[i+1] = px[i+2] = Math.max(0, Math.min(255, nv));
+        }
+      }
+    }
+    workCtx.putImageData(imgData, 0, 0);
+
+    // --- Light cluster merge (only if organic > 50%) ---
+    // Much gentler than v0.2: minimal blur just to connect
+    // adjacent particles without smoothing them into blobs
+    if (organicMix > 0.5) {
+      const mergeRadius = 0.2 + (organicMix - 0.5) * 0.6; // 0.2 to 0.5px
+      srcCtx.clearRect(0, 0, w, h);
+      srcCtx.filter = `blur(${mergeRadius}px)`;
+      srcCtx.drawImage(workCanvas, 0, 0);
+      srcCtx.filter = 'none';
+      workCtx.drawImage(srcCanvas, 0, 0);
+
+      // Sharp re-threshold to keep crispness
+      imgData = workCtx.getImageData(0, 0, w, h);
+      px = imgData.data;
+      for (let i=0; i<px.length; i+=4) {
+        px[i] = px[i+1] = px[i+2] = px[i] > 128 ? 255 : 0;
+      }
+      workCtx.putImageData(imgData, 0, 0);
+    }
+  }
+
+  // Step 7: Halftone
+  if (p.halftoneMix > 0) {
+    generateHalftone(p);
+    const rd = workCtx.getImageData(0,0,w,h);
+    const hd = htCtx.getImageData(0,0,w,h);
+    const rp=rd.data, hp=hd.data, mix=p.halftoneMix, inv=1-mix;
+    for (let i=0; i<rp.length; i+=4)
+      rp[i]=rp[i+1]=rp[i+2]=(rp[i]*inv+hp[i]*mix)>128?255:0;
+    workCtx.putImageData(rd,0,0);
+  }
+
+  renderOutput();
+  state.processing = false;
+}
+
+function generateHalftone(p) {
+  const w=state.width, h=state.height;
+  srcCtx.clearRect(0,0,w,h);
+  srcCtx.filter = p.preBlur>0 ? `blur(${p.preBlur}px)` : 'none';
+  srcCtx.drawImage(state.sourceImage,0,0,w,h);
+  srcCtx.filter='none';
+  const sp=srcCtx.getImageData(0,0,w,h).data;
+  htCtx.fillStyle='#fff'; htCtx.fillRect(0,0,w,h); htCtx.fillStyle='#000';
+  const sz=p.halftoneSize;
+  for (let gy=-sz; gy<h+sz; gy+=sz) {
+    for (let gx=-sz; gx<w+sz; gx+=sz) {
+      const sx=Math.max(0,Math.min(w-1,Math.round(gx)));
+      const sy=Math.max(0,Math.min(h-1,Math.round(gy)));
+      const idx=(sy*w+sx)*4;
+      const b=(sp[idx]*0.299+sp[idx+1]*0.587+sp[idx+2]*0.114)/255;
+      const r=(1-b)*sz*0.55;
+      if(r>0.3){htCtx.beginPath();htCtx.arc(gx,gy,r,0,Math.PI*2);htCtx.fill();}
+    }
+  }
+}
+
+function renderOutput() {
+  const w=state.width, h=state.height;
+  outputCanvas.width=w; outputCanvas.height=h;
+  if (state.view==='original') { ctx.drawImage(state.sourceImage,0,0,w,h); }
+  else if (state.view==='split') {
+    const half=Math.floor(w/2);
+    ctx.drawImage(state.sourceImage,0,0,half,h,0,0,half,h);
+    ctx.drawImage(workCanvas,half,0,w-half,h,half,0,w-half,h);
+    ctx.strokeStyle='#ff0000';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(half,0);ctx.lineTo(half,h);ctx.stroke();
+  } else { ctx.drawImage(workCanvas,0,0); }
+}
+
+// ============================================================
+// IMAGE LOADING
+// ============================================================
+function loadImage(file) {
+  if (!file||!file.type.startsWith('image/')) return;
+  const reader=new FileReader();
+  reader.onload=(e)=>{
+    const img=new Image();
+    img.onload=()=>{
+      const mx=2000; let w=img.width,h=img.height;
+      if(w>mx||h>mx){const s=mx/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+      state.sourceImage=img; state.width=w; state.height=h;
+      initOffscreen(w,h);
+      document.getElementById('dropZone').style.display='none';
+      outputCanvas.style.display='block';
+      document.getElementById('btnDownload').disabled=false;
+      document.getElementById('processingInfo').textContent=`${w}×${h}px`;
+      processImage();
+    };
+    img.src=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ============================================================
+// PRESETS
+// ============================================================
+const presets = {
+  xerox90s:  { threshold:128, softness:12, preBlur:12, contrast:20,  brightness:0,   grain:25, organic:40, cluster:25, fiber:15, edgeRough:18, halftoneMix:0,  halftoneSize:4, halftoneAngle:45 },
+  hardCopy:  { threshold:118, softness:3,  preBlur:6,  contrast:50,  brightness:5,   grain:12, organic:30, cluster:18, fiber:8,  edgeRough:10, halftoneMix:0,  halftoneSize:4, halftoneAngle:45 },
+  risograph: { threshold:135, softness:22, preBlur:15, contrast:10,  brightness:5,   grain:40, organic:55, cluster:35, fiber:30, edgeRough:22, halftoneMix:15, halftoneSize:3, halftoneAngle:45 },
+  degraded:  { threshold:140, softness:30, preBlur:25, contrast:5,   brightness:-10, grain:55, organic:50, cluster:45, fiber:40, edgeRough:38, halftoneMix:0,  halftoneSize:4, halftoneAngle:45 },
+  halftone:  { threshold:128, softness:8,  preBlur:8,  contrast:25,  brightness:0,   grain:10, organic:35, cluster:20, fiber:10, edgeRough:8,  halftoneMix:80, halftoneSize:5, halftoneAngle:30 }
+};
+
+function applyPreset(name) {
+  const p=presets[name]; if(!p) return;
+  Object.keys(p).forEach(k=>{const el=document.getElementById(k);if(el)el.value=p[k];});
+  updateAllDisplays(); processImage();
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`[data-preset="${name}"]`)?.classList.add('active');
+}
+
+// ============================================================
+// UI
+// ============================================================
+function updateAllDisplays() {
+  document.getElementById('thresholdVal').textContent = document.getElementById('threshold').value;
+  document.getElementById('softnessVal').textContent = document.getElementById('softness').value;
+  document.getElementById('preBlurVal').textContent = (+document.getElementById('preBlur').value/10).toFixed(1);
+  document.getElementById('contrastVal').textContent = document.getElementById('contrast').value;
+  document.getElementById('brightnessVal').textContent = document.getElementById('brightness').value;
+  document.getElementById('grainVal').textContent = document.getElementById('grain').value;
+  document.getElementById('organicVal').textContent = document.getElementById('organic').value;
+  document.getElementById('clusterVal').textContent = document.getElementById('cluster').value;
+  document.getElementById('fiberVal').textContent = document.getElementById('fiber').value;
+  document.getElementById('edgeRoughVal').textContent = document.getElementById('edgeRough').value;
+  document.getElementById('halftoneVal').textContent = document.getElementById('halftoneMix').value+'%';
+  document.getElementById('halftoneSizeVal').textContent = document.getElementById('halftoneSize').value;
+  document.getElementById('halftoneAngleVal').textContent = document.getElementById('halftoneAngle').value+'°';
+}
+
+let pt;
+function scheduleProcess(){clearTimeout(pt);pt=setTimeout(processImage,40);}
+
+document.querySelectorAll('input[type="range"]').forEach(input=>{
+  input.addEventListener('input',()=>{
+    updateAllDisplays();
+    document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('active'));
+    scheduleProcess();
+  });
+});
+
+document.querySelectorAll('.canvas-toolbar .tab').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.canvas-toolbar .tab').forEach(t=>t.classList.remove('active'));
+    tab.classList.add('active'); state.view=tab.dataset.view;
+    if(state.sourceImage) renderOutput();
+  });
+});
+
+document.querySelectorAll('.preset-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>applyPreset(btn.dataset.preset));
+});
+
+const fileInput=document.getElementById('fileInput');
+document.getElementById('btnLoadImage').addEventListener('click',()=>fileInput.click());
+document.getElementById('dropZone').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>{if(e.target.files[0])loadImage(e.target.files[0]);});
+
+const cc=document.getElementById('canvasContainer');
+['dragenter','dragover'].forEach(e=>cc.addEventListener(e,ev=>{ev.preventDefault();document.getElementById('dropZone').classList.add('dragover');}));
+['dragleave','drop'].forEach(e=>cc.addEventListener(e,ev=>{ev.preventDefault();document.getElementById('dropZone').classList.remove('dragover');}));
+cc.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)loadImage(f);});
+
+document.getElementById('btnDownload').addEventListener('click',()=>{
+  if(!state.sourceImage)return;
+  const a=document.createElement('a');a.download='photocopy-filter.png';a.href=outputCanvas.toDataURL('image/png');a.click();
+});
+
+document.querySelectorAll('.reset-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const d=presets.xerox90s;
+    const g={threshold:['threshold','softness'],preprocess:['preBlur','contrast','brightness'],
+      texture:['grain','organic','cluster','fiber','edgeRough'],
+      halftone:['halftoneMix','halftoneSize','halftoneAngle']};
+    (g[btn.dataset.reset]||[]).forEach(k=>{const el=document.getElementById(k);if(el&&d[k]!==undefined)el.value=d[k];});
+    updateAllDisplays();scheduleProcess();
+  });
+});
+
+updateAllDisplays();
+</script>
+</body>
+</html>
