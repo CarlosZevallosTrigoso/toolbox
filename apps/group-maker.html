@@ -10,7 +10,7 @@
   body {
     font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
     background: #0a0a0b;
-    color: #999;
+    color: #bbb;
     min-height: 100vh;
     padding: 2.5rem 2.5rem 4rem;
     font-size: 0.88rem;
@@ -26,17 +26,17 @@
 
   .back-link {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #444;
+    color: #777;
     text-decoration: none;
     font-size: 0.82rem;
   }
-  .back-link:hover { color: #888; }
+  .back-link:hover { color: #bbb; }
 
   h1 {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.88rem;
     font-weight: normal;
-    color: #555;
+    color: #888;
   }
 
   /* ===== OUTPUT ZONE ===== */
@@ -50,9 +50,9 @@
     align-items: center;
     justify-content: center;
     min-height: 220px;
-    border: 1px dashed #1a1a1e;
+    border: 1px dashed #333;
     border-radius: 6px;
-    color: #2a2a2e;
+    color: #555;
     font-size: 0.88rem;
   }
 
@@ -61,7 +61,7 @@
     display: none;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.78rem;
-    color: #444;
+    color: #777;
     background: #08080a;
     border: 1px solid #141416;
     border-radius: 4px;
@@ -81,11 +81,11 @@
     transition: opacity 0.15s;
   }
   .ccol-right { text-align: right; }
-  .console-bar .cdim { color: #333; }
-  .console-bar .cname { color: #999; }
-  .console-bar .cgroup { color: #5a7a3a; }
-  .console-bar .cshuffle { color: #5580aa; }
-  .console-bar .cmerge { color: #b08a3a; }
+  .console-bar .cdim { color: #777; }
+  .console-bar .cname { color: #ddd; }
+  .console-bar .cgroup { color: #7da252; }
+  .console-bar .cshuffle { color: #72a0cc; }
+  .console-bar .cmerge { color: #d4a94e; }
 
   /* Name pool */
   .pool {
@@ -99,7 +99,7 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #333;
+    color: #666;
     margin-bottom: 0.6rem;
   }
 
@@ -112,7 +112,7 @@
   .pool-tag {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.78rem;
-    color: #999;
+    color: #bbb;
     background: #141416;
     border: 1px solid #1e1e22;
     border-radius: 4px;
@@ -122,8 +122,8 @@
   .pool-tag.picked {
     opacity: 0;
     transform: scale(0.8) translateY(-6px);
-    border-color: #5a7a3a;
-    color: #5a7a3a;
+    border-color: #7da252;
+    color: #7da252;
   }
 
   /* Groups area */
@@ -140,7 +140,7 @@
   .groups-title {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.82rem;
-    color: #555;
+    color: #888;
   }
 
   .groups-actions { display: flex; gap: 0.5rem; }
@@ -148,7 +148,7 @@
   .btn-small {
     background: none;
     border: 1px solid #222225;
-    color: #555;
+    color: #888;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.75rem;
     padding: 0.3rem 0.7rem;
@@ -156,7 +156,7 @@
     border-radius: 3px;
     transition: all 0.15s;
   }
-  .btn-small:hover { border-color: #5a7a3a; color: #5a7a3a; }
+  .btn-small:hover { border-color: #7da252; color: #7da252; }
 
   .groups-box {
     background: #111113;
@@ -166,11 +166,11 @@
     cursor: pointer;
     transition: border-color 0.2s;
   }
-  .groups-box:hover { border-color: #333; }
+  .groups-box:hover { border-color: #666; }
   .groups-box-hint {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.72rem;
-    color: #2a2a2e;
+    color: #555;
     text-align: right;
     margin-top: 1rem;
   }
@@ -188,12 +188,12 @@
     padding: 1rem 1.15rem;
     transition: border-color 0.15s;
   }
-  .group-card:hover { border-color: #2a2a2e; }
+  .group-card:hover { border-color: #555; }
 
   .group-title {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.72rem;
-    color: #5a7a3a;
+    color: #7da252;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.6rem;
@@ -203,7 +203,7 @@
     justify-content: space-between;
     align-items: center;
   }
-  .group-title .member-count { color: #333; font-size: 0.72rem; }
+  .group-title .member-count { color: #666; font-size: 0.72rem; }
 
   .group-name-input {
     background: none;
@@ -211,7 +211,7 @@
     border-bottom: 1px solid transparent;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.72rem;
-    color: #5a7a3a;
+    color: #7da252;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     outline: none;
@@ -221,15 +221,15 @@
     max-width: 160px;
     transition: border-color 0.15s;
   }
-  .group-name-input:hover { border-bottom-color: #333; }
+  .group-name-input:hover { border-bottom-color: #666; }
   .group-name-input:focus {
-    border-bottom-color: #5a7a3a;
-    color: #7a9a5a;
+    border-bottom-color: #7da252;
+    color: #9abf74;
   }
 
   .group-member {
     font-size: 0.88rem;
-    color: #ccc;
+    color: #ddd;
     padding: 0.25rem 0;
     opacity: 0;
     transform: translateY(4px);
@@ -270,12 +270,12 @@
     text-overflow: ellipsis;
   }
   .full-log .flog-line .fcol-right { text-align: right; }
-  .full-log .fdim { color: #2a2a2e; }
-  .full-log .fname { color: #666; }
-  .full-log .fgroup { color: #3d5a28; }
-  .full-log .fshuffle { color: #3a5570; }
-  .full-log .fmerge { color: #6b5525; }
-  .full-log .fdone { color: #3d5a28; }
+  .full-log .fdim { color: #666; }
+  .full-log .fname { color: #999; }
+  .full-log .fgroup { color: #7da252; }
+  .full-log .fshuffle { color: #72a0cc; }
+  .full-log .fmerge { color: #d4a94e; }
+  .full-log .fdone { color: #7da252; }
   .full-log .flog-sep {
     border: none;
     border-top: 1px solid #111113;
@@ -294,7 +294,7 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #2a2a2e;
+    color: #555;
   }
 
   /* ===== INPUT ZONE ===== */
@@ -319,7 +319,7 @@
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #444;
+    color: #777;
     margin-bottom: 0.4rem;
   }
 
@@ -329,7 +329,7 @@
     background: #111113;
     border: 1px solid #1e1e22;
     border-radius: 4px;
-    color: #ccc;
+    color: #ddd;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.82rem;
     padding: 0.8rem 1rem;
@@ -338,8 +338,8 @@
     line-height: 1.6;
     outline: none;
   }
-  textarea:focus { border-color: #5a7a3a; }
-  textarea::placeholder { color: #282828; }
+  textarea:focus { border-color: #7da252; }
+  textarea::placeholder { color: #444; }
 
   .input-right {
     display: flex;
@@ -369,21 +369,21 @@
     font-family: inherit;
     font-size: 0.75rem;
     font-weight: 500;
-    color: #444;
+    color: #777;
     cursor: pointer;
     padding: 0.5rem 0.6rem;
     transition: all 0.15s;
     text-align: center;
   }
   .mode-tab + .mode-tab { border-left: 1px solid #1e1e22; }
-  .mode-tab.active { color: #ccc; background: #18181c; }
+  .mode-tab.active { color: #ddd; background: #18181c; }
   .mode-tab:hover:not(.active) { color: #888; background: #141416; }
 
   input[type="number"] {
     background: #111113;
     border: 1px solid #1e1e22;
     border-radius: 4px;
-    color: #ccc;
+    color: #ddd;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.85rem;
     padding: 0.55rem 0.7rem;
@@ -391,12 +391,12 @@
     width: 100%;
     transition: border-color 0.2s;
   }
-  input[type="number"]:focus { border-color: #5a7a3a; }
+  input[type="number"]:focus { border-color: #7da252; }
 
   .name-count {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.78rem;
-    color: #333;
+    color: #666;
     margin-top: 0.3rem;
   }
 
@@ -435,8 +435,84 @@
   .toggle input:checked ~ .toggle-knob { left: 19px; background: #e8e8ec; }
   .toggle-label {
     font-size: 0.82rem;
-    color: #555;
+    color: #888;
     cursor: pointer;
+  }
+
+  /* Algorithm selector */
+  .algo-select {
+    background: #111113;
+    border: 1px solid #1e1e22;
+    border-radius: 4px;
+    color: #ddd;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.78rem;
+    padding: 0.5rem 0.7rem;
+    outline: none;
+    width: 100%;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23444'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    padding-right: 2rem;
+  }
+  .algo-select:focus { border-color: #7da252; }
+  .algo-select option { background: #111113; color: #ddd; }
+
+  .algo-wrap {
+    position: relative;
+  }
+
+  .algo-desc {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.7rem;
+    line-height: 1.65;
+    color: #999;
+    background: #141416;
+    border: 1px solid #222225;
+    border-radius: 5px;
+    padding: 0.7rem 0.85rem;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 10;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+  }
+  .algo-desc::after {
+    content: '';
+    position: absolute;
+    bottom: -5px;
+    left: 20px;
+    width: 8px;
+    height: 8px;
+    background: #141416;
+    border-right: 1px solid #222225;
+    border-bottom: 1px solid #222225;
+    transform: rotate(45deg);
+  }
+  .algo-wrap:hover .algo-desc,
+  .algo-select:focus ~ .algo-desc {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .algo-desc .algo-tag {
+    display: inline-block;
+    font-size: 0.62rem;
+    color: #7da252;
+    border: 1px solid #4a6a3a;
+    border-radius: 2px;
+    padding: 0.1rem 0.35rem;
+    margin-right: 0.3rem;
+    margin-bottom: 0.3rem;
+    vertical-align: middle;
   }
 
   /* Actions */
@@ -463,7 +539,7 @@
   .btn-secondary {
     background: none;
     border: 1px solid #1e1e22;
-    color: #555;
+    color: #888;
     font-family: inherit;
     font-size: 0.84rem;
     padding: 0.6rem 1rem;
@@ -471,7 +547,7 @@
     border-radius: 4px;
     transition: all 0.15s;
   }
-  .btn-secondary:hover { border-color: #333; color: #999; }
+  .btn-secondary:hover { border-color: #666; color: #bbb; }
 
   /* Lightbox */
   .lightbox {
@@ -511,18 +587,18 @@
   .lightbox-title {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.92rem;
-    color: #555;
+    color: #888;
   }
   .lightbox-close {
     background: none;
     border: none;
-    color: #444;
+    color: #777;
     font-size: 1.2rem;
     cursor: pointer;
     padding: 0.25rem;
     transition: color 0.15s;
   }
-  .lightbox-close:hover { color: #ccc; }
+  .lightbox-close:hover { color: #ddd; }
 
   .lightbox .groups-grid {
     grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
@@ -617,6 +693,19 @@
         </label>
         <span class="toggle-label" onclick="document.getElementById('verboseToggle').click()">verbose</span>
       </div>
+      <div class="control-group">
+        <label>algoritmo</label>
+        <div class="algo-wrap">
+          <select class="algo-select" id="algoSelect" onchange="showAlgoDesc()">
+            <option value="fisher-yates">Fisher-Yates shuffle</option>
+            <option value="random-bucket">Random bucket</option>
+            <option value="sort-random-key">Sort by random key</option>
+            <option value="round-robin">Round-robin pick</option>
+            <option value="csprng">Fisher-Yates CSPRNG</option>
+          </select>
+          <div class="algo-desc" id="algoDesc"></div>
+        </div>
+      </div>
       <div class="actions">
         <button class="btn-primary" id="btnGenerate" onclick="generate()">generar</button>
         <button class="btn-secondary" onclick="shuffle()">↻</button>
@@ -645,6 +734,75 @@ let isRunning = false;
 let logEntries = [];
 let logMeta = {};
 let currentMode = 'size'; // 'size' = by members, 'count' = by number of groups
+let currentAlgo = 'fisher-yates';
+
+const algoInfo = {
+  'fisher-yates': {
+    name: 'Fisher-Yates (Knuth) shuffle',
+    prng: 'Math.random() — xorshift128+',
+    tags: ['O(n)', 'in-place', 'uniforme'],
+    desc: 'Recorre el array de atrás hacia adelante. En cada posición i, elige un índice aleatorio j entre 0 e i, e intercambia los elementos. Produce cada una de las n! permutaciones con probabilidad exactamente igual. Luego corta el array mezclado en bloques secuenciales.',
+    logDesc: 'El algoritmo Fisher-Yates genera una permutación uniformemente aleatoria iterando desde la última posición hasta la primera, seleccionando en cada paso un índice aleatorio j en [0, i] e intercambiando los elementos. La fuente de aleatoriedad es Math.random() (xorshift128+). La asignación a grupos es secuencial por bloques.'
+  },
+  'random-bucket': {
+    name: 'Random bucket assignment',
+    prng: 'Math.random() — xorshift128+',
+    tags: ['O(n)', 'directo', 'balanceado'],
+    desc: 'Asigna cada persona directamente a un grupo aleatorio, manteniendo balance. Para cada nombre, elige al azar entre los grupos que aún no están llenos. No hay fase de mezcla previa: el sorteo es individual y simultáneo a la agrupación.',
+    logDesc: 'El algoritmo Random Bucket asigna cada nombre directamente a un grupo elegido al azar entre los que aún tienen cupo disponible. No realiza una mezcla previa del array; el sorteo y la asignación ocurren en un solo paso. La fuente de aleatoriedad es Math.random() (xorshift128+).'
+  },
+  'sort-random-key': {
+    name: 'Sort by random key',
+    prng: 'Math.random() — xorshift128+',
+    tags: ['O(n log n)', 'transparente', 'uniforme'],
+    desc: 'A cada nombre se le asigna un número aleatorio entre 0 y 1 como llave de ordenamiento. Se ordena la lista por esa llave (sort estable). El resultado se corta en bloques secuenciales. Conceptualmente transparente: "le dimos un número al azar a cada uno y los ordenamos".',
+    logDesc: 'El algoritmo Sort by Random Key asigna a cada nombre una llave aleatoria (float entre 0 y 1) y ordena la lista por esa llave. El array ordenado se divide en bloques secuenciales para formar los grupos. La fuente de aleatoriedad es Math.random() (xorshift128+).'
+  },
+  'round-robin': {
+    name: 'Round-robin random pick',
+    prng: 'Math.random() — xorshift128+',
+    tags: ['O(n)', 'cíclico', 'balance perfecto'],
+    desc: 'Extrae nombres al azar del pool uno por uno y los asigna cíclicamente: el 1° al grupo 1, el 2° al grupo 2, etc., y vuelta. Garantiza balance perfecto desde el inicio sin necesidad de fusionar grupos residuales.',
+    logDesc: 'El algoritmo Round-Robin Random Pick extrae nombres al azar del pool y los asigna cíclicamente a los grupos (1, 2, ..., n, 1, 2, ...). Garantiza balance perfecto sin fusiones. La fuente de aleatoriedad es Math.random() (xorshift128+).'
+  },
+  'csprng': {
+    name: 'Fisher-Yates (CSPRNG)',
+    prng: 'crypto.getRandomValues() — CSPRNG del sistema',
+    tags: ['O(n)', 'criptográfico', 'uniforme'],
+    desc: 'Idéntico al Fisher-Yates clásico, pero usa crypto.getRandomValues() como fuente de aleatoriedad criptográficamente segura. Para contextos donde se necesita evidencia de que el resultado no pudo ser predecido ni manipulado.',
+    logDesc: 'El algoritmo Fisher-Yates con CSPRNG genera una permutación uniformemente aleatoria usando crypto.getRandomValues() como fuente criptográficamente segura. Es computacionalmente inviable predecir o reproducir la secuencia generada. La asignación a grupos es secuencial por bloques.'
+  }
+};
+
+function showAlgoDesc() {
+  currentAlgo = document.getElementById('algoSelect').value;
+  const info = algoInfo[currentAlgo];
+  const descEl = document.getElementById('algoDesc');
+  const tags = info.tags.map(t => `<span class="algo-tag">${t}</span>`).join('');
+  descEl.innerHTML = `${tags}<br>${info.desc}`;
+}
+
+// Initialize desc on load
+document.addEventListener('DOMContentLoaded', () => showAlgoDesc());
+
+// --- CSPRNG helper ---
+function cryptoRandomInt(max) {
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  return arr[0] % max;
+}
+
+// --- Algorithm: Fisher-Yates (original, now also used by CSPRNG variant) ---
+function fisherYatesShuffleGeneric(arr, rngFn) {
+  const a = [...arr];
+  const steps = [];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = rngFn(i + 1);
+    steps.push({ i, j, nameI: a[i], nameJ: a[j] });
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return { shuffled: a, steps };
+}
 
 function parseNames(raw) {
   return raw.split(/\n/).map(n => n.trim()).filter(Boolean);
@@ -675,14 +833,86 @@ function setMode(mode) {
 }
 
 function fisherYatesShuffle(arr) {
-  const a = [...arr];
-  const steps = [];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    steps.push({ i, j, nameI: a[i], nameJ: a[j] });
-    [a[i], a[j]] = [a[j], a[i]];
+  return fisherYatesShuffleGeneric(arr, (max) => Math.floor(Math.random() * max));
+}
+
+function csprngShuffle(arr) {
+  return fisherYatesShuffleGeneric(arr, cryptoRandomInt);
+}
+
+// --- Algorithm: Sort by random key ---
+function sortRandomKeyShuffle(arr) {
+  const keyed = arr.map(name => ({ name, key: Math.random() }));
+  keyed.sort((a, b) => a.key - b.key);
+  const steps = keyed.map((item, i) => ({ idx: i, name: item.name, key: item.key }));
+  return { shuffled: keyed.map(k => k.name), steps };
+}
+
+// --- Algorithm: Random bucket ---
+function randomBucketAssign(names, value, mode) {
+  let numGroups, groupCap;
+  if (mode === 'count') {
+    numGroups = Math.max(2, Math.min(value, names.length));
+    groupCap = Math.ceil(names.length / numGroups);
+  } else {
+    groupCap = value;
+    numGroups = Math.ceil(names.length / groupCap);
   }
-  return { shuffled: a, steps };
+
+  const groups = Array.from({ length: numGroups }, () => []);
+  const order = [];
+  const remaining = [...names];
+
+  while (remaining.length > 0) {
+    const nameIdx = Math.floor(Math.random() * remaining.length);
+    const name = remaining.splice(nameIdx, 1)[0];
+
+    // find groups with available space
+    let available = [];
+    for (let g = 0; g < numGroups; g++) {
+      if (groups[g].length < groupCap) available.push(g);
+    }
+    if (available.length === 0) available = [numGroups - 1]; // fallback
+
+    const g = available[Math.floor(Math.random() * available.length)];
+    groups[g].push(name);
+    order.push({ name, groupIdx: g, picked: true });
+  }
+
+  // merge lone group
+  if (groups.length > 1 && groups[groups.length - 1].length === 1) {
+    const loner = groups.pop()[0];
+    groups[groups.length - 1].push(loner);
+    const entry = order.find(o => o.name === loner);
+    if (entry) { entry.groupIdx = groups.length - 1; entry.merged = true; }
+  }
+
+  return { groups, order };
+}
+
+// --- Algorithm: Round-robin random pick ---
+function roundRobinAssign(names, value, mode) {
+  let numGroups;
+  if (mode === 'count') {
+    numGroups = Math.max(2, Math.min(value, names.length));
+  } else {
+    numGroups = Math.ceil(names.length / value);
+  }
+
+  const groups = Array.from({ length: numGroups }, () => []);
+  const order = [];
+  const pool = [...names];
+  let g = 0;
+
+  while (pool.length > 0) {
+    const idx = Math.floor(Math.random() * pool.length);
+    const name = pool.splice(idx, 1)[0];
+    groups[g].push(name);
+    order.push({ name, groupIdx: g });
+    g = (g + 1) % numGroups;
+  }
+
+  return { groups, order };
 }
 
 function makeGroupsFromShuffled(shuffled, value, mode) {
@@ -791,8 +1021,18 @@ async function generate() {
     document.getElementById('pool').classList.remove('visible');
     document.getElementById('fullLog').classList.remove('visible');
     document.getElementById('fullLogHeader').style.display = 'none';
-    const { shuffled } = fisherYatesShuffle(names);
-    const { groups } = makeGroupsFromShuffled(shuffled, value, currentMode);
+
+    let groups;
+    if (currentAlgo === 'random-bucket') {
+      ({ groups } = randomBucketAssign(names, value, currentMode));
+    } else if (currentAlgo === 'round-robin') {
+      ({ groups } = roundRobinAssign(names, value, currentMode));
+    } else {
+      const shuffleFn = currentAlgo === 'csprng' ? csprngShuffle :
+                         currentAlgo === 'sort-random-key' ? sortRandomKeyShuffle : fisherYatesShuffle;
+      const { shuffled } = shuffleFn(names);
+      ({ groups } = makeGroupsFromShuffled(shuffled, value, currentMode));
+    }
     currentGroups = groups;
     initGroupNames(groups.length);
     renderGroupsFinal(groups);
@@ -804,6 +1044,7 @@ async function runAnimated(names, value) {
   const poolEl = document.getElementById('pool');
   const poolTags = document.getElementById('poolTags');
   const poolLabel = document.getElementById('poolLabel');
+  const info = algoInfo[currentAlgo];
 
   bar.classList.add('visible');
   poolEl.classList.add('visible');
@@ -813,15 +1054,16 @@ async function runAnimated(names, value) {
   logEntries = [];
   logMeta = {
     timestamp: new Date().toISOString(),
-    algorithm: 'Fisher-Yates (Knuth) shuffle',
-    prng: 'Math.random() — V8 xorshift128+ PRNG',
+    algorithm: info.name,
+    prng: info.prng,
     mode: currentMode === 'count' ? 'por número de grupos' : 'por número de integrantes',
     modeValue: value,
     inputNames: [...names],
     swaps: [],
     shuffledOrder: [],
     assignments: [],
-    merges: []
+    merges: [],
+    keys: [] // for sort-random-key
   };
 
   const speed = names.length > 25 ? 40 : names.length > 15 ? 70 : 100;
@@ -843,39 +1085,105 @@ async function runAnimated(names, value) {
   poolLabel.textContent = `pool · ${names.length}`;
   await delay(speed * 3);
 
-  // Phase 2: shuffle
-  flogSep();
-  clog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">fisher-yates</span>`, `<span class="cdim">mezclando...</span>`);
-  flog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">fisher-yates</span>`, `<span class="cdim">inicio</span>`);
-  await delay(speed * 2);
+  let groups, order;
 
-  const { shuffled, steps } = fisherYatesShuffle(names);
+  // ====== ALGORITHM DISPATCH ======
+  if (currentAlgo === 'fisher-yates' || currentAlgo === 'csprng') {
+    // --- Fisher-Yates / CSPRNG: shuffle then assign ---
+    const label = currentAlgo === 'csprng' ? 'csprng' : 'fisher-yates';
+    flogSep();
+    clog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">${label}</span>`, `<span class="cdim">mezclando...</span>`);
+    flog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">${label}</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
 
-  for (const step of steps) {
-    if (step.i !== step.j) {
-      logMeta.swaps.push({ pos: [step.i, step.j], names: [step.nameI, step.nameJ] });
+    const shuffleFn = currentAlgo === 'csprng' ? csprngShuffle : fisherYatesShuffle;
+    const { shuffled, steps } = shuffleFn(names);
+
+    for (const step of steps) {
+      if (step.i !== step.j) {
+        logMeta.swaps.push({ pos: [step.i, step.j], names: [step.nameI, step.nameJ] });
+        clog(
+          `<span class="cshuffle">swap</span> <span class="cdim">[${step.i}↔${step.j}]</span>`,
+          `<span class="cname">${step.nameI}</span>`,
+          `<span class="cdim">↔</span> <span class="cname">${step.nameJ}</span>`
+        );
+        flog(
+          `<span class="cshuffle">swap</span> <span class="cdim">[${step.i}↔${step.j}]</span>`,
+          `<span class="cname">${step.nameI}</span>`,
+          `<span class="cdim">↔</span> <span class="cname">${step.nameJ}</span>`
+        );
+      }
+      await delay(speed / 2);
+    }
+
+    const modeLabel = currentMode === 'count' ? `${value} grupos` : `grupos de ${value}`;
+    clog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">completo</span>`, `<span class="cdim">${modeLabel}</span>`);
+    flog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">completo</span>`, `<span class="cdim">${steps.length} swaps</span>`);
+    await delay(speed * 3);
+
+    const result = makeGroupsFromShuffled(shuffled, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+    logMeta.shuffledOrder = shuffled.map((n, i) => `[${i}] ${n}`);
+
+  } else if (currentAlgo === 'sort-random-key') {
+    // --- Sort by random key ---
+    flogSep();
+    clog(`<span class="cshuffle">keys</span>`, `<span class="cdim">asignando llaves aleatorias...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">keys</span>`, `<span class="cdim">sort by random key</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const { shuffled, steps: keySteps } = sortRandomKeyShuffle(names);
+
+    for (const step of keySteps) {
+      const keyStr = step.key.toFixed(6);
+      logMeta.keys.push({ name: step.name, key: keyStr });
       clog(
-        `<span class="cshuffle">swap</span> <span class="cdim">[${step.i}↔${step.j}]</span>`,
-        `<span class="cname">${step.nameI}</span>`,
-        `<span class="cdim">↔</span> <span class="cname">${step.nameJ}</span>`
+        `<span class="cshuffle">key</span> <span class="cdim">[${step.idx}]</span>`,
+        `<span class="cname">${step.name}</span>`,
+        `<span class="cdim">${keyStr}</span>`
       );
       flog(
-        `<span class="cshuffle">swap</span> <span class="cdim">[${step.i}↔${step.j}]</span>`,
-        `<span class="cname">${step.nameI}</span>`,
-        `<span class="cdim">↔</span> <span class="cname">${step.nameJ}</span>`
+        `<span class="cshuffle">key</span> <span class="cdim">[${step.idx}]</span>`,
+        `<span class="cname">${step.name}</span>`,
+        `<span class="cdim">${keyStr}</span>`
       );
+      await delay(speed / 2);
     }
-    await delay(speed / 2);
+
+    clog(`<span class="cshuffle">sort</span>`, `<span class="cdim">ordenado por llave</span>`, `<span class="cdim">${keySteps.length} llaves</span>`);
+    flog(`<span class="cshuffle">sort</span>`, `<span class="cdim">ordenado por llave</span>`, `<span class="cdim">${keySteps.length} llaves</span>`);
+    await delay(speed * 3);
+
+    const result = makeGroupsFromShuffled(shuffled, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+    logMeta.shuffledOrder = shuffled.map((n, i) => `[${i}] ${n}`);
+
+  } else if (currentAlgo === 'random-bucket') {
+    // --- Random bucket ---
+    flogSep();
+    clog(`<span class="cshuffle">bucket</span>`, `<span class="cdim">asignación directa aleatoria...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">bucket</span>`, `<span class="cdim">random bucket assignment</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const result = randomBucketAssign(names, value, currentMode);
+    groups = result.groups;
+    order = result.order;
+
+  } else if (currentAlgo === 'round-robin') {
+    // --- Round-robin ---
+    flogSep();
+    clog(`<span class="cshuffle">robin</span>`, `<span class="cdim">selección cíclica aleatoria...</span>`, '&nbsp;');
+    flog(`<span class="cshuffle">robin</span>`, `<span class="cdim">round-robin random pick</span>`, `<span class="cdim">inicio</span>`);
+    await delay(speed * 2);
+
+    const result = roundRobinAssign(names, value, currentMode);
+    groups = result.groups;
+    order = result.order;
   }
 
-  const modeLabel = currentMode === 'count' ? `${value} grupos` : `grupos de ${value}`;
-  clog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">completo</span>`, `<span class="cdim">${modeLabel}</span>`);
-  flog(`<span class="cshuffle">shuffle</span>`, `<span class="cdim">completo</span>`, `<span class="cdim">${steps.length} swaps</span>`);
-  await delay(speed * 3);
-
-  // Phase 3: build group cards (empty)
-  const { groups, order } = makeGroupsFromShuffled(shuffled, value, currentMode);
-  logMeta.shuffledOrder = shuffled.map((n, i) => `[${i}] ${n}`);
+  // ====== COMMON: build cards and animate assignment ======
   logMeta.groupCount = groups.length;
   logMeta.groupSizes = groups.map(g => g.length);
   initGroupNames(groups.length);
@@ -899,7 +1207,7 @@ async function runAnimated(names, value) {
   document.getElementById('groupsTitle').textContent = `${groups.length} grupos · ${total} personas`;
   document.getElementById('groupsArea').classList.add('visible');
 
-  // Phase 4: pick names one by one
+  // Phase: pick names one by one
   flogSep();
   const nameToPoolIdx = {};
   names.forEach((n, i) => { nameToPoolIdx[n] = i; });
@@ -1115,22 +1423,25 @@ function downloadLog() {
   // Algorithmic description
   lines.push('DESCRIPCIÓN DEL ALGORITMO');
   lines.push(dividerThin);
-  lines.push('El algoritmo Fisher-Yates (también conocido como Knuth shuffle) genera');
-  lines.push('una permutación uniformemente aleatoria de la lista de entrada. Itera');
-  lines.push('desde la última posición (n-1) hasta la primera (1), y en cada paso i');
-  lines.push('selecciona un índice aleatorio j en el rango [0, i] e intercambia los');
-  lines.push('elementos en las posiciones i y j. Cada una de las n! permutaciones');
-  lines.push('posibles tiene exactamente la misma probabilidad de ser generada.');
-  lines.push('');
-  lines.push('La fuente de aleatoriedad es Math.random(), que en motores V8 (Chrome,');
-  lines.push('Edge, Node.js) implementa el algoritmo xorshift128+ con estado interno');
-  lines.push('de 128 bits. No es criptográficamente seguro, pero proporciona una');
-  lines.push('distribución estadísticamente uniforme adecuada para este propósito.');
-  lines.push('');
-  lines.push('La asignación a grupos es secuencial: el primer bloque de k nombres del');
-  lines.push('array mezclado se asigna al grupo 1, el segundo bloque al grupo 2, etc.');
-  lines.push('Si el último grupo queda con un solo integrante, se fusiona con el grupo');
-  lines.push('anterior para evitar asignaciones individuales.');
+  const algoKey = Object.keys(algoInfo).find(k => algoInfo[k].name === logMeta.algorithm) || 'fisher-yates';
+  const algoDesc = algoInfo[algoKey];
+  // Wrap text at ~70 chars
+  const wrapText = (text, width) => {
+    const words = text.split(' ');
+    const result = [];
+    let line = '';
+    for (const word of words) {
+      if ((line + ' ' + word).trim().length > width) {
+        result.push(line.trim());
+        line = word;
+      } else {
+        line = line ? line + ' ' + word : word;
+      }
+    }
+    if (line.trim()) result.push(line.trim());
+    return result;
+  };
+  wrapText(algoDesc.logDesc, 68).forEach(l => lines.push(l));
   lines.push('');
 
   // Pool de entrada
@@ -1141,25 +1452,43 @@ function downloadLog() {
   });
   lines.push('');
 
-  // Shuffle
-  lines.push(`FASE 1: FISHER-YATES SHUFFLE (${logMeta.swaps.length} intercambios)`);
-  lines.push(dividerThin);
-  if (logMeta.swaps.length === 0) {
-    lines.push('  (sin intercambios — la lista ya estaba en orden aleatorio)');
-  } else {
-    logMeta.swaps.forEach((s, i) => {
-      lines.push(`  ${String(i + 1).padStart(3)}.  swap [${s.pos[0]} ↔ ${s.pos[1]}]    ${s.names[0]}  ↔  ${s.names[1]}`);
+  // Shuffle / key assignment phase
+  if (logMeta.keys && logMeta.keys.length > 0) {
+    lines.push(`FASE 1: ASIGNACIÓN DE LLAVES ALEATORIAS (${logMeta.keys.length} llaves)`);
+    lines.push(dividerThin);
+    logMeta.keys.forEach((k, i) => {
+      lines.push(`  ${String(i + 1).padStart(3)}.  ${k.name}  →  key ${k.key}`);
     });
+    lines.push('');
+    lines.push('FASE 1 RESULTADO: ARRAY ORDENADO POR LLAVE');
+    lines.push(dividerThin);
+    logMeta.shuffledOrder.forEach(entry => {
+      lines.push(`  ${entry}`);
+    });
+    lines.push('');
+  } else if (logMeta.swaps.length > 0 || (algoKey === 'fisher-yates' || algoKey === 'csprng')) {
+    lines.push(`FASE 1: ${logMeta.algorithm.toUpperCase()} (${logMeta.swaps.length} intercambios)`);
+    lines.push(dividerThin);
+    if (logMeta.swaps.length === 0) {
+      lines.push('  (sin intercambios — la lista ya estaba en orden aleatorio)');
+    } else {
+      logMeta.swaps.forEach((s, i) => {
+        lines.push(`  ${String(i + 1).padStart(3)}.  swap [${s.pos[0]} ↔ ${s.pos[1]}]    ${s.names[0]}  ↔  ${s.names[1]}`);
+      });
+    }
+    lines.push('');
+    lines.push('FASE 1 RESULTADO: ARRAY POST-SHUFFLE');
+    lines.push(dividerThin);
+    logMeta.shuffledOrder.forEach(entry => {
+      lines.push(`  ${entry}`);
+    });
+    lines.push('');
+  } else {
+    lines.push(`FASE 1: ${logMeta.algorithm.toUpperCase()} — ASIGNACIÓN DIRECTA`);
+    lines.push(dividerThin);
+    lines.push('  (sin fase de mezcla — asignación directa a grupos)');
+    lines.push('');
   }
-  lines.push('');
-
-  // Resultado post-shuffle
-  lines.push('FASE 1 RESULTADO: ARRAY POST-SHUFFLE');
-  lines.push(dividerThin);
-  logMeta.shuffledOrder.forEach(entry => {
-    lines.push(`  ${entry}`);
-  });
-  lines.push('');
 
   // Asignación
   lines.push(`FASE 2: ASIGNACIÓN SECUENCIAL A ${logMeta.groupCount} GRUPOS`);
