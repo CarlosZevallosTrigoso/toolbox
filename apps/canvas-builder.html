@@ -810,38 +810,38 @@ function showProps(el) {
 
   // position
   h += `<div class="prop-group"><h3>posición</h3>
-    <div class="prop-row"><label>x</label><input type="number" data-p="x" value="${Math.round(el.x)}" onchange="setPosP('${el.id}',this)"></div>
-    <div class="prop-row"><label>y</label><input type="number" data-p="y" value="${Math.round(el.y)}" onchange="setPosP('${el.id}',this)"></div>
-    <div class="prop-row"><label>w</label><input type="number" data-p="w" value="${Math.round(el.w)}" onchange="setPosP('${el.id}',this)"></div>
-    <div class="prop-row"><label>h</label><input type="number" data-p="h" value="${Math.round(el.h)}" onchange="setPosP('${el.id}',this)"></div>
+    <div class="prop-row"><label>x</label><input type="number" data-p="x" value="${Math.round(el.x)}" oninput="setPosP('${el.id}',this)"></div>
+    <div class="prop-row"><label>y</label><input type="number" data-p="y" value="${Math.round(el.y)}" oninput="setPosP('${el.id}',this)"></div>
+    <div class="prop-row"><label>w</label><input type="number" data-p="w" value="${Math.round(el.w)}" oninput="setPosP('${el.id}',this)"></div>
+    <div class="prop-row"><label>h</label><input type="number" data-p="h" value="${Math.round(el.h)}" oninput="setPosP('${el.id}',this)"></div>
   </div>`;
 
   // transform
   h += `<div class="prop-group"><h3>transform</h3>
-    <div class="prop-row"><label>rot</label><input type="number" value="${el.rotation||0}" min="-360" max="360" onchange="setTransP('${el.id}','rotation',+this.value)">°</div>
+    <div class="prop-row"><label>rot</label><input type="number" value="${el.rotation||0}" min="-360" max="360" oninput="setTransP('${el.id}','rotation',+this.value)">°</div>
     <div class="prop-row"><label>op</label><input type="range" value="${el.opacity}" min="0" max="1" step="0.05" oninput="setTransP('${el.id}','opacity',+this.value)"><span style="width:28px;text-align:right;font-size:10px;color:var(--text-dim)">${Math.round(el.opacity*100)}%</span></div>
   </div>`;
 
   // type-specific
   if (el.type === 'text') {
     h += `<div class="prop-group"><h3>texto</h3>
-      <div class="prop-row"><label>px</label><input type="number" value="${el.fontSize}" min="8" max="400" onchange="setTextP('${el.id}','fontSize',+this.value)"></div>
-      <div class="prop-row"><label>wt</label><select onchange="setTextP('${el.id}','fontWeight',this.value)">
+      <div class="prop-row"><label>px</label><input type="number" value="${el.fontSize}" min="8" max="400" oninput="setTextP('${el.id}','fontSize',+this.value)"></div>
+      <div class="prop-row"><label>wt</label><select oninput="setTextP('${el.id}','fontWeight',this.value)">
         ${['300','400','600','700','900'].map(w=>`<option value="${w}"${el.fontWeight===w?' selected':''}>${{300:'light',400:'regular',600:'semi',700:'bold',900:'black'}[w]}</option>`).join('')}
       </select></div>
-      <div class="prop-row"><label>al</label><select onchange="setTextP('${el.id}','textAlign',this.value)">
+      <div class="prop-row"><label>al</label><select oninput="setTextP('${el.id}','textAlign',this.value)">
         ${['left','center','right'].map(a=>`<option value="${a}"${el.textAlign===a?' selected':''}>${{left:'izq',center:'centro',right:'der'}[a]}</option>`).join('')}
       </select></div>
-      <div class="prop-row"><label>col</label><input type="color" value="${el.color}" onchange="setTextP('${el.id}','color',this.value)"></div>
-      <div class="prop-row"><label>bg</label><input type="color" value="${el.bgColor==='transparent'?'#ffffff':el.bgColor}" onchange="setTextP('${el.id}','bgColor',this.value)"></div>
+      <div class="prop-row"><label>col</label><input type="color" value="${el.color}" oninput="setTextP('${el.id}','color',this.value)"></div>
+      <div class="prop-row"><label>bg</label><input type="color" value="${el.bgColor==='transparent'?'#ffffff':el.bgColor}" oninput="setTextP('${el.id}','bgColor',this.value)"></div>
     </div>`;
 
     // font selector with Google Fonts search
     h += `<div class="prop-group"><h3>fuente</h3>
-      <div class="prop-row"><label>sys</label><select onchange="setFontSystem('${el.id}',this.value)">
-        <option value=""${!el._font&&el.fontFamily.includes('system')?' selected':''}>sans-serif</option>
-        <option value=""${!el._font&&el.fontFamily.includes('Georgia')?' selected':''}>serif</option>
-        <option value=""${!el._font&&el.fontFamily.includes('monospace')?' selected':''}>mono</option>
+      <div class="prop-row"><label>sys</label><select oninput="setFontSystem('${el.id}',this.value)">
+        <option value="system-ui, sans-serif"${!el._font&&el.fontFamily.includes('system')?' selected':''}>sans-serif</option>
+        <option value="'Georgia', serif"${!el._font&&el.fontFamily.includes('Georgia')?' selected':''}>serif</option>
+        <option value="ui-monospace, monospace"${!el._font&&el.fontFamily.includes('monospace')?' selected':''}>mono</option>
       </select></div>
       <div class="font-search-wrap">
         <div class="prop-row"><label>g·f</label><input type="text" id="fontSearch" value="${el._font||''}" placeholder="buscar google font..." oninput="searchFonts(this.value,'${el.id}')" onfocus="searchFonts(this.value,'${el.id}')"></div>
@@ -849,15 +849,15 @@ function showProps(el) {
     </div>`;
   } else if (el.type === 'shape') {
     h += `<div class="prop-group"><h3>forma</h3>
-      <div class="prop-row"><label>fill</label><input type="color" value="${el.fillColor}" onchange="setShapeP('${el.id}','fillColor',this.value)"></div>
-      <div class="prop-row"><label>brd</label><input type="color" value="${el.borderColor==='transparent'?'#333':el.borderColor}" onchange="setShapeP('${el.id}','borderColor',this.value)"></div>
-      <div class="prop-row"><label>bw</label><input type="number" value="${el.borderWidth}" min="0" max="50" onchange="setShapeP('${el.id}','borderWidth',+this.value)"></div>
+      <div class="prop-row"><label>fill</label><input type="color" value="${el.fillColor}" oninput="setShapeP('${el.id}','fillColor',this.value)"></div>
+      <div class="prop-row"><label>brd</label><input type="color" value="${el.borderColor==='transparent'?'#333':el.borderColor}" oninput="setShapeP('${el.id}','borderColor',this.value)"></div>
+      <div class="prop-row"><label>bw</label><input type="number" value="${el.borderWidth}" min="0" max="50" oninput="setShapeP('${el.id}','borderWidth',+this.value)"></div>
     </div>`;
   } else if (el.type === 'image') {
     h += `<div class="prop-group"><h3>imagen</h3>
       <div class="prop-row"><label>src</label><input type="text" value="${el.src||''}" onchange="setImgP('${el.id}','src',this.value)" style="font-size:10px"></div>
       <div class="prop-row"><label>alt</label><input type="text" value="${el.alt||''}" onchange="setImgP('${el.id}','alt',this.value)"></div>
-      <div class="prop-row"><label>fit</label><select onchange="setImgP('${el.id}','objectFit',this.value)">
+      <div class="prop-row"><label>fit</label><select oninput="setImgP('${el.id}','objectFit',this.value)">
         ${['cover','contain','fill','none'].map(f=>`<option value="${f}"${(el.objectFit||'cover')===f?' selected':''}>${f}</option>`).join('')}
       </select></div>
     </div>`;
@@ -865,7 +865,7 @@ function showProps(el) {
 
   // filters
   h += `<div class="prop-group"><h3>filtros css</h3>
-    <div class="prop-row"><label>css</label><input type="text" value="${el.filter||''}" placeholder="blur(2px) grayscale(1)..." onchange="setFilterP('${el.id}',this.value)"></div>
+    <div class="prop-row"><label>css</label><input type="text" value="${el.filter||''}" placeholder="blur(2px) grayscale(1)..." oninput="setFilterP('${el.id}',this.value)"></div>
     <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px">
       ${['blur(3px)','grayscale(1)','invert(1)','sepia(1)','hue-rotate(90deg)','contrast(1.5)','saturate(2)','brightness(1.3)'].map(f =>
         `<button class="btn sm" onclick="appendFilter('${el.id}','${f}')" style="font-size:9px">${f.split('(')[0]}</button>`
@@ -891,8 +891,16 @@ function updatePropInputs(el) {
 }
 
 // property setters
+let _propSnapshotDone = false;
+function propSnapshot() {
+  if (!_propSnapshotDone) { snapshot(); _propSnapshotDone = true; }
+}
+// reset snapshot flag when panel inputs get focus
+document.getElementById('propsBody').addEventListener('focusin', () => { _propSnapshotDone = false; });
+document.getElementById('propsBody').addEventListener('focusout', () => { _propSnapshotDone = false; });
+
 function setPosP(id, inp) {
-  snapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   const p = inp.dataset.p; el[p] = +inp.value;
   const dom = document.getElementById(id);
   if (p==='x') dom.style.left=el.x+'px';
@@ -901,12 +909,15 @@ function setPosP(id, inp) {
   if (p==='h') dom.style.height=el.h+'px';
 }
 function setTransP(id, prop, val) {
-  snapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   el[prop] = val; applyDomStyle(document.getElementById(id), el);
-  if (prop==='opacity') showProps(el); // refresh range display
+  if (prop==='opacity') {
+    const span = document.querySelector('.prop-group input[type="range"]')?.nextElementSibling;
+    if (span) span.textContent = Math.round(val*100)+'%';
+  }
 }
 function setTextP(id, prop, val) {
-  snapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   el[prop] = val;
   const c = document.querySelector(`#${id} .content`);
   if (prop==='fontSize') c.style.fontSize=val+'px';
@@ -917,32 +928,32 @@ function setTextP(id, prop, val) {
   if (prop==='bgColor') c.style.background=val;
 }
 function setShapeP(id, prop, val) {
-  snapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   el[prop] = val;
   const inner = document.querySelector(`#${id} .shape-inner`);
   if (prop==='fillColor') inner.style.background=val;
   if (prop==='borderColor'||prop==='borderWidth') inner.style.border=`${el.borderWidth}px solid ${el.borderColor}`;
 }
 function setImgP(id, prop, val) {
-  snapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   el[prop] = val;
   if (prop==='src') { let img=document.querySelector(`#${id} img`); if(img) img.src=val; }
   if (prop==='alt') { let img=document.querySelector(`#${id} img`); if(img) img.alt=val; }
   if (prop==='objectFit') { let img=document.querySelector(`#${id} img`); if(img) img.style.objectFit=val; }
 }
 function setFilterP(id, val) {
-  snapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   el.filter = val; document.getElementById(id).style.filter = val || 'none';
 }
 function appendFilter(id, f) {
-  const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   const current = el.filter || '';
   const newF = current ? current + ' ' + f : f;
-  setFilterP(id, newF);
+  el.filter = newF; document.getElementById(id).style.filter = newF;
   showProps(el);
 }
 function setLinkP(id, val) {
-  const el = elements.find(e=>e.id===id); if(!el) return;
+  propSnapshot(); const el = elements.find(e=>e.id===id); if(!el) return;
   el.link = val;
 }
 
@@ -986,13 +997,9 @@ function pickFont(elId, fontName) {
 }
 function setFontSystem(elId, val) {
   const el = elements.find(e=>e.id===elId); if(!el) return;
-  snapshot();
+  propSnapshot();
   el._font = '';
-  const families = {'':'system-ui, sans-serif'};
-  // detect from select index
-  const sel = event.target;
-  const idx = sel.selectedIndex;
-  el.fontFamily = ['system-ui, sans-serif',"'Georgia', serif",'ui-monospace, monospace'][idx];
+  el.fontFamily = val;
   const c = document.querySelector(`#${elId} .content`);
   if (c) c.style.fontFamily = el.fontFamily;
 }
