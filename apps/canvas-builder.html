@@ -907,53 +907,47 @@ function showProps(el) {
 function P(prop, val) {
   if (!selectedEl) return;
   const el = selectedEl;
+
+  // save state once per interaction
+  if (!P._s) { snapshot(); P._s = true; setTimeout(() => { P._s = false; }, 500); }
+
+  // update model
+  if (prop === 'sysFont') { el._font = ''; el.fontFamily = val; }
+  else if (prop === 'x' || prop === 'y' || prop === 'w' || prop === 'h' ||
+           prop === 'rotation' || prop === 'opacity' || prop === 'filter' || prop === 'link') {
+    el[prop] = val;
+  } else {
+    el[prop] = val;
+  }
+
+  // for position: direct DOM manipulation (needs to be fast for dragging)
   const dom = document.getElementById(el.id);
   if (!dom) return;
 
-  // save state once
-  if (!P._s) { snapshot(); P._s = true; setTimeout(() => { P._s = false; }, 500); }
-
-  // position
-  if (prop === 'x') { el.x = val; dom.style.left = val + 'px'; return; }
-  if (prop === 'y') { el.y = val; dom.style.top = val + 'px'; return; }
-  if (prop === 'w') { el.w = val; dom.style.width = val + 'px'; return; }
-  if (prop === 'h') { el.h = val; dom.style.height = val + 'px'; return; }
-
-  // transform
-  if (prop === 'rotation') { el.rotation = val; applyDomStyle(dom, el); return; }
-  if (prop === 'opacity') {
-    el.opacity = val; applyDomStyle(dom, el);
-    const lbl = document.getElementById('p_op_label');
-    if (lbl) lbl.textContent = Math.round(val * 100) + '%';
+  if (prop === 'x') { dom.style.left = val + 'px'; return; }
+  if (prop === 'y') { dom.style.top = val + 'px'; return; }
+  if (prop === 'w') { dom.style.width = val + 'px'; return; }
+  if (prop === 'h') { dom.style.height = val + 'px'; return; }
+  if (prop === 'rotation' || prop === 'opacity') {
+    applyDomStyle(dom, el);
+    if (prop === 'opacity') {
+      const lbl = document.getElementById('p_op_label');
+      if (lbl) lbl.textContent = Math.round(val * 100) + '%';
+    }
     return;
   }
+  if (prop === 'filter') { dom.style.filter = val || 'none'; return; }
+  if (prop === 'link') return;
 
-  // text
-  const c = dom.querySelector('.content');
-  if (prop === 'fontSize') { el.fontSize = val; if (c) c.style.fontSize = val + 'px'; return; }
-  if (prop === 'fontWeight') { el.fontWeight = val; if (c) c.style.fontWeight = val; return; }
-  if (prop === 'textAlign') { el.textAlign = val; if (c) c.style.textAlign = val; return; }
-  if (prop === 'color') { el.color = val; if (c) c.style.color = val; return; }
-  if (prop === 'bgColor') { el.bgColor = val; if (c) c.style.backgroundColor = val; return; }
-  if (prop === 'sysFont') { el._font = ''; el.fontFamily = val; if (c) c.style.fontFamily = val; return; }
-
-  // shape
-  const inner = dom.querySelector('.shape-inner');
-  if (prop === 'fillColor') { el.fillColor = val; if (inner) inner.style.backgroundColor = val; return; }
-  if (prop === 'borderColor') { el.borderColor = val; if (inner) inner.style.border = `${el.borderWidth}px solid ${val}`; return; }
-  if (prop === 'borderWidth') { el.borderWidth = val; if (inner) inner.style.border = `${val}px solid ${el.borderColor}`; return; }
-
-  // image
-  const img = dom.querySelector('img');
-  if (prop === 'src') { el.src = val; if (img) img.src = val; return; }
-  if (prop === 'alt') { el.alt = val; if (img) img.alt = val; return; }
-  if (prop === 'objectFit') { el.objectFit = val; if (img) img.style.objectFit = val; return; }
-
-  // filter
-  if (prop === 'filter') { el.filter = val; dom.style.filter = val || 'none'; return; }
-
-  // link
-  if (prop === 'link') { el.link = val; return; }
+  // for ALL visual properties (text, shape, image): full re-render
+  dom.remove();
+  renderElement(el);
+  const newDom = document.getElementById(el.id);
+  if (newDom) {
+    newDom.classList.add('selected');
+    const c = newDom.querySelector('.content');
+    if (c) c.contentEditable = true;
+  }
 }
 P._s = false;
 
