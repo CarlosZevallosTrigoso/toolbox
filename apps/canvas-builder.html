@@ -830,66 +830,61 @@ function showDefaultProps() {
 }
 
 function showProps(el) {
+  const id = el.id;
   let h = '';
 
-  // position
   h += `<div class="prop-group"><h3>posición</h3>
-    <div class="prop-row"><label>x</label><input type="number" data-act="pos" data-prop="x" value="${Math.round(el.x)}"></div>
-    <div class="prop-row"><label>y</label><input type="number" data-act="pos" data-prop="y" value="${Math.round(el.y)}"></div>
-    <div class="prop-row"><label>w</label><input type="number" data-act="pos" data-prop="w" value="${Math.round(el.w)}"></div>
-    <div class="prop-row"><label>h</label><input type="number" data-act="pos" data-prop="h" value="${Math.round(el.h)}"></div>
+    <div class="prop-row"><label>x</label><input type="number" id="p_x" value="${Math.round(el.x)}"></div>
+    <div class="prop-row"><label>y</label><input type="number" id="p_y" value="${Math.round(el.y)}"></div>
+    <div class="prop-row"><label>w</label><input type="number" id="p_w" value="${Math.round(el.w)}"></div>
+    <div class="prop-row"><label>h</label><input type="number" id="p_h" value="${Math.round(el.h)}"></div>
   </div>`;
 
-  // transform
   h += `<div class="prop-group"><h3>transform</h3>
-    <div class="prop-row"><label>rot</label><input type="number" data-act="trans" data-prop="rotation" value="${el.rotation||0}" min="-360" max="360">°</div>
-    <div class="prop-row"><label>op</label><input type="range" data-act="trans" data-prop="opacity" value="${el.opacity}" min="0" max="1" step="0.05"><span class="op-label" style="width:28px;text-align:right;font-size:10px;color:var(--text-dim)">${Math.round(el.opacity*100)}%</span></div>
+    <div class="prop-row"><label>rot</label><input type="number" id="p_rot" value="${el.rotation||0}" min="-360" max="360">°</div>
+    <div class="prop-row"><label>op</label><input type="range" id="p_op" value="${el.opacity}" min="0" max="1" step="0.05"><span id="p_op_label" style="width:28px;text-align:right;font-size:10px;color:var(--text-dim)">${Math.round(el.opacity*100)}%</span></div>
   </div>`;
 
-  // type-specific
   if (el.type === 'text') {
     h += `<div class="prop-group"><h3>texto</h3>
-      <div class="prop-row"><label>px</label><input type="number" data-act="text" data-prop="fontSize" data-num="1" value="${el.fontSize}" min="8" max="400"></div>
-      <div class="prop-row"><label>wt</label><select data-act="text" data-prop="fontWeight">
+      <div class="prop-row"><label>px</label><input type="number" id="p_fontSize" value="${el.fontSize}" min="8" max="400"></div>
+      <div class="prop-row"><label>wt</label><select id="p_fontWeight">
         ${['300','400','600','700','900'].map(w=>`<option value="${w}"${el.fontWeight===w?' selected':''}>${{300:'light',400:'regular',600:'semi',700:'bold',900:'black'}[w]}</option>`).join('')}
       </select></div>
-      <div class="prop-row"><label>al</label><select data-act="text" data-prop="textAlign">
+      <div class="prop-row"><label>al</label><select id="p_textAlign">
         ${['left','center','right'].map(a=>`<option value="${a}"${el.textAlign===a?' selected':''}>${{left:'izq',center:'centro',right:'der'}[a]}</option>`).join('')}
       </select></div>
-      <div class="prop-row"><label>col</label><input type="color" data-act="text" data-prop="color" value="${el.color}"></div>
-      <div class="prop-row"><label>bg</label><input type="color" data-act="text" data-prop="bgColor" value="${el.bgColor==='transparent'?'#ffffff':el.bgColor}"></div>
+      <div class="prop-row"><label>col</label><input type="color" id="p_color" value="${el.color}"></div>
+      <div class="prop-row"><label>bg</label><input type="color" id="p_bgColor" value="${el.bgColor==='transparent'?'#ffffff':el.bgColor}"></div>
     </div>`;
-
-    const FS = `data-act="sysFont"`;
     h += `<div class="prop-group"><h3>fuente</h3>
-      <div class="prop-row"><label>sys</label><select ${FS}>
+      <div class="prop-row"><label>sys</label><select id="p_sysFont">
         <option value="system-ui, sans-serif"${!el._font&&el.fontFamily.includes('system')?' selected':''}>sans-serif</option>
         <option value="'Georgia', serif"${!el._font&&el.fontFamily.includes('Georgia')?' selected':''}>serif</option>
         <option value="ui-monospace, monospace"${!el._font&&el.fontFamily.includes('monospace')?' selected':''}>mono</option>
       </select></div>
       <div class="font-search-wrap">
-        <div class="prop-row"><label>g·f</label><input type="text" id="fontSearch" value="${el._font||''}" placeholder="buscar google font..." oninput="searchFonts(this.value,'${el.id}')" onfocus="searchFonts(this.value,'${el.id}')"></div>
+        <div class="prop-row"><label>g·f</label><input type="text" id="fontSearch" value="${el._font||''}" placeholder="buscar google font..."></div>
       </div>
     </div>`;
   } else if (el.type === 'shape') {
     h += `<div class="prop-group"><h3>forma</h3>
-      <div class="prop-row"><label>fill</label><input type="color" data-act="shape" data-prop="fillColor" value="${el.fillColor}"></div>
-      <div class="prop-row"><label>brd</label><input type="color" data-act="shape" data-prop="borderColor" value="${el.borderColor==='transparent'?'#333':el.borderColor}"></div>
-      <div class="prop-row"><label>bw</label><input type="number" data-act="shape" data-prop="borderWidth" data-num="1" value="${el.borderWidth}" min="0" max="50"></div>
+      <div class="prop-row"><label>fill</label><input type="color" id="p_fillColor" value="${el.fillColor}"></div>
+      <div class="prop-row"><label>brd</label><input type="color" id="p_borderColor" value="${el.borderColor==='transparent'?'#333':el.borderColor}"></div>
+      <div class="prop-row"><label>bw</label><input type="number" id="p_borderWidth" value="${el.borderWidth}" min="0" max="50"></div>
     </div>`;
   } else if (el.type === 'image') {
     h += `<div class="prop-group"><h3>imagen</h3>
-      <div class="prop-row"><label>src</label><input type="text" data-act="img" data-prop="src" value="${el.src||''}" style="font-size:10px"></div>
-      <div class="prop-row"><label>alt</label><input type="text" data-act="img" data-prop="alt" value="${el.alt||''}"></div>
-      <div class="prop-row"><label>fit</label><select data-act="img" data-prop="objectFit">
+      <div class="prop-row"><label>src</label><input type="text" id="p_src" value="${el.src||''}" style="font-size:10px"></div>
+      <div class="prop-row"><label>alt</label><input type="text" id="p_alt" value="${el.alt||''}"></div>
+      <div class="prop-row"><label>fit</label><select id="p_objectFit">
         ${['cover','contain','fill','none'].map(f=>`<option value="${f}"${(el.objectFit||'cover')===f?' selected':''}>${f}</option>`).join('')}
       </select></div>
     </div>`;
   }
 
-  // filters
   h += `<div class="prop-group"><h3>filtros css</h3>
-    <div class="prop-row"><label>css</label><input type="text" data-act="filter" value="${el.filter||''}" placeholder="blur(2px) grayscale(1)..."></div>
+    <div class="prop-row"><label>css</label><input type="text" id="p_filter" value="${el.filter||''}" placeholder="blur(2px) grayscale(1)..."></div>
     <div style="display:flex;gap:3px;flex-wrap:wrap;margin-top:4px">
       ${['blur(3px)','grayscale(1)','invert(1)','sepia(1)','hue-rotate(90deg)','contrast(1.5)','saturate(2)','brightness(1.3)'].map(f =>
         `<button class="btn sm" onclick="appendFilter('${f}')" style="font-size:9px">${f.split('(')[0]}</button>`
@@ -897,97 +892,79 @@ function showProps(el) {
     </div>
   </div>`;
 
-  // link
   h += `<div class="prop-group"><h3>enlace</h3>
-    <div class="prop-row"><label>url</label><input type="text" data-act="link" value="${el.link||''}" placeholder="https://..."></div>
+    <div class="prop-row"><label>url</label><input type="text" id="p_link" value="${el.link||''}" placeholder="https://..."></div>
   </div>`;
 
   document.getElementById('propsContent').innerHTML = h;
+
+  // ── attach listeners directly ──
+  const dom = document.getElementById(id);
+  if (!dom) return;
+  let snapped = false;
+  function ss() { if (!snapped) { snapshot(); snapped = true; } }
+
+  function bind(inputId, fn) {
+    const inp = document.getElementById(inputId);
+    if (!inp) return;
+    const handler = () => { ss(); fn(inp); };
+    inp.addEventListener('input', handler);
+    inp.addEventListener('change', handler);
+    inp.addEventListener('focus', () => { snapped = false; });
+  }
+
+  // position
+  bind('p_x', i => { el.x=+i.value; dom.style.left=el.x+'px'; });
+  bind('p_y', i => { el.y=+i.value; dom.style.top=el.y+'px'; });
+  bind('p_w', i => { el.w=+i.value; dom.style.width=el.w+'px'; });
+  bind('p_h', i => { el.h=+i.value; dom.style.height=el.h+'px'; });
+
+  // transform
+  bind('p_rot', i => { el.rotation=+i.value; applyDomStyle(dom,el); });
+  bind('p_op', i => {
+    el.opacity=+i.value; applyDomStyle(dom,el);
+    const lbl = document.getElementById('p_op_label');
+    if (lbl) lbl.textContent = Math.round(el.opacity*100)+'%';
+  });
+
+  if (el.type === 'text') {
+    const c = dom.querySelector('.content');
+    bind('p_fontSize', i => { el.fontSize=+i.value; if(c) c.style.fontSize=el.fontSize+'px'; });
+    bind('p_fontWeight', i => { el.fontWeight=i.value; if(c) c.style.fontWeight=i.value; });
+    bind('p_textAlign', i => { el.textAlign=i.value; if(c) c.style.textAlign=i.value; });
+    bind('p_color', i => { el.color=i.value; if(c) c.style.color=i.value; });
+    bind('p_bgColor', i => { el.bgColor=i.value; if(c) c.style.backgroundColor=i.value; });
+    bind('p_sysFont', i => { el._font=''; el.fontFamily=i.value; if(c) c.style.fontFamily=i.value; });
+
+    const fontInput = document.getElementById('fontSearch');
+    if (fontInput) {
+      fontInput.addEventListener('input', () => searchFonts(fontInput.value, id));
+      fontInput.addEventListener('focus', () => searchFonts(fontInput.value, id));
+    }
+  } else if (el.type === 'shape') {
+    const inner = dom.querySelector('.shape-inner');
+    bind('p_fillColor', i => { el.fillColor=i.value; if(inner) inner.style.backgroundColor=i.value; });
+    bind('p_borderColor', i => { el.borderColor=i.value; if(inner) inner.style.border=`${el.borderWidth}px solid ${el.borderColor}`; });
+    bind('p_borderWidth', i => { el.borderWidth=+i.value; if(inner) inner.style.border=`${el.borderWidth}px solid ${el.borderColor}`; });
+  } else if (el.type === 'image') {
+    const img = dom.querySelector('img');
+    bind('p_src', i => { el.src=i.value; if(img) img.src=i.value; });
+    bind('p_alt', i => { el.alt=i.value; if(img) img.alt=i.value; });
+    bind('p_objectFit', i => { el.objectFit=i.value; if(img) img.style.objectFit=i.value; });
+  }
+
+  bind('p_filter', i => { el.filter=i.value; dom.style.filter=i.value||'none'; });
+  bind('p_link', i => { el.link=i.value; });
 }
 
 function updatePropInputs(el) {
-  const panel = document.getElementById('propsContent');
-  const inputs = panel.querySelectorAll('input[data-act="pos"]');
-  inputs.forEach(inp => {
-    const p = inp.dataset.prop;
-    if (p && el[p] !== undefined) inp.value = Math.round(el[p]);
-  });
-}
-
-// ── property setters via event delegation ──
-function handlePropChange(e) {
-  const t = e.target;
-  const act = t.dataset.act;
-  if (!act || !selectedEl) return;
-
-  const el = selectedEl;
-  const id = el.id;
-  const dom = document.getElementById(id);
-  if (!dom) return;
-  const prop = t.dataset.prop;
-  const val = t.dataset.num ? +t.value : t.value;
-
-  // snapshot once per focus session
-  if (!handlePropChange._snapped) { snapshot(); handlePropChange._snapped = true; }
-
-  if (act === 'pos') {
-    el[prop] = +t.value;
-    if (prop==='x') dom.style.left = el.x+'px';
-    if (prop==='y') dom.style.top = el.y+'px';
-    if (prop==='w') dom.style.width = el.w+'px';
-    if (prop==='h') dom.style.height = el.h+'px';
-
-  } else if (act === 'trans') {
-    el[prop] = +t.value;
-    applyDomStyle(dom, el);
-    const opLabel = document.querySelector('.op-label');
-    if (prop==='opacity' && opLabel) opLabel.textContent = Math.round(el.opacity*100)+'%';
-
-  } else if (act === 'text') {
-    el[prop] = val;
-    const c = dom.querySelector('.content');
-    if (!c) return;
-    if (prop==='fontSize') c.style.fontSize = val+'px';
-    if (prop==='fontFamily') c.style.fontFamily = val;
-    if (prop==='color') c.style.color = val;
-    if (prop==='fontWeight') c.style.fontWeight = val;
-    if (prop==='textAlign') c.style.textAlign = val;
-    if (prop==='bgColor') c.style.backgroundColor = val;
-
-  } else if (act === 'sysFont') {
-    el._font = '';
-    el.fontFamily = t.value;
-    const c = dom.querySelector('.content');
-    if (c) c.style.fontFamily = t.value;
-
-  } else if (act === 'shape') {
-    el[prop] = val;
-    const inner = dom.querySelector('.shape-inner');
-    if (!inner) return;
-    if (prop==='fillColor') inner.style.backgroundColor = val;
-    if (prop==='borderColor'||prop==='borderWidth') inner.style.border = `${el.borderWidth}px solid ${el.borderColor}`;
-
-  } else if (act === 'img') {
-    el[prop] = val;
-    const img = dom.querySelector('img');
-    if (prop==='src' && img) img.src = val;
-    if (prop==='alt' && img) img.alt = val;
-    if (prop==='objectFit' && img) img.style.objectFit = val;
-
-  } else if (act === 'filter') {
-    el.filter = t.value;
-    dom.style.filter = t.value || 'none';
-
-  } else if (act === 'link') {
-    el.link = t.value;
+  const ids = {x:'p_x',y:'p_y',w:'p_w',h:'p_h'};
+  for (const [prop,inputId] of Object.entries(ids)) {
+    const inp = document.getElementById(inputId);
+    if (inp) inp.value = Math.round(el[prop]);
   }
 }
-handlePropChange._snapped = false;
 
-const _propsBody = document.getElementById('propsBody');
-_propsBody.addEventListener('input', handlePropChange);
-_propsBody.addEventListener('change', handlePropChange);
-_propsBody.addEventListener('focusin', () => { handlePropChange._snapped = false; });
 
 function appendFilter(f) {
   if (!selectedEl) return;
