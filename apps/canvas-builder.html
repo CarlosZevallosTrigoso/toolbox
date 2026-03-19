@@ -84,14 +84,18 @@
     padding: 40px;
   }
   #canvas {
-    width: 1200px; height: 800px; background: #ffffff;
+    width: 1200px; height: 800px; background-color: #ffffff;
     position: relative; box-shadow: 0 0 60px rgba(0,0,0,.5); cursor: crosshair;
     margin: 0 auto;
   }
   #canvas.snap-grid {
-    background-image: linear-gradient(var(--grid-color) 1px,transparent 1px),
-      linear-gradient(90deg,var(--grid-color) 1px,transparent 1px);
+    background-image: linear-gradient(rgba(0,0,0,0.06) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(0,0,0,0.06) 1px,transparent 1px);
     background-size: 20px 20px;
+  }
+  #canvas.snap-grid.dark-bg {
+    background-image: linear-gradient(rgba(255,255,255,0.04) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,0.04) 1px,transparent 1px);
   }
   #canvas.tool-select { cursor: default; }
   #canvas.tool-text { cursor: text; }
@@ -122,6 +126,8 @@
     min-height: 1.5em; word-wrap: break-word; white-space: pre-wrap;
   }
   .ce-text .content:focus { outline: none; }
+  .ce-text .content::selection { background: rgba(90,122,58,0.3); }
+  .ce-text .content::-moz-selection { background: rgba(90,122,58,0.3); }
   .ce-text .content[data-placeholder]:empty::before {
     content: attr(data-placeholder); color: var(--text-dim); pointer-events: none;
   }
@@ -675,7 +681,7 @@ function renderElement(el) {
 
   if (el.type === 'text') {
     const c = document.createElement('div');
-    c.className = 'content'; c.contentEditable = true;
+    c.className = 'content'; c.contentEditable = false;
     c.setAttribute('data-placeholder','escribe aquí...');
     c.textContent = el.text || '';
     c.style.cssText = `font-size:${el.fontSize}px;font-family:${el.fontFamily};color:${el.color};font-weight:${el.fontWeight};text-align:${el.textAlign};${el.bgColor!=='transparent'?'background-color:'+el.bgColor+';':''}`;
@@ -723,12 +729,23 @@ function applyDomStyle(div, el) {
 function selectElement(el) {
   deselectAll();
   selectedEl = el;
-  document.getElementById(el.id)?.classList.add('selected');
+  const dom = document.getElementById(el.id);
+  if (dom) {
+    dom.classList.add('selected');
+    // enable text editing when selected
+    const content = dom.querySelector('.content');
+    if (content) content.contentEditable = true;
+  }
   showProps(el); highlightLayer(el.id);
 }
 function deselectAll() {
+  // disable contentEditable on all text elements
+  document.querySelectorAll('.ce-text .content').forEach(c => { c.contentEditable = false; });
   selectedEl = null;
   document.querySelectorAll('.ce.selected').forEach(d => d.classList.remove('selected'));
+  const focused = document.activeElement;
+  if (focused && focused.contentEditable === 'true') focused.blur();
+  if (window.getSelection) window.getSelection().removeAllRanges();
   showDefaultProps(); highlightLayer(null);
 }
 
@@ -1082,12 +1099,34 @@ function applyCanvasSettings() {
   canvas.style.height = document.getElementById('mCH').value + 'px';
   const bgText = document.getElementById('mCBgText').value.trim();
   canvasBg = bgText || document.getElementById('mCBg').value;
-  canvas.style.background = canvasBg;
+  setCanvasBg(canvasBg);
   canvasBgImg = document.getElementById('mCBgImg').value.trim();
   if (canvasBgImg) canvas.style.backgroundImage = `url(${canvasBgImg})`;
-  else canvas.style.backgroundImage = '';
   canvas.style.backgroundSize = 'cover';
   closeModal('canvasModal');
+}
+
+function setCanvasBg(bg) {
+  if (bg.includes('gradient')) {
+    canvas.style.backgroundImage = bg;
+    canvas.style.backgroundColor = '';
+  } else {
+    canvas.style.backgroundColor = bg;
+  }
+  // toggle grid color for dark/light backgrounds
+  canvas.classList.toggle('dark-bg', isDarkBg(bg));
+}
+
+function isDarkBg(bg) {
+  if (bg.includes('gradient')) return true; // assume dark for gradients
+  const m = bg.match(/^#([0-9a-f]{6})$/i);
+  if (m) {
+    const r = parseInt(m[1].substr(0,2),16);
+    const g = parseInt(m[1].substr(2,2),16);
+    const b = parseInt(m[1].substr(4,2),16);
+    return (r*0.299 + g*0.587 + b*0.114) < 128;
+  }
+  return false;
 }
 document.getElementById('mCBg').addEventListener('input', function() {
   document.getElementById('mCBgText').value = this.value;
@@ -1167,7 +1206,7 @@ function handleLoad(e) {
       canvas.style.width = proj.canvas.w + 'px';
       canvas.style.height = proj.canvas.h + 'px';
       canvasBg = proj.canvas.bg || '#ffffff';
-      canvas.style.background = canvasBg;
+      setCanvasBg(canvasBg);
       canvasBgImg = proj.canvas.bgImg || '';
       if (canvasBgImg) { canvas.style.backgroundImage = `url(${canvasBgImg})`; canvas.style.backgroundSize = 'cover'; }
       canvas.querySelectorAll('.ce').forEach(d => d.remove());
@@ -1272,7 +1311,7 @@ async function doImport() {
         if (bgMatch) bg = bgMatch[1].trim();
       }
     }
-    if (bg) { canvasBg = bg; canvas.style.background = bg; }
+    if (bg) { canvasBg = bg; setCanvasBg(bg); }
   }
 
   // load Google Fonts found in the HTML
