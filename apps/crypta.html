@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRYPTA</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tweetnacl/1.0.3/nacl-fast.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --bg:#fff;--fg:#1a1a1a;--fg-dim:#6e6e73;--fg-faint:#aeaeb2;
+    --border:#d2d2d7;--border-light:#e5e5ea;--accent:#007aff;
+    --accent-dim:rgba(0,122,255,0.08);--green:#28cd41;--red:#ff3b30;
+    --orange:#ff9500;--mono:'IBM Plex Mono','Menlo','Monaco',monospace;--radius:6px;
+  }
+  html,body{height:100%;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--fg);background:var(--bg);-webkit-font-smoothing:antialiased}
+  .window{width:80%;max-width:1100px;margin:32px auto;border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:0 22px 70px 4px rgba(0,0,0,0.06),0 0 0 1px rgba(0,0,0,0.04)}
+  .titlebar{height:38px;background:#f5f5f7;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;user-select:none;position:relative}
+  .dots{display:flex;gap:8px}
+  .dot{width:12px;height:12px;border-radius:50%}.dot.r{background:#ff5f57}.dot.y{background:#febc2e}.dot.g{background:#28c840}
+  .titlebar-text{position:absolute;left:50%;transform:translateX(-50%);font-size:12px;font-weight:500;color:var(--fg-dim);letter-spacing:.02em}
+  .content{padding:24px 28px 28px;min-height:500px}
+  .header{margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border-light)}
+  .header h1{font-size:15px;font-weight:600;letter-spacing:.08em;margin-bottom:3px}
+  .header p{font-size:11.5px;color:var(--fg-dim);font-weight:300}
+  .mode-tabs{display:flex;gap:0;margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;width:fit-content}
+  .mode-tab{padding:7px 20px;font-family:var(--mono);font-size:12px;font-weight:500;border:none;background:transparent;color:var(--fg-dim);cursor:pointer;transition:all .15s;border-right:1px solid var(--border);letter-spacing:.02em}
+  .mode-tab:last-child{border-right:none}
+  .mode-tab.active{background:var(--fg);color:var(--bg)}
+  .mode-tab:hover:not(.active){background:#f5f5f7}
+  .row{margin-bottom:14px}
+  .row label{display:block;font-size:11px;font-weight:500;color:var(--fg-dim);margin-bottom:4px;letter-spacing:.06em;text-transform:uppercase}
+  textarea{width:100%;min-height:120px;padding:10px 12px;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--fg);background:#fafafa;border:1px solid var(--border);border-radius:var(--radius);resize:vertical;outline:none;transition:border-color .15s}
+  textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+  textarea::placeholder{color:var(--fg-faint);font-weight:300}
+  input[type="text"],input[type="password"],select{width:100%;padding:8px 12px;font-family:var(--mono);font-size:13px;color:var(--fg);background:#fafafa;border:1px solid var(--border);border-radius:var(--radius);outline:none;transition:border-color .15s}
+  input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+  select{cursor:pointer;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236e6e73'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+  .row-inline{display:flex;gap:12px;align-items:flex-end}
+  .row-inline .row{flex:1;margin-bottom:0}
+  .file-zone{border:1px dashed var(--border);border-radius:var(--radius);padding:12px;text-align:center;cursor:pointer;transition:all .15s;font-size:12px;color:var(--fg-dim)}
+  .file-zone:hover{border-color:var(--accent);background:var(--accent-dim);color:var(--accent)}
+  .file-zone.has-file{border-style:solid;border-color:var(--green);color:var(--fg)}
+  .file-zone input[type="file"]{display:none}
+  .toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .toggle{position:relative;width:36px;height:20px;cursor:pointer}
+  .toggle input{display:none}
+  .toggle-track{position:absolute;inset:0;background:var(--border);border-radius:10px;transition:background .2s}
+  .toggle input:checked+.toggle-track{background:var(--accent)}
+  .toggle-knob{position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+  .toggle input:checked~.toggle-knob{transform:translateX(16px)}
+  .toggle-label{font-size:12px;color:var(--fg-dim)}
+  .actions{display:flex;gap:10px;margin-top:18px}
+  .btn{padding:9px 22px;font-family:var(--mono);font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;transition:all .15s;letter-spacing:.03em;background:transparent;color:var(--fg)}
+  .btn:hover{background:#f5f5f7}
+  .btn-primary{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+  .btn-primary:hover{background:#333}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+  .verbose-panel{margin-top:18px;border:1px solid var(--border-light);border-radius:var(--radius);overflow:hidden;display:none}
+  .verbose-panel.visible{display:block}
+  .verbose-header{background:#f5f5f7;padding:8px 14px;font-size:11px;font-weight:500;color:var(--fg-dim);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border-light);display:flex;justify-content:space-between;align-items:center}
+  .verbose-body{padding:14px;max-height:500px;overflow-y:auto;font-size:11.5px;line-height:1.7}
+  .log-line{margin-bottom:2px}
+  .log-step{color:var(--accent);font-weight:500}
+  .log-data{color:var(--fg-dim);word-break:break-all}
+  .log-ok{color:var(--green);font-weight:500}
+  .log-warn{color:var(--orange)}
+  .log-err{color:var(--red);font-weight:500}
+  .log-dim{color:var(--fg-faint)}
+  .output-panel{margin-top:18px;display:none}
+  .output-panel.visible{display:block}
+  .output-area{width:100%;min-height:80px;padding:10px 12px;font-family:var(--mono);font-size:13px;line-height:1.6;color:var(--fg);background:#f9f9fb;border:1px solid var(--border);border-radius:var(--radius);resize:vertical;outline:none}
+  .output-actions{display:flex;gap:8px;margin-top:8px}
+  .btn-sm{padding:5px 14px;font-family:var(--mono);font-size:11px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--fg-dim);transition:all .15s}
+  .btn-sm:hover{background:#f5f5f7;color:var(--fg)}
+  .status{margin-top:10px;font-size:12px;min-height:18px}
+  .status.ok{color:var(--green)}.status.err{color:var(--red)}
+  .pass-mode-row{display:flex;gap:8px;margin-bottom:6px}
+  .pass-mode-btn{padding:5px 12px;font-family:var(--mono);font-size:11px;border:1px solid var(--border);border-radius:var(--radius);cursor:pointer;background:transparent;color:var(--fg-dim);transition:all .15s}
+  .pass-mode-btn.active{background:var(--fg);color:var(--bg)}
+  .pass-strength{font-size:11px;margin-top:3px;min-height:14px}
+  .algo-info{font-size:11px;color:var(--fg-faint);margin-top:3px;font-weight:300}
+  .algo-warn{font-size:11px;color:var(--orange);margin-top:3px;font-weight:400}
+  .bytemap-container{margin-top:12px;padding:12px;border:1px solid var(--border-light);border-radius:var(--radius);background:#fafafa}
+  .bytemap-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-dim);margin-bottom:6px;font-weight:500}
+  .bytemap-row{display:flex;gap:1px;margin-bottom:1px}
+  .bytemap-cell{width:7px;height:7px;border-radius:1px}
+  .bytemap-pair{display:flex;gap:16px;flex-wrap:wrap}
+  .bytemap-side{flex:1;min-width:200px}
+  .rail-display{font-size:11px;line-height:1.4;margin:8px 0}
+  .rail-display span{display:inline-block;width:1.2em;text-align:center}
+  .vig-table{font-size:10px;line-height:1.3;margin:8px 0}
+  .vig-highlight{background:rgba(0,122,255,0.15);font-weight:600}
+  optgroup{font-weight:600;font-style:normal;color:var(--fg-dim);font-size:12px}
+  option{font-weight:400;color:var(--fg);padding:4px}
+  .verbose-body::-webkit-scrollbar{width:6px}.verbose-body::-webkit-scrollbar-track{background:transparent}.verbose-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  @media(max-width:768px){.window{width:96%;margin:12px auto}.row-inline{flex-direction:column}.content{padding:16px}}
+</style>
+</head>
+<body>
+<div class="window">
+  <div class="titlebar">
+    <div class="dots"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div></div>
+    <span class="titlebar-text">CRYPTA — herramienta criptográfica</span>
+  </div>
+  <div class="content">
+    <div class="header">
+      <h1>CRYPTA</h1>
+      <p>cifrado simétrico · 8 algoritmos · modo verbose con visualización de bytes</p>
+    </div>
+
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="encrypt" onclick="setMode('encrypt')">Cifrar</button>
+      <button class="mode-tab" data-mode="decrypt" onclick="setMode('decrypt')">Descifrar</button>
+    </div>
+
+    <div class="row">
+      <label id="inputLabel">Texto a cifrar</label>
+      <textarea id="inputText" placeholder="Escribe o pega tu texto aquí..."></textarea>
+    </div>
+    <div class="row">
+      <div class="file-zone" id="fileZone" onclick="document.getElementById('fileInput').click()">
+        <span id="fileZoneText">o arrastra / selecciona un archivo .txt</span>
+        <input type="file" id="fileInput" accept=".txt" onchange="handleFile(event)">
+      </div>
+    </div>
+
+    <div class="row-inline" style="margin-bottom:14px">
+      <div class="row">
+        <label>Algoritmo</label>
+        <select id="algo" onchange="updateAlgoInfo()">
+          <optgroup label="Criptografía moderna">
+            <option value="AES-GCM-256">AES-256-GCM (recomendado)</option>
+            <option value="AES-CBC-256">AES-256-CBC</option>
+            <option value="AES-GCM-128">AES-128-GCM</option>
+            <option value="NACL">NaCl SecretBox (XSalsa20-Poly1305)</option>
+          </optgroup>
+          <optgroup label="Experimental">
+            <option value="CASCADE">Cascada AES-256 → NaCl (doble capa)</option>
+            <option value="OTP">One-Time Pad (XOR)</option>
+          </optgroup>
+          <optgroup label="Clásicos (didáctico)">
+            <option value="VIGENERE">Vigenère</option>
+            <option value="RAILFENCE">Rail Fence (visual)</option>
+          </optgroup>
+        </select>
+        <div class="algo-info" id="algoInfo">Cifrado autenticado · 256 bits · resistente a manipulación</div>
+        <div class="algo-warn" id="algoWarn" style="display:none"></div>
+      </div>
+      <div class="row" id="itersRow">
+        <label>Iteraciones PBKDF2</label>
+        <select id="iterations">
+          <option value="100000">100,000</option>
+          <option value="250000">250,000</option>
+          <option value="600000" selected>600,000 (OWASP)</option>
+          <option value="1000000">1,000,000</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" id="passwordRow">
+      <label id="passLabel">Contraseña</label>
+      <div class="pass-mode-row" id="passModeRow">
+        <button class="pass-mode-btn active" data-pm="manual" onclick="setPassMode('manual')">Manual</button>
+        <button class="pass-mode-btn" data-pm="generate" onclick="setPassMode('generate')" id="genPassBtn">Generar</button>
+      </div>
+      <input type="password" id="password" placeholder="Introduce tu contraseña" autocomplete="off">
+      <div class="pass-strength" id="passStrength"></div>
+    </div>
+
+    <div class="toggle-row">
+      <label class="toggle"><input type="checkbox" id="verboseToggle" onchange="toggleVerbose()"><div class="toggle-track"></div><div class="toggle-knob"></div></label>
+      <span class="toggle-label">Modo verbose</span>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="actionBtn" onclick="execute()">Cifrar</button>
+      <button class="btn" onclick="clearAll()">Limpiar</button>
+    </div>
+    <div class="status" id="status"></div>
+
+    <div class="verbose-panel" id="verbosePanel">
+      <div class="verbose-header"><span>Registro de operaciones</span><button class="btn-sm" onclick="clearLog()">Limpiar</button></div>
+      <div class="verbose-body" id="verboseBody"></div>
+    </div>
+
+    <div class="output-panel" id="outputPanel">
+      <div class="row">
+        <label id="outputLabel">Resultado cifrado</label>
+        <textarea class="output-area" id="outputText" readonly></textarea>
+      </div>
+      <div class="output-actions">
+        <button class="btn-sm" onclick="copyOutput()">Copiar</button>
+        <button class="btn-sm" onclick="downloadOutput()">Descargar .txt</button>
+        <button class="btn-sm" onclick="sendToInput()">Usar como entrada ↺</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+let currentMode = 'encrypt';
+let verboseOn = false;
+
+// ═══════════════════════════════════════════
+//  UI CONTROLS
+// ═══════════════════════════════════════════
+function setMode(m) {
+  currentMode = m;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', t.dataset.mode === m));
+  document.getElementById('inputLabel').textContent = m === 'encrypt' ? 'Texto a cifrar' : 'Texto cifrado';
+  document.getElementById('actionBtn').textContent = m === 'encrypt' ? 'Cifrar' : 'Descifrar';
+  document.getElementById('outputLabel').textContent = m === 'encrypt' ? 'Resultado cifrado' : 'Texto descifrado';
+  document.getElementById('inputText').placeholder = m === 'encrypt' ? 'Escribe o pega tu texto aquí...' : 'Pega el texto cifrado...';
+  if (m === 'decrypt') setPassMode('manual');
+  updateAlgoInfo();
+  clearStatus();
+}
+
+const ALGO_INFO = {
+  'AES-GCM-256': { info: 'Cifrado autenticado · 256 bits · resistente a manipulación', warn: '', pbkdf: true },
+  'AES-CBC-256': { info: 'Cifrado de bloque · 256 bits · padding PKCS7', warn: '', pbkdf: true },
+  'AES-GCM-128': { info: 'Cifrado autenticado · 128 bits · más rápido', warn: '', pbkdf: true },
+  'NACL': { info: 'XSalsa20 stream cipher + Poly1305 MAC · 256 bits · librería NaCl', warn: '', pbkdf: true },
+  'CASCADE': { info: 'Doble cifrado: AES-256-GCM primero, luego NaCl SecretBox · claves independientes', warn: '', pbkdf: true },
+  'OTP': { info: 'Clave aleatoria del mismo tamaño que el mensaje · teóricamente irrompible', warn: '⚠ La clave se genera automáticamente y es tan larga como el texto. Debes guardarla.', pbkdf: false },
+  'VIGENERE': { info: 'Cifrado polialfabético clásico · siglo XVI · Blaise de Vigenère', warn: '⚠ No es criptográficamente seguro. Solo para fines didácticos.', pbkdf: false },
+  'RAILFENCE': { info: 'Cifrado por transposición en zigzag · visualización del patrón', warn: '⚠ No es criptográficamente seguro. Solo para fines didácticos.', pbkdf: false },
+};
+
+function updateAlgoInfo() {
+  const a = document.getElementById('algo').value;
+  const ai = ALGO_INFO[a];
+  document.getElementById('algoInfo').textContent = ai.info;
+  const w = document.getElementById('algoWarn');
+  if (ai.warn) { w.textContent = ai.warn; w.style.display = ''; } else { w.style.display = 'none'; }
+  document.getElementById('itersRow').style.display = ai.pbkdf ? '' : 'none';
+  // OTP: auto-generate key on encrypt
+  if (a === 'OTP' && currentMode === 'encrypt') {
+    document.getElementById('passLabel').textContent = 'Clave (se generará automáticamente)';
+    document.getElementById('password').placeholder = 'Se generará al cifrar';
+    document.getElementById('password').readOnly = true;
+    document.getElementById('passModeRow').style.display = 'none';
+  } else if (a === 'OTP' && currentMode === 'decrypt') {
+    document.getElementById('passLabel').textContent = 'Clave OTP (Base64)';
+    document.getElementById('password').placeholder = 'Pega la clave OTP aquí';
+    document.getElementById('password').readOnly = false;
+    document.getElementById('passModeRow').style.display = 'none';
+  } else if (a === 'RAILFENCE') {
+    document.getElementById('passLabel').textContent = 'Número de raíles (2–20)';
+    document.getElementById('password').placeholder = 'ej: 4';
+    document.getElementById('password').readOnly = false;
+    document.getElementById('password').type = 'text';
+    document.getElementById('passModeRow').style.display = 'none';
+  } else {
+    document.getElementById('passLabel').textContent = 'Contraseña';
+    document.getElementById('password').placeholder = 'Introduce tu contraseña';
+    document.getElementById('password').readOnly = false;
+    document.getElementById('passModeRow').style.display = '';
+  }
+}
+
+function setPassMode(pm) {
+  document.querySelectorAll('.pass-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.pm === pm));
+  const p = document.getElementById('password');
+  if (pm === 'generate') { const g = genPass(24); p.value = g; p.type = 'text'; evalPass(g); }
+  else { p.type = 'password'; p.value = ''; document.getElementById('passStrength').textContent = ''; }
+}
+
+function genPass(n) {
+  const c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*-_=+';
+  const a = new Uint32Array(n); crypto.getRandomValues(a);
+  return Array.from(a, v => c[v % c.length]).join('');
+}
+
+function evalPass(pw) {
+  const el = document.getElementById('passStrength');
+  if (!pw) { el.textContent = ''; return; }
+  let s = 0;
+  if (pw.length >= 8) s++; if (pw.length >= 16) s++; if (pw.length >= 24) s++;
+  if (/[a-z]/.test(pw) && /[A-Z]/.test(pw)) s++;
+  if (/\d/.test(pw)) s++; if (/[^a-zA-Z0-9]/.test(pw)) s++;
+  const l = ['muy débil','débil','aceptable','buena','fuerte','muy fuerte','excelente'];
+  const k = ['#ff3b30','#ff3b30','#ff9500','#ffcc00','#28cd41','#28cd41','#28cd41'];
+  const i = Math.min(s, l.length - 1);
+  el.textContent = `Fortaleza: ${l[i]}`; el.style.color = k[i];
+}
+document.getElementById('password').addEventListener('input', e => evalPass(e.target.value));
+
+function handleFile(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => {
+    document.getElementById('inputText').value = ev.target.result;
+    document.getElementById('fileZone').classList.add('has-file');
+    document.getElementById('fileZoneText').textContent = `✓ ${f.name} (${(f.size/1024).toFixed(1)} KB)`;
+  };
+  r.readAsText(f);
+}
+const fz = document.getElementById('fileZone');
+fz.addEventListener('dragover', e => { e.preventDefault(); fz.style.borderColor = 'var(--accent)'; });
+fz.addEventListener('dragleave', () => fz.style.borderColor = '');
+fz.addEventListener('drop', e => {
+  e.preventDefault(); fz.style.borderColor = '';
+  const f = e.dataTransfer.files[0];
+  if (f && f.name.endsWith('.txt')) { document.getElementById('fileInput').files = e.dataTransfer.files; handleFile({target:{files:[f]}}); }
+});
+
+function toggleVerbose() {
+  verboseOn = document.getElementById('verboseToggle').checked;
+  document.getElementById('verbosePanel').classList.toggle('visible', verboseOn);
+}
+
+// ═══════════════════════════════════════════
+//  VERBOSE LOGGING
+// ═══════════════════════════════════════════
+function log(t, cls='') {
+  if (!verboseOn) return;
+  const b = document.getElementById('verboseBody');
+  const d = document.createElement('div');
+  d.className = `log-line ${cls}`; d.textContent = t; b.appendChild(d); b.scrollTop = b.scrollHeight;
+}
+function logHtml(h) {
+  if (!verboseOn) return;
+  const b = document.getElementById('verboseBody');
+  const d = document.createElement('div');
+  d.className = 'log-line'; d.innerHTML = h; b.appendChild(d); b.scrollTop = b.scrollHeight;
+}
+function logStep(t) { log(`→ ${t}`, 'log-step'); }
+function logData(t) { log(`  ${t}`, 'log-data'); }
+function logOk(t)   { log(`✓ ${t}`, 'log-ok'); }
+function logErr(t)  { log(`✗ ${t}`, 'log-err'); }
+function logDim(t)  { log(`  ${t}`, 'log-dim'); }
+function logWarn(t)  { log(`⚠ ${t}`, 'log-warn'); }
+function clearLog() { document.getElementById('verboseBody').innerHTML = ''; }
+
+// ═══════════════════════════════════════════
+//  BYTE MAP VISUALIZATION
+// ═══════════════════════════════════════════
+function renderByteMap(label, bytes, containerId) {
+  if (!verboseOn) return;
+  const body = document.getElementById('verboseBody');
+  const wrap = document.createElement('div');
+  wrap.className = 'bytemap-container';
+
+  const lbl = document.createElement('div');
+  lbl.className = 'bytemap-label';
+  lbl.textContent = label;
+  wrap.appendChild(lbl);
+
+  const cols = 32;
+  const rows = Math.ceil(bytes.length / cols);
+  for (let r = 0; r < rows && r < 40; r++) {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'bytemap-row';
+    for (let c = 0; c < cols; c++) {
+      const i = r * cols + c;
+      const cell = document.createElement('div');
+      cell.className = 'bytemap-cell';
+      if (i < bytes.length) {
+        const v = bytes[i];
+        // Map byte to a blue-tinted grayscale
+        const lightness = 95 - (v / 255) * 80;
+        cell.style.background = `hsl(215, 12%, ${lightness}%)`;
+        cell.title = `byte[${i}] = ${v} (0x${v.toString(16).padStart(2,'0')})`;
+      } else {
+        cell.style.background = 'transparent';
+      }
+      rowDiv.appendChild(cell);
+    }
+    wrap.appendChild(rowDiv);
+  }
+  if (bytes.length > 40 * cols) {
+    const more = document.createElement('div');
+    more.style.cssText = 'font-size:10px;color:var(--fg-faint);margin-top:4px';
+    more.textContent = `… ${bytes.length - 40*cols} bytes más no visualizados`;
+    wrap.appendChild(more);
+  }
+  body.appendChild(wrap);
+  body.scrollTop = body.scrollHeight;
+}
+
+function renderByteMaps(inputBytes, outputBytes) {
+  if (!verboseOn) return;
+  const body = document.getElementById('verboseBody');
+  const pair = document.createElement('div');
+  pair.className = 'bytemap-pair';
+
+  // We render them sequentially in the log
+  logStep('Mapa de bytes — visualización de difusión');
+  logDim('Cada celda = 1 byte. Más oscuro = valor mayor. Cifrado fuerte → ruido uniforme.');
+  renderByteMap('Entrada (texto plano)', inputBytes);
+  renderByteMap('Salida (cifrado)', outputBytes);
+}
+
+// ═══════════════════════════════════════════
+//  CRYPTO UTILITIES
+// ═══════════════════════════════════════════
+function buf2hex(b) { return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2,'0')).join(''); }
+function buf2b64(b) { return btoa(String.fromCharCode(...new Uint8Array(b))); }
+function b642buf(s) { const b = atob(s); const u = new Uint8Array(b.length); for (let i=0;i<b.length;i++) u[i]=b.charCodeAt(i); return u; }
+const enc = new TextEncoder(), dec = new TextDecoder();
+
+function getAesParams(id) {
+  return {
+    'AES-GCM-256': { name:'AES-GCM', keyLen:256, ivLen:12 },
+    'AES-CBC-256': { name:'AES-CBC', keyLen:256, ivLen:16 },
+    'AES-GCM-128': { name:'AES-GCM', keyLen:128, ivLen:12 },
+  }[id];
+}
+
+async function deriveKey(password, salt, algoName, keyLen, iters) {
+  logStep('Derivando clave con PBKDF2...');
+  logDim(`Iteraciones: ${iters.toLocaleString()} · Hash: SHA-256`);
+  logData(`Salt: ${buf2hex(salt).substring(0,40)}…`);
+  const km = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const key = await crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:iters, hash:'SHA-256' }, km,
+    { name:algoName, length:keyLen }, true, ['encrypt','decrypt']
+  );
+  if (verboseOn) {
+    const raw = await crypto.subtle.exportKey('raw', key);
+    logData(`Clave derivada: ${buf2hex(raw).substring(0,48)}…`);
+  }
+  logOk(`Clave ${keyLen}-bit lista`);
+  return key;
+}
+
+async function deriveRawKey(password, salt, iters, len) {
+  logStep(`Derivando ${len*8}-bit raw key con PBKDF2...`);
+  logDim(`Iteraciones: ${iters.toLocaleString()}`);
+  const km = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name:'PBKDF2', salt, iterations:iters, hash:'SHA-256' }, km, len * 8
+  );
+  const key = new Uint8Array(bits);
+  logData(`Clave: ${buf2hex(key).substring(0,48)}…`);
+  logOk('Clave raw derivada');
+  return key;
+}
+
+// ═══════════════════════════════════════════
+//  ALGO FLAGS FOR PACKING
+// ═══════════════════════════════════════════
+const FLAG = { 'AES-GCM-256':1, 'AES-CBC-256':2, 'AES-GCM-128':3, 'NACL':4, 'CASCADE':5, 'OTP':6, 'VIGENERE':7, 'RAILFENCE':8 };
+const FLAG_REV = Object.fromEntries(Object.entries(FLAG).map(([k,v])=>[v,k]));
+
+function packHeader(algoId, iters) {
+  const h = new Uint8Array(6);
+  h[0] = 2; // version
+  h[1] = FLAG[algoId];
+  new DataView(h.buffer).setUint32(2, iters, false);
+  return h;
+}
+
+function unpackHeader(buf) {
+  const ver = buf[0], flag = buf[1];
+  const iters = new DataView(buf.buffer, buf.byteOffset + 2, 4).getUint32(0, false);
+  return { ver, algoId: FLAG_REV[flag], iters, headerLen: 6 };
+}
+
+// ═══════════════════════════════════════════
+//  AES ENCRYPT / DECRYPT
+// ═══════════════════════════════════════════
+async function aesEncrypt(plain, password, algoId) {
+  const ap = getAesParams(algoId);
+  const iters = parseInt(document.getElementById('iterations').value);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(ap.ivLen));
+  logStep(`Cifrando con ${algoId}`);
+  logDim(`Texto: ${plain.length} caracteres`);
+
+  logStep('Generando salt (16 bytes) e IV...');
+  logData(`Salt: ${buf2hex(salt)}`);
+  logData(`IV (${ap.ivLen} bytes): ${buf2hex(iv)}`);
+
+  const key = await deriveKey(password, salt, ap.name, ap.keyLen, iters);
+
+  logStep(`Cifrando con ${ap.name}...`);
+  const data = enc.encode(plain);
+  const ct = await crypto.subtle.encrypt({ name:ap.name, iv }, key, data);
+  logOk(`Cifrado: ${ct.byteLength} bytes`);
+
+  const header = packHeader(algoId, iters);
+  const packed = new Uint8Array(header.length + salt.length + iv.length + ct.byteLength);
+  let o = 0;
+  packed.set(header, o); o += header.length;
+  packed.set(salt, o); o += salt.length;
+  packed.set(iv, o); o += iv.length;
+  packed.set(new Uint8Array(ct), o);
+
+  renderByteMaps(data, new Uint8Array(ct));
+  return buf2b64(packed);
+}
+
+async function aesDecrypt(b64, password) {
+  const packed = b642buf(b64.trim());
+  const { ver, algoId, iters, headerLen } = unpackHeader(packed);
+  const ap = getAesParams(algoId);
+  logStep(`Descifrando ${algoId}`);
+  let o = headerLen;
+  const salt = packed.slice(o, o+16); o += 16;
+  const iv = packed.slice(o, o+ap.ivLen); o += ap.ivLen;
+  const ct = packed.slice(o);
+  logData(`Salt: ${buf2hex(salt)}`);
+  logData(`IV: ${buf2hex(iv)}`);
+  logDim(`Cifrado: ${ct.byteLength} bytes`);
+
+  const key = await deriveKey(password, salt, ap.name, ap.keyLen, iters);
+  logStep('Descifrando...');
+  const pt = await crypto.subtle.decrypt({ name:ap.name, iv }, key, ct);
+  logOk(`Descifrado: ${pt.byteLength} bytes`);
+  renderByteMaps(new Uint8Array(ct), new Uint8Array(pt));
+  return dec.decode(pt);
+}
+
+// ═══════════════════════════════════════════
+//  NaCl SecretBox (XSalsa20-Poly1305)
+// ═══════════════════════════════════════════
+async function naclEncrypt(plain, password) {
+  const iters = parseInt(document.getElementById('iterations').value);
+  logStep('Cifrando con NaCl SecretBox (XSalsa20-Poly1305)');
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const key = await deriveRawKey(password, salt, iters, 32);
+  const nonce = nacl.randomBytes(24);
+  logStep('Generando nonce (24 bytes)...');
+  logData(`Nonce: ${buf2hex(nonce)}`);
+
+  const msgBytes = enc.encode(plain);
+  logStep(`Cifrando ${msgBytes.length} bytes con XSalsa20-Poly1305...`);
+  const box = nacl.secretbox(msgBytes, nonce, key);
+  logOk(`SecretBox: ${box.length} bytes (incluye 16-byte Poly1305 MAC)`);
+
+  const header = packHeader('NACL', iters);
+  const packed = new Uint8Array(header.length + 16 + 24 + box.length);
+  let o = 0;
+  packed.set(header, o); o += header.length;
+  packed.set(salt, o); o += 16;
+  packed.set(nonce, o); o += 24;
+  packed.set(box, o);
+
+  renderByteMaps(msgBytes, box);
+  return buf2b64(packed);
+}
+
+async function naclDecrypt(b64, password) {
+  const packed = b642buf(b64.trim());
+  const { iters, headerLen } = unpackHeader(packed);
+  logStep('Descifrando NaCl SecretBox');
+  let o = headerLen;
+  const salt = packed.slice(o, o+16); o += 16;
+  const nonce = packed.slice(o, o+24); o += 24;
+  const box = packed.slice(o);
+  logData(`Salt: ${buf2hex(salt)}`);
+  logData(`Nonce: ${buf2hex(nonce)}`);
+  logDim(`SecretBox: ${box.length} bytes`);
+
+  const key = await deriveRawKey(password, salt, iters, 32);
+  logStep('Descifrando + verificando MAC...');
+  const pt = nacl.secretbox.open(box, nonce, key);
+  if (!pt) { logErr('MAC inválido — contraseña incorrecta o datos corruptos'); throw new Error('Descifrado falló. Verifica la contraseña.'); }
+  logOk(`Descifrado: ${pt.length} bytes`);
+  renderByteMaps(box, pt);
+  return dec.decode(pt);
+}
+
+// ═══════════════════════════════════════════
+//  CASCADE (AES-256-GCM → NaCl)
+// ═══════════════════════════════════════════
+async function cascadeEncrypt(plain, password) {
+  const iters = parseInt(document.getElementById('iterations').value);
+  logStep('CASCADA: doble cifrado AES-256-GCM → NaCl SecretBox');
+  logWarn('Se derivan dos claves independientes de la misma contraseña con salts distintos');
+
+  // Layer 1: AES-256-GCM
+  logStep('═══ Capa 1: AES-256-GCM ═══');
+  const salt1 = crypto.getRandomValues(new Uint8Array(16));
+  const iv1 = crypto.getRandomValues(new Uint8Array(12));
+  const key1 = await deriveKey(password, salt1, 'AES-GCM', 256, iters);
+  const data = enc.encode(plain);
+  logStep(`Cifrando ${data.length} bytes...`);
+  const ct1 = new Uint8Array(await crypto.subtle.encrypt({ name:'AES-GCM', iv:iv1 }, key1, data));
+  logOk(`Capa 1 lista: ${ct1.length} bytes`);
+
+  // Layer 2: NaCl
+  logStep('═══ Capa 2: NaCl SecretBox ═══');
+  const salt2 = crypto.getRandomValues(new Uint8Array(16));
+  const key2 = await deriveRawKey(password, salt2, iters, 32);
+  const nonce2 = nacl.randomBytes(24);
+  logData(`Nonce capa 2: ${buf2hex(nonce2)}`);
+  const box = nacl.secretbox(ct1, nonce2, key2);
+  logOk(`Capa 2 lista: ${box.length} bytes`);
+
+  // Pack: header + salt1(16) + iv1(12) + salt2(16) + nonce2(24) + box
+  const header = packHeader('CASCADE', iters);
+  const packed = new Uint8Array(header.length + 16 + 12 + 16 + 24 + box.length);
+  let o = 0;
+  packed.set(header, o); o += header.length;
+  packed.set(salt1, o); o += 16;
+  packed.set(iv1, o); o += 12;
+  packed.set(salt2, o); o += 16;
+  packed.set(nonce2, o); o += 24;
+  packed.set(box, o);
+
+  logStep('Empaquetado completo');
+  logDim(`Total: ${packed.length} bytes → ${Math.ceil(packed.length*4/3)} chars Base64`);
+  renderByteMaps(data, box);
+  return buf2b64(packed);
+}
+
+async function cascadeDecrypt(b64, password) {
+  const packed = b642buf(b64.trim());
+  const { iters, headerLen } = unpackHeader(packed);
+  logStep('CASCADA: descifrado NaCl → AES-256-GCM');
+  let o = headerLen;
+  const salt1 = packed.slice(o,o+16); o+=16;
+  const iv1 = packed.slice(o,o+12); o+=12;
+  const salt2 = packed.slice(o,o+16); o+=16;
+  const nonce2 = packed.slice(o,o+24); o+=24;
+  const box = packed.slice(o);
+
+  logStep('═══ Descifrar capa 2: NaCl ═══');
+  const key2 = await deriveRawKey(password, salt2, iters, 32);
+  const ct1 = nacl.secretbox.open(box, nonce2, key2);
+  if (!ct1) { logErr('Capa 2 falló'); throw new Error('Descifrado falló en capa NaCl.'); }
+  logOk(`Capa 2: ${ct1.length} bytes recuperados`);
+
+  logStep('═══ Descifrar capa 1: AES-256-GCM ═══');
+  const key1 = await deriveKey(password, salt1, 'AES-GCM', 256, iters);
+  const pt = await crypto.subtle.decrypt({ name:'AES-GCM', iv:iv1 }, key1, ct1);
+  logOk(`Capa 1: ${pt.byteLength} bytes descifrados`);
+  renderByteMaps(box, new Uint8Array(pt));
+  return dec.decode(pt);
+}
+
+// ═══════════════════════════════════════════
+//  ONE-TIME PAD
+// ═══════════════════════════════════════════
+function otpEncrypt(plain) {
+  logStep('ONE-TIME PAD (XOR)');
+  const data = enc.encode(plain);
+  const key = crypto.getRandomValues(new Uint8Array(data.length));
+  logDim(`Texto: ${data.length} bytes`);
+  logDim(`Clave generada: ${key.length} bytes (misma longitud)`);
+
+  if (verboseOn && data.length <= 60) {
+    logStep('Operación XOR byte a byte (primeros bytes):');
+    const n = Math.min(data.length, 16);
+    for (let i = 0; i < n; i++) {
+      const p = data[i].toString(2).padStart(8,'0');
+      const k = key[i].toString(2).padStart(8,'0');
+      const c = (data[i]^key[i]).toString(2).padStart(8,'0');
+      logHtml(`  <span style="color:var(--fg-dim)">${String.fromCharCode(data[i]).replace(/</g,'&lt;').padEnd(2)}</span> ${p} ⊕ ${k} = <span style="color:var(--accent)">${c}</span>  (${data[i]} ⊕ ${key[i]} = ${data[i]^key[i]})`);
+    }
+    if (data.length > 16) logDim(`  … ${data.length - 16} bytes más`);
+  }
+
+  const ct = new Uint8Array(data.length);
+  for (let i = 0; i < data.length; i++) ct[i] = data[i] ^ key[i];
+  logOk('XOR completo');
+
+  // Store password field with key
+  const keyB64 = buf2b64(key);
+  document.getElementById('password').value = keyB64;
+  document.getElementById('password').type = 'text';
+  document.getElementById('password').readOnly = false;
+  logWarn(`Clave OTP (Base64, ${keyB64.length} chars) — GUÁRDALA, sin ella no puedes descifrar`);
+
+  const header = packHeader('OTP', 0);
+  const packed = new Uint8Array(header.length + ct.length);
+  packed.set(header, 0);
+  packed.set(ct, header.length);
+
+  renderByteMaps(data, ct);
+  return buf2b64(packed);
+}
+
+function otpDecrypt(b64, keyB64) {
+  const packed = b642buf(b64.trim());
+  const { headerLen } = unpackHeader(packed);
+  const ct = packed.slice(headerLen);
+  logStep('OTP: descifrando con clave XOR');
+
+  let key;
+  try { key = b642buf(keyB64.trim()); } catch(e) { logErr('Clave no es Base64 válido'); throw new Error('Clave OTP inválida'); }
+  if (key.length !== ct.length) { logErr(`Longitud de clave (${key.length}) ≠ cifrado (${ct.length})`); throw new Error('La clave OTP debe tener la misma longitud que el texto cifrado'); }
+
+  const pt = new Uint8Array(ct.length);
+  for (let i = 0; i < ct.length; i++) pt[i] = ct[i] ^ key[i];
+  logOk(`Descifrado: ${pt.length} bytes`);
+  renderByteMaps(ct, pt);
+  return dec.decode(pt);
+}
+
+// ═══════════════════════════════════════════
+//  VIGENÈRE
+// ═══════════════════════════════════════════
+function vigEncrypt(plain, password) {
+  logStep('VIGENÈRE — cifrado polialfabético');
+  logWarn('Cifrado clásico del siglo XVI. No usar para seguridad real.');
+  const key = password.toUpperCase().replace(/[^A-Z]/g, '');
+  if (!key) throw new Error('La contraseña Vigenère debe contener al menos una letra');
+  logDim(`Clave normalizada: ${key} (${key.length} letras)`);
+
+  // Show partial tabula recta
+  if (verboseOn) {
+    logStep('Tabla de sustitución (fragmento):');
+    const usedRows = [...new Set(key.split(''))].slice(0, 6);
+    let tableHtml = '<div class="vig-table" style="font-family:var(--mono);overflow-x:auto">';
+    tableHtml += '<div><span style="color:var(--fg-faint)">    </span>';
+    for (let c = 0; c < 26; c++) tableHtml += `<span style="display:inline-block;width:1.5em;text-align:center;color:var(--fg-faint)">${String.fromCharCode(65+c)}</span>`;
+    tableHtml += '</div>';
+    for (const r of usedRows) {
+      const shift = r.charCodeAt(0) - 65;
+      tableHtml += `<div><span style="color:var(--accent);font-weight:600;display:inline-block;width:2.8em">${r} → </span>`;
+      for (let c = 0; c < 26; c++) {
+        const ch = String.fromCharCode(65 + (c + shift) % 26);
+        tableHtml += `<span style="display:inline-block;width:1.5em;text-align:center">${ch}</span>`;
+      }
+      tableHtml += '</div>';
+    }
+    tableHtml += '</div>';
+    logHtml(tableHtml);
+  }
+
+  let result = '';
+  let ki = 0;
+  const details = [];
+  for (let i = 0; i < plain.length; i++) {
+    const ch = plain[i];
+    const code = ch.charCodeAt(0);
+    if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+      const isUpper = code >= 65 && code <= 90;
+      const base = isUpper ? 65 : 97;
+      const p = code - base;
+      const k = key.charCodeAt(ki % key.length) - 65;
+      const c = (p + k) % 26;
+      result += String.fromCharCode(base + c);
+      if (details.length < 20) details.push({ plain: ch, key: key[ki % key.length], shift: k, cipher: String.fromCharCode(base + c) });
+      ki++;
+    } else {
+      result += ch;
+    }
+  }
+
+  if (verboseOn && details.length > 0) {
+    logStep('Primeras sustituciones:');
+    let line1 = '  Texto:  ', line2 = '  Clave:  ', line3 = '  Shift:  ', line4 = '  Cifra:  ';
+    for (const d of details) {
+      line1 += d.plain.padEnd(4); line2 += d.key.padEnd(4);
+      line3 += String(d.shift).padEnd(4); line4 += d.cipher.padEnd(4);
+    }
+    logHtml(`<span style="color:var(--fg-dim)">${line1}</span>`);
+    logHtml(`<span style="color:var(--accent)">${line2}</span>`);
+    logHtml(`<span style="color:var(--fg-faint)">${line3}</span>`);
+    logHtml(`<span style="color:var(--fg)">${line4}</span>`);
+  }
+
+  logOk(`Cifrado: ${result.length} caracteres`);
+
+  // Pack with header
+  const header = packHeader('VIGENERE', 0);
+  const resBytes = enc.encode(result);
+  const packed = new Uint8Array(header.length + resBytes.length);
+  packed.set(header, 0); packed.set(resBytes, header.length);
+
+  renderByteMaps(enc.encode(plain), resBytes);
+  return buf2b64(packed);
+}
+
+function vigDecrypt(b64, password) {
+  const packed = b642buf(b64.trim());
+  const { headerLen } = unpackHeader(packed);
+  const ct = dec.decode(packed.slice(headerLen));
+  const key = password.toUpperCase().replace(/[^A-Z]/g, '');
+  if (!key) throw new Error('Clave inválida');
+  logStep('VIGENÈRE: descifrando');
+  logDim(`Clave: ${key}`);
+
+  let result = '';
+  let ki = 0;
+  for (let i = 0; i < ct.length; i++) {
+    const ch = ct[i];
+    const code = ch.charCodeAt(0);
+    if ((code >= 65 && code <= 90) || (code >= 97 && code <= 122)) {
+      const isUpper = code >= 65 && code <= 90;
+      const base = isUpper ? 65 : 97;
+      const c = code - base;
+      const k = key.charCodeAt(ki % key.length) - 65;
+      const p = (c - k + 26) % 26;
+      result += String.fromCharCode(base + p);
+      ki++;
+    } else {
+      result += ch;
+    }
+  }
+  logOk(`Descifrado: ${result.length} caracteres`);
+  return result;
+}
+
+// ═══════════════════════════════════════════
+//  RAIL FENCE
+// ═══════════════════════════════════════════
+function railEncrypt(plain, railsStr) {
+  const rails = parseInt(railsStr);
+  if (isNaN(rails) || rails < 2 || rails > 20) throw new Error('Número de raíles debe ser entre 2 y 20');
+  logStep(`RAIL FENCE — ${rails} raíles`);
+  logWarn('Cifrado por transposición. No usar para seguridad real.');
+  logDim(`Texto: "${plain.length > 80 ? plain.substring(0,80)+'…' : plain}"`);
+
+  const fence = Array.from({ length: rails }, () => []);
+  let rail = 0, dir = 1;
+  for (let i = 0; i < plain.length; i++) {
+    fence[rail].push({ ch: plain[i], pos: i });
+    if (rail === 0) dir = 1;
+    if (rail === rails - 1) dir = -1;
+    rail += dir;
+  }
+
+  // Visual zigzag
+  if (verboseOn && plain.length <= 80) {
+    logStep('Patrón zigzag:');
+    const grid = Array.from({ length: rails }, () => Array(plain.length).fill(' '));
+    rail = 0; dir = 1;
+    for (let i = 0; i < plain.length; i++) {
+      grid[rail][i] = plain[i];
+      if (rail === 0) dir = 1;
+      if (rail === rails - 1) dir = -1;
+      rail += dir;
+    }
+    const colors = ['#007aff', '#ff9500', '#28cd41', '#ff3b30', '#af52de', '#ff2d55', '#5ac8fa', '#ffcc00', '#34c759', '#ff6482'];
+    for (let r = 0; r < rails; r++) {
+      let html = `<span style="color:${colors[r % colors.length]};font-weight:500">R${r}: </span>`;
+      for (let c = 0; c < plain.length; c++) {
+        const ch = grid[r][c];
+        if (ch !== ' ') {
+          html += `<span style="color:${colors[r % colors.length]};font-weight:500">${ch.replace(/</g,'&lt;')}</span>`;
+        } else {
+          html += `<span style="color:var(--border)">·</span>`;
+        }
+      }
+      logHtml(`  ${html}`);
+    }
+  }
+
+  // Read off
+  let result = '';
+  for (let r = 0; r < rails; r++) {
+    for (const item of fence[r]) result += item.ch;
+  }
+  logDim(`Lectura por raíles: "${result.length > 80 ? result.substring(0,80)+'…' : result}"`);
+  logOk(`Cifrado: ${result.length} caracteres`);
+
+  const header = packHeader('RAILFENCE', rails); // store rails in iters field
+  const resBytes = enc.encode(result);
+  const packed = new Uint8Array(header.length + resBytes.length);
+  packed.set(header, 0); packed.set(resBytes, header.length);
+
+  renderByteMaps(enc.encode(plain), resBytes);
+  return buf2b64(packed);
+}
+
+function railDecrypt(b64, railsStr) {
+  const packed = b642buf(b64.trim());
+  const { iters: storedRails, headerLen } = unpackHeader(packed);
+  const ct = dec.decode(packed.slice(headerLen));
+  const rails = storedRails;
+  logStep(`RAIL FENCE: descifrando con ${rails} raíles`);
+  logDim(`Cifrado: ${ct.length} caracteres`);
+
+  // Reconstruct positions
+  const n = ct.length;
+  const order = [];
+  let rail = 0, dir = 1;
+  for (let i = 0; i < n; i++) {
+    order.push(rail);
+    if (rail === 0) dir = 1;
+    if (rail === rails - 1) dir = -1;
+    rail += dir;
+  }
+
+  // Count chars per rail
+  const counts = Array(rails).fill(0);
+  for (const r of order) counts[r]++;
+
+  // Distribute ciphertext to rails
+  const railChars = [];
+  let idx = 0;
+  for (let r = 0; r < rails; r++) {
+    railChars.push(ct.substring(idx, idx + counts[r]));
+    idx += counts[r];
+  }
+
+  // Read in zigzag order
+  const pointers = Array(rails).fill(0);
+  let result = '';
+  for (const r of order) {
+    result += railChars[r][pointers[r]];
+    pointers[r]++;
+  }
+  logOk(`Descifrado: ${result.length} caracteres`);
+
+  // Show zigzag reconstruction
+  if (verboseOn && result.length <= 80) {
+    logStep('Patrón reconstruido:');
+    const grid = Array.from({ length: rails }, () => Array(n).fill(' '));
+    rail = 0; dir = 1;
+    for (let i = 0; i < n; i++) {
+      grid[rail][i] = result[i];
+      if (rail === 0) dir = 1;
+      if (rail === rails - 1) dir = -1;
+      rail += dir;
+    }
+    const colors = ['#007aff','#ff9500','#28cd41','#ff3b30','#af52de','#ff2d55','#5ac8fa','#ffcc00'];
+    for (let r = 0; r < rails; r++) {
+      let html = `<span style="color:${colors[r%colors.length]};font-weight:500">R${r}: </span>`;
+      for (let c = 0; c < n; c++) {
+        const ch = grid[r][c];
+        html += ch !== ' '
+          ? `<span style="color:${colors[r%colors.length]};font-weight:500">${ch.replace(/</g,'&lt;')}</span>`
+          : `<span style="color:var(--border)">·</span>`;
+      }
+      logHtml(`  ${html}`);
+    }
+  }
+
+  return result;
+}
+
+// ═══════════════════════════════════════════
+//  DISPATCHER
+// ═══════════════════════════════════════════
+async function execute() {
+  const input = document.getElementById('inputText').value.trim();
+  const password = document.getElementById('password').value;
+  const algoId = document.getElementById('algo').value;
+
+  if (!input) { setStatus('Introduce texto o sube un archivo', 'err'); return; }
+  if (algoId !== 'OTP' || currentMode === 'decrypt') {
+    if (!password) { setStatus('Introduce una contraseña', 'err'); return; }
+  }
+
+  const btn = document.getElementById('actionBtn');
+  btn.disabled = true;
+  btn.textContent = currentMode === 'encrypt' ? 'Cifrando…' : 'Descifrando…';
+  clearStatus();
+  clearLog();
+
+  try {
+    let result;
+    if (currentMode === 'encrypt') {
+      if (['AES-GCM-256','AES-CBC-256','AES-GCM-128'].includes(algoId)) {
+        result = await aesEncrypt(input, password, algoId);
+      } else if (algoId === 'NACL') {
+        result = await naclEncrypt(input, password);
+      } else if (algoId === 'CASCADE') {
+        result = await cascadeEncrypt(input, password);
+      } else if (algoId === 'OTP') {
+        result = otpEncrypt(input);
+      } else if (algoId === 'VIGENERE') {
+        result = vigEncrypt(input, password);
+      } else if (algoId === 'RAILFENCE') {
+        result = railEncrypt(input, password);
+      }
+      setStatus('Cifrado completado', 'ok');
+    } else {
+      // Detect algorithm from packed header
+      let packed;
+      try { packed = b642buf(input.trim()); } catch(e) { throw new Error('Texto no es Base64 válido'); }
+      const { algoId: detectedAlgo } = unpackHeader(packed);
+      logStep(`Algoritmo detectado: ${detectedAlgo}`);
+
+      if (['AES-GCM-256','AES-CBC-256','AES-GCM-128'].includes(detectedAlgo)) {
+        result = await aesDecrypt(input, password);
+      } else if (detectedAlgo === 'NACL') {
+        result = await naclDecrypt(input, password);
+      } else if (detectedAlgo === 'CASCADE') {
+        result = await cascadeDecrypt(input, password);
+      } else if (detectedAlgo === 'OTP') {
+        result = otpDecrypt(input, password);
+      } else if (detectedAlgo === 'VIGENERE') {
+        result = vigDecrypt(input, password);
+      } else if (detectedAlgo === 'RAILFENCE') {
+        result = railDecrypt(input, password);
+      } else {
+        throw new Error('Algoritmo no reconocido');
+      }
+      setStatus('Descifrado completado', 'ok');
+    }
+    showOutput(result);
+  } catch(e) {
+    setStatus(e.message, 'err');
+    if (verboseOn) logErr(e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = currentMode === 'encrypt' ? 'Cifrar' : 'Descifrar';
+  }
+}
+
+// ═══════════════════════════════════════════
+//  OUTPUT
+// ═══════════════════════════════════════════
+function showOutput(t) {
+  document.getElementById('outputText').value = t;
+  document.getElementById('outputPanel').classList.add('visible');
+}
+function copyOutput() {
+  navigator.clipboard.writeText(document.getElementById('outputText').value)
+    .then(() => setStatus('Copiado al portapapeles', 'ok'));
+}
+function downloadOutput() {
+  const b = new Blob([document.getElementById('outputText').value], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(b);
+  a.download = currentMode === 'encrypt' ? 'cifrado.txt' : 'descifrado.txt';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+function sendToInput() {
+  document.getElementById('inputText').value = document.getElementById('outputText').value;
+  document.getElementById('outputPanel').classList.remove('visible');
+  setMode(currentMode === 'encrypt' ? 'decrypt' : 'encrypt');
+}
+function setStatus(m,t) { const e=document.getElementById('status'); e.textContent=m; e.className=`status ${t||''}`; }
+function clearStatus() { setStatus('',''); }
+function clearAll() {
+  document.getElementById('inputText').value='';
+  document.getElementById('password').value='';
+  document.getElementById('password').type='password';
+  document.getElementById('password').readOnly=false;
+  document.getElementById('outputPanel').classList.remove('visible');
+  document.getElementById('outputText').value='';
+  document.getElementById('fileZone').classList.remove('has-file');
+  document.getElementById('fileZoneText').textContent='o arrastra / selecciona un archivo .txt';
+  document.getElementById('fileInput').value='';
+  document.getElementById('passStrength').textContent='';
+  clearStatus(); clearLog(); updateAlgoInfo();
+}
+
+// Init
+updateAlgoInfo();
+</script>
+</body>
+</html>
