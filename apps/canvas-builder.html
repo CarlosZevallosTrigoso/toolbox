@@ -250,6 +250,7 @@
     <button class="btn sm" id="snapBtn" onclick="toggleSnap()" title="snap to grid">grid</button>
     <button class="btn" onclick="saveProject()">guardar</button>
     <button class="btn" onclick="loadProject()">cargar</button>
+    <button class="btn" onclick="showImportModal()">importar</button>
     <button class="btn" onclick="showCanvasSettings()">canvas</button>
     <button class="btn" onclick="previewHTML()">preview</button>
     <button class="btn" onclick="exportPDF()">pdf</button>
@@ -429,6 +430,51 @@
     </div>
   </div>
 </div>
+
+<div class="modal-bg hidden" id="importModal">
+  <div class="modal">
+    <h2>importar html</h2>
+    <p style="font-size:11px;color:var(--text);margin-bottom:12px;line-height:1.6">
+      importa un archivo html y lo convierte en elementos editables. funciona con páginas exportadas desde canvas·builder y con html genérico que use posicionamiento absoluto.
+    </p>
+
+    <div style="margin-bottom:12px">
+      <button class="btn" onclick="document.getElementById('fileImportHtml').click()" style="width:100%;text-align:center;padding:8px">
+        seleccionar archivo .html
+      </button>
+      <div id="importFileName" style="font-size:10px;color:var(--text-dim);margin-top:4px"></div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--text);margin-bottom:8px">
+        <input type="checkbox" id="importWithFolder" style="accent-color:var(--accent)">
+        tengo una carpeta con imágenes locales
+      </label>
+      <div id="importFolderWrap" style="display:none">
+        <p style="font-size:10px;color:var(--text-dim);margin-bottom:6px;line-height:1.5">
+          si el html usa rutas relativas (ej: <code style="color:var(--accent)">images/foto.jpg</code>), selecciona la carpeta raíz donde está el html. las imágenes se cargarán en memoria.
+        </p>
+        <button class="btn" onclick="document.getElementById('fileImportFolder').click()" style="width:100%;text-align:center;padding:8px">
+          seleccionar carpeta
+        </button>
+        <div id="importFolderName" style="font-size:10px;color:var(--text-dim);margin-top:4px"></div>
+      </div>
+    </div>
+
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--text);margin-bottom:8px">
+      <input type="checkbox" id="importClearFirst" checked style="accent-color:var(--accent)">
+      limpiar canvas antes de importar
+    </label>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('importModal')">cancelar</button>
+      <button class="btn primary" id="importGoBtn" onclick="doImport()" disabled>importar</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileImportHtml" accept=".html,.htm" style="display:none" onchange="handleImportFile(event)">
+<input type="file" id="fileImportFolder" webkitdirectory style="display:none" onchange="handleImportFolder(event)">
 
 <script>
 // ══════════════════════════════════════
@@ -1089,6 +1135,269 @@ function handleLoad(e) {
   };
   reader.readAsText(file);
   e.target.value = '';
+}
+
+// ══════════════════════════════════════
+// IMPORT HTML
+// ══════════════════════════════════════
+let _importHtmlContent = null;
+let _importFolderFiles = {};
+
+function showImportModal() {
+  _importHtmlContent = null;
+  _importFolderFiles = {};
+  document.getElementById('importFileName').textContent = '';
+  document.getElementById('importFolderName').textContent = '';
+  document.getElementById('importGoBtn').disabled = true;
+  document.getElementById('importWithFolder').checked = false;
+  document.getElementById('importFolderWrap').style.display = 'none';
+  document.getElementById('importClearFirst').checked = true;
+  openModal('importModal');
+}
+
+document.getElementById('importWithFolder').addEventListener('change', function() {
+  document.getElementById('importFolderWrap').style.display = this.checked ? 'block' : 'none';
+});
+
+function handleImportFile(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    _importHtmlContent = ev.target.result;
+    document.getElementById('importFileName').textContent = '✓ ' + file.name;
+    document.getElementById('importGoBtn').disabled = false;
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function handleImportFolder(e) {
+  const files = e.target.files;
+  _importFolderFiles = {};
+  let count = 0;
+  for (const file of files) {
+    // store by relative path (webkitRelativePath = "folderName/sub/file.jpg")
+    // strip the root folder name so paths match relative refs in the HTML
+    const parts = file.webkitRelativePath.split('/');
+    const relPath = parts.slice(1).join('/'); // remove root folder
+    if (file.type.startsWith('image/') || file.type.startsWith('video/') || file.type.startsWith('audio/')) {
+      _importFolderFiles[relPath] = file;
+      // also store just the filename for simple references
+      _importFolderFiles[parts[parts.length - 1]] = file;
+      count++;
+    }
+  }
+  document.getElementById('importFolderName').textContent = `✓ ${count} archivos de media encontrados`;
+  e.target.value = '';
+}
+
+async function doImport() {
+  if (!_importHtmlContent) return;
+  closeModal('importModal');
+
+  const clearFirst = document.getElementById('importClearFirst').checked;
+  if (clearFirst) {
+    canvas.querySelectorAll('.ce').forEach(d => d.remove());
+    elements = []; selectedEl = null; nextZ = 1;
+  }
+
+  snapshot();
+
+  // parse HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(_importHtmlContent, 'text/html');
+
+  // try to extract canvas/body background
+  const canvasDiv = doc.querySelector('.canvas');
+  const bodyEl = doc.querySelector('body');
+  if (clearFirst) {
+    const bgSource = canvasDiv || bodyEl;
+    // try inline style first
+    let bg = bgSource ? (bgSource.style.backgroundColor || bgSource.style.background) : '';
+    // fallback: parse <style> content for body/canvas bg
+    if (!bg) {
+      const styleTag = doc.querySelector('style');
+      if (styleTag) {
+        const css = styleTag.textContent;
+        const bgMatch = css.match(/body\s*\{[^}]*?background(?:-color)?:\s*([^;}\n]+)/);
+        if (bgMatch) bg = bgMatch[1].trim();
+      }
+    }
+    if (bg) { canvasBg = bg; canvas.style.background = bg; }
+  }
+
+  // load Google Fonts found in the HTML
+  const fontMatches = _importHtmlContent.match(/fonts\.googleapis\.com\/css2\?([^'"]+)/g);
+  if (fontMatches) {
+    fontMatches.forEach(url => {
+      const families = url.match(/family=([^&:'"]+)/g);
+      if (families) families.forEach(f => {
+        const name = decodeURIComponent(f.replace('family=', '')).replace(/\+/g, ' ');
+        loadGFont(name);
+      });
+    });
+  }
+
+  // find all absolutely positioned elements
+  const container = canvasDiv || bodyEl;
+  if (!container) { alert('no se encontró contenido válido'); return; }
+
+  const children = container.querySelectorAll('*');
+  const processed = new Set();
+
+  for (const node of children) {
+    if (processed.has(node)) continue;
+    const style = node.style;
+    const computed = node.getAttribute('style') || '';
+
+    // skip non-positioned elements, handles, overlays, pdf links
+    if (!computed.includes('position:absolute') && !computed.includes('position: absolute')) continue;
+    if (node.id === 'pdfLink') continue;
+
+    processed.add(node);
+
+    const x = parseFloat(style.left) || 0;
+    const y = parseFloat(style.top) || 0;
+    const w = parseFloat(style.width) || 200;
+    const h = parseFloat(style.height) || 100;
+    const rotation = parseRotation(style.transform);
+    const opacity = style.opacity !== '' ? parseFloat(style.opacity) : 1;
+    const filter = style.filter && style.filter !== 'none' ? style.filter : '';
+
+    // detect link wrapper
+    let link = '';
+    if (node.tagName === 'A') {
+      link = node.getAttribute('href') || '';
+      // the actual content is inside the <a>
+      const inner = node.querySelector('div, img, iframe');
+      if (inner) {
+        processed.add(inner);
+        await importNode(inner, x, y, w, h, rotation, opacity, filter, link);
+        continue;
+      }
+    }
+
+    await importNode(node, x, y, w, h, rotation, opacity, filter, link);
+  }
+
+  showDefaultProps(); updateLayers(); updateCount();
+  _importHtmlContent = null;
+}
+
+async function importNode(node, x, y, w, h, rotation, opacity, filter, link) {
+  const style = node.style;
+  const tag = node.tagName;
+
+  // ── image ──
+  const img = (tag === 'IMG') ? node : node.querySelector('img');
+  if (img) {
+    let src = img.getAttribute('src') || '';
+    // resolve relative image from folder
+    src = await resolveImageSrc(src);
+    createElement('image', x, y, w, h, {
+      src, alt: img.getAttribute('alt') || '',
+      objectFit: (img.style.objectFit || 'cover'),
+      rotation, opacity, filter, link, name: 'imagen'
+    });
+    return;
+  }
+
+  // ── embed (iframe) ──
+  const iframe = (tag === 'IFRAME') ? node : node.querySelector('iframe');
+  if (iframe) {
+    const embedSrc = iframe.getAttribute('src') || '';
+    createElement('embed', x, y, w, h, {
+      embedSrc, embedHtml: '', embedType: 'iframe',
+      rotation, opacity, filter, link, name: 'embed'
+    });
+    return;
+  }
+
+  // ── shape (no text content, has background) ──
+  const text = node.textContent.trim();
+  const bg = style.background || style.backgroundColor;
+  if (!text && bg) {
+    const isCircle = (style.borderRadius === '50%');
+    createElement('shape', x, y, w, h, {
+      shape: isCircle ? 'circle' : 'rect',
+      fillColor: bg,
+      borderColor: parseBorderColor(style.border) || 'transparent',
+      borderWidth: parseBorderWidth(style.border) || 0,
+      rotation, opacity, filter, link,
+      name: isCircle ? 'círculo' : 'rectángulo'
+    });
+    return;
+  }
+
+  // ── text ──
+  if (text || tag === 'DIV' || tag === 'P' || tag === 'SPAN' || tag === 'H1' || tag === 'H2' || tag === 'H3') {
+    const fontSize = parseFloat(style.fontSize) || 16;
+    const fontFamily = style.fontFamily || 'system-ui, sans-serif';
+    const color = style.color || '#333333';
+    const fontWeight = style.fontWeight || '400';
+    const textAlign = style.textAlign || 'left';
+    const bgColor = (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') ? bg : 'transparent';
+
+    // detect Google Font
+    let _font = '';
+    const fontMatch = fontFamily.match(/'([^']+)'/);
+    if (fontMatch && !['Georgia','Courier New'].includes(fontMatch[1])) {
+      _font = fontMatch[1];
+      loadGFont(_font);
+    }
+
+    createElement('text', x, y, w, h, {
+      text, fontSize, fontFamily, _font, color, fontWeight, textAlign, bgColor,
+      rotation, opacity, filter, link, name: 'texto'
+    });
+    return;
+  }
+}
+
+async function resolveImageSrc(src) {
+  if (!src) return src;
+  // already absolute or base64
+  if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('blob:')) return src;
+
+  // try to find in imported folder
+  const candidates = [
+    src,
+    src.replace(/^\.\//, ''),
+    src.replace(/^\//, ''),
+    src.split('/').pop() // just filename
+  ];
+
+  for (const path of candidates) {
+    const file = _importFolderFiles[path];
+    if (file) {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+    }
+  }
+
+  // couldn't resolve — return original path
+  return src;
+}
+
+function parseRotation(transform) {
+  if (!transform) return 0;
+  const m = transform.match(/rotate\(([-\d.]+)deg\)/);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+function parseBorderWidth(border) {
+  if (!border) return 0;
+  const m = border.match(/([\d.]+)px/);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+function parseBorderColor(border) {
+  if (!border) return '';
+  const m = border.match(/\d+px\s+\w+\s+(.*)/);
+  return m ? m[1] : '';
 }
 
 // ══════════════════════════════════════
