@@ -197,13 +197,13 @@
   /* google fonts dropdown */
   .font-search-wrap { position: relative; }
   .font-results {
-    position: absolute; top: 100%; left: 0; right: 0; max-height: 160px;
+    position: fixed; max-height: 180px; width: 188px;
     overflow-y: auto; background: var(--bg2); border: 1px solid var(--border);
-    z-index: 100; display: none;
+    z-index: 9000; display: none; box-shadow: 0 4px 16px rgba(0,0,0,.5);
   }
   .font-results.show { display: block; }
   .font-result {
-    padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--text);
+    padding: 5px 8px; font-size: 11px; cursor: pointer; color: var(--text);
   }
   .font-result:hover { background: var(--accent-dim); }
 
@@ -475,6 +475,8 @@
 
 <input type="file" id="fileImportHtml" accept=".html,.htm" style="display:none" onchange="handleImportFile(event)">
 <input type="file" id="fileImportFolder" webkitdirectory style="display:none" onchange="handleImportFolder(event)">
+
+<div class="font-results" id="fontResults"></div>
 
 <script>
 // ══════════════════════════════════════
@@ -783,7 +785,8 @@ function loadGFont(name) {
   loadedFonts.add(name);
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(name)}:wght@300;400;600;700;900&display=swap`;
+  link.crossOrigin = 'anonymous';
+  link.href = `https://fonts.googleapis.com/css2?family=${name.replace(/ /g,'+')}&display=swap`;
   document.head.appendChild(link);
 }
 
@@ -843,7 +846,6 @@ function showProps(el) {
       </select></div>
       <div class="font-search-wrap">
         <div class="prop-row"><label>g·f</label><input type="text" id="fontSearch" value="${el._font||''}" placeholder="buscar google font..." oninput="searchFonts(this.value,'${el.id}')" onfocus="searchFonts(this.value,'${el.id}')"></div>
-        <div class="font-results" id="fontResults"></div>
       </div>
     </div>`;
   } else if (el.type === 'shape') {
@@ -948,10 +950,20 @@ function setLinkP(id, val) {
 // google fonts search
 function searchFonts(query, elId) {
   const box = document.getElementById('fontResults');
+  const input = document.getElementById('fontSearch');
   if (!query) { box.classList.remove('show'); return; }
   const q = query.toLowerCase();
   const matches = GFONTS.filter(f => f.toLowerCase().includes(q)).slice(0, 12);
-  box.innerHTML = matches.map(f => `<div class="font-result" onmousedown="pickFont('${elId}','${f}')">${f}</div>`).join('');
+  // preload matched fonts for preview
+  matches.forEach(f => loadGFont(f));
+  box.innerHTML = matches.map(f => `<div class="font-result" style="font-family:'${f}',sans-serif" onmousedown="pickFont('${elId}','${f}')">${f}</div>`).join('');
+  // position dropdown below the input
+  if (input && matches.length) {
+    const rect = input.getBoundingClientRect();
+    box.style.left = rect.left + 'px';
+    box.style.top = rect.bottom + 2 + 'px';
+    box.style.width = rect.width + 'px';
+  }
   box.classList.toggle('show', matches.length > 0);
 }
 function pickFont(elId, fontName) {
@@ -981,7 +993,7 @@ function setFontSystem(elId, val) {
 
 // close font results on click elsewhere
 document.addEventListener('click', e => {
-  if (!e.target.closest('.font-search-wrap')) {
+  if (!e.target.closest('.font-search-wrap') && !e.target.closest('#fontResults')) {
     const box = document.getElementById('fontResults');
     if (box) box.classList.remove('show');
   }
@@ -1415,7 +1427,7 @@ function generateHTML(opts = {}) {
 
   let fontImport = '';
   if (usedFonts.size) {
-    const families = [...usedFonts].map(f => `family=${encodeURIComponent(f)}:wght@300;400;600;700;900`).join('&');
+    const families = [...usedFonts].map(f => `family=${f.replace(/ /g,'+')}`).join('&');
     fontImport = `@import url('https://fonts.googleapis.com/css2?${families}&display=swap');`;
   }
 
@@ -1503,7 +1515,7 @@ async function downloadPDF() {
   ${fontImport}
   * { margin:0; padding:0; box-sizing:border-box; }
   body { ${bgStyle}; min-height:100vh; }
-  .canvas { position:relative; width:100%; min-height:100vh; overflow:hidden; }
+  .canvas { position:relative; width:100%; height:${h}px; overflow:hidden; }
   @media print { #pdfLink { display:none !important; } }
 </style>
 </head>
