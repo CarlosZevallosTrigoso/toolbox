@@ -33,103 +33,88 @@
   a:hover { text-decoration: underline; }
 
   .container {
-    max-width: 960px;
+    max-width: 1080px;
     margin: 0 auto;
     padding: 2rem 1.5rem;
   }
 
   header {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     border-bottom: 1px solid var(--border);
-    padding-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    display: flex;
+    align-items: baseline;
+    gap: 1rem;
   }
 
-  header .back { font-size: 12px; color: var(--text-dim); margin-bottom: 0.5rem; display: block; }
+  header .back { font-size: 12px; color: var(--text-dim); }
   header .back:hover { color: var(--accent-bright); text-decoration: none; }
 
   h1 {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
     font-weight: 400;
     color: var(--text-bright);
     letter-spacing: -0.02em;
   }
 
   h1 span { color: var(--accent); }
-  .subtitle { color: var(--text-dim); font-size: 12px; margin-top: 0.25rem; }
 
-  .grid {
-    display: grid;
-    grid-template-columns: 250px 1fr;
-    gap: 1.5rem;
-    align-items: start;
-  }
-
-  @media (max-width: 720px) {
-    .grid { grid-template-columns: 1fr; }
-  }
-
-  .panel {
+  /* ── Controls panel ── */
+  .controls-panel {
     background: var(--bg2);
     border: 1px solid var(--border);
     border-radius: 6px;
+    margin-bottom: 1rem;
     overflow: hidden;
   }
 
-  .panel-header {
-    padding: 0.6rem 0.8rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-dim);
+  .controls-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0.7rem 0.8rem;
+    align-items: end;
   }
 
-  .panel-body { padding: 0.8rem; }
+  .controls-row + .controls-row {
+    border-top: 1px solid var(--border);
+  }
 
-  .control-group { margin-bottom: 0.7rem; }
-  .control-group:last-child { margin-bottom: 0; }
+  .field { display: flex; flex-direction: column; gap: 0.2rem; }
 
-  label {
-    display: block;
-    font-size: 10px;
+  .field label {
+    font-size: 9px;
     color: var(--text-dim);
-    margin-bottom: 0.25rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
 
-  select, input[type="number"] {
-    width: 100%;
+  .field select, .field input[type="number"] {
     background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 4px;
     color: var(--text);
     font-family: inherit;
     font-size: 12px;
-    padding: 0.35rem 0.5rem;
+    padding: 0.3rem 0.4rem;
     outline: none;
     transition: border-color 0.15s;
   }
 
-  select:focus, input[type="number"]:focus { border-color: var(--accent); }
-  select { cursor: pointer; }
+  .field select:focus, .field input:focus { border-color: var(--accent); }
+  .field select { cursor: pointer; }
+  .field input[type="number"] { width: 58px; }
 
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.5rem;
+  .sep {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    align-self: end;
+    margin-bottom: 2px;
   }
 
-  .info-hint {
-    font-size: 10px;
-    color: var(--text-dim);
-    margin-top: 0.15rem;
-    font-style: italic;
-  }
-
-  .btn-generate {
-    width: 100%;
-    padding: 0.55rem;
+  .btn-gen {
+    padding: 0.3rem 0.9rem;
     background: var(--accent-dim);
     border: 1px solid var(--accent);
     border-radius: 4px;
@@ -138,17 +123,27 @@
     font-size: 12px;
     cursor: pointer;
     transition: all 0.15s;
-    letter-spacing: 0.04em;
-    margin-top: 0.7rem;
+    white-space: nowrap;
+    align-self: end;
   }
 
-  .btn-generate:hover { background: var(--accent); }
-  .btn-generate:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-gen:hover { background: var(--accent); }
+  .btn-gen:disabled { opacity: 0.3; cursor: not-allowed; }
 
-  .presets {
+  /* Presets row */
+  .presets-row {
     display: flex;
     flex-wrap: wrap;
     gap: 0.3rem;
+    align-items: center;
+  }
+
+  .presets-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 0.2rem;
   }
 
   .preset-chip {
@@ -158,7 +153,7 @@
     color: var(--text-dim);
     font-family: inherit;
     font-size: 10px;
-    padding: 0.2rem 0.4rem;
+    padding: 0.15rem 0.4rem;
     cursor: pointer;
     transition: all 0.15s;
   }
@@ -166,9 +161,12 @@
   .preset-chip:hover { border-color: var(--accent); color: var(--text); }
   .preset-chip.active { border-color: var(--accent); color: var(--accent-bright); }
 
-  /* Output */
-  .output-area {
-    min-height: 420px;
+  /* ── Output panel ── */
+  .output-panel {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
   }
@@ -177,7 +175,7 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem 0.8rem;
+    padding: 0.45rem 0.8rem;
     border-bottom: 1px solid var(--border);
   }
 
@@ -194,7 +192,7 @@
     color: var(--text-dim);
     font-family: inherit;
     font-size: 11px;
-    padding: 0.2rem 0.45rem;
+    padding: 0.15rem 0.4rem;
     cursor: pointer;
     transition: all 0.15s;
   }
@@ -203,15 +201,14 @@
   .btn-sm.ok { border-color: var(--accent); color: var(--accent-bright); }
 
   .output-body {
-    flex: 1;
-    padding: 0.8rem;
-    max-height: 70vh;
+    padding: 1rem;
+    max-height: 65vh;
     overflow-y: auto;
   }
 
   .output-body p {
     margin-bottom: 0.8em;
-    line-height: 1.7;
+    line-height: 1.75;
   }
 
   .output-body p:last-child { margin-bottom: 0; }
@@ -220,7 +217,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 300px;
+    min-height: 200px;
     color: var(--text-dim);
     font-style: italic;
     font-size: 12px;
@@ -229,6 +226,12 @@
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    .controls-row { gap: 0.4rem; }
+    .field select, .field input { font-size: 11px; padding: 0.25rem 0.35rem; }
+    .sep { display: none; }
+  }
 </style>
 </head>
 <body>
@@ -237,323 +240,271 @@
   <header>
     <a class="back" href="./">← toolbox/</a>
     <h1>rizo-<span>lorem</span></h1>
-    <div class="subtitle">texto placeholder rizomático</div>
   </header>
 
-  <div class="grid">
-    <div class="sidebar">
-      <!-- Controls -->
-      <div class="panel" style="margin-bottom: 1rem;">
-        <div class="panel-header">controles</div>
-        <div class="panel-body">
-          <div class="control-group">
-            <label>algoritmo</label>
-            <select id="algo">
-              <option value="fragments">fragmentos</option>
-              <option value="markov" selected>markov</option>
-              <option value="shuffle">shuffle</option>
-              <option value="hybrid">híbrido</option>
-            </select>
-          </div>
-
-          <div class="control-group" id="markovGroup">
-            <label>orden de markov</label>
-            <select id="markovOrder">
-              <option value="1">1 — caótico</option>
-              <option value="2" selected>2 — balanceado</option>
-              <option value="3">3 — coherente</option>
-              <option value="4">4 — casi original</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label>unidad</label>
-            <select id="unit">
-              <option value="paragraphs">párrafos</option>
-              <option value="sentences">oraciones</option>
-              <option value="words">palabras</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label>cantidad</label>
-            <input type="number" id="amount" value="4" min="1" max="200">
-          </div>
-
-          <div class="row">
-            <div class="control-group">
-              <label>orac / párrafo</label>
-              <input type="number" id="spp" value="5" min="1" max="20">
-            </div>
-            <div class="control-group">
-              <label>palab / oración</label>
-              <input type="number" id="wps" value="14" min="3" max="50">
-            </div>
-          </div>
-
-          <div class="control-group">
-            <label>formato</label>
-            <select id="format">
-              <option value="plain">texto plano</option>
-              <option value="p">&lt;p&gt;</option>
-              <option value="li">&lt;li&gt;</option>
-              <option value="div">&lt;div&gt;</option>
-            </select>
-          </div>
-
-          <div class="control-group">
-            <label>capitalizar inicio</label>
-            <select id="capitalize">
-              <option value="yes">sí</option>
-              <option value="no">no</option>
-            </select>
-          </div>
-
-          <button class="btn-generate" id="btnGen" disabled>generar · ⌘↵</button>
-        </div>
+  <div class="controls-panel">
+    <!-- Main controls -->
+    <div class="controls-row">
+      <div class="field">
+        <label>algoritmo</label>
+        <select id="algo">
+          <option value="fragments">fragmentos</option>
+          <option value="markov" selected>markov</option>
+          <option value="shuffle">shuffle</option>
+          <option value="hybrid">híbrido</option>
+        </select>
+      </div>
+      <div class="field" id="markovGroup">
+        <label>orden</label>
+        <select id="markovOrder">
+          <option value="1">1</option>
+          <option value="2" selected>2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+        </select>
       </div>
 
-      <!-- Presets -->
-      <div class="panel">
-        <div class="panel-header">presets</div>
-        <div class="panel-body">
-          <div class="presets" id="presets">
-            <button class="preset-chip" data-p="short">párrafo corto</button>
-            <button class="preset-chip" data-p="article">artículo</button>
-            <button class="preset-chip" data-p="list">lista 10 items</button>
-            <button class="preset-chip" data-p="micro">microcopy</button>
-            <button class="preset-chip" data-p="dense">bloque denso</button>
-            <button class="preset-chip" data-p="chaotic">caótico</button>
-          </div>
-        </div>
+      <div class="sep"></div>
+
+      <div class="field">
+        <label>unidad</label>
+        <select id="unit">
+          <option value="paragraphs">párrafos</option>
+          <option value="sentences">oraciones</option>
+          <option value="words">palabras</option>
+        </select>
       </div>
+      <div class="field">
+        <label>cantidad</label>
+        <input type="number" id="amount" value="4" min="1" max="200">
+      </div>
+      <div class="field">
+        <label>orac/¶</label>
+        <input type="number" id="spp" value="5" min="1" max="20">
+      </div>
+      <div class="field">
+        <label>palab/orac</label>
+        <input type="number" id="wps" value="14" min="3" max="50">
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="field">
+        <label>formato</label>
+        <select id="format">
+          <option value="plain">plano</option>
+          <option value="p">&lt;p&gt;</option>
+          <option value="li">&lt;li&gt;</option>
+          <option value="div">&lt;div&gt;</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>mayúsc.</label>
+        <select id="capitalize">
+          <option value="yes">sí</option>
+          <option value="no">no</option>
+        </select>
+      </div>
+
+      <div class="sep"></div>
+
+      <button class="btn-gen" id="btnGen" disabled>generar · ⌘↵</button>
     </div>
 
-    <!-- Output -->
-    <div class="panel output-area">
-      <div class="output-bar">
-        <span class="stats" id="stats"></span>
-        <button class="btn-sm" id="btnCopy">copiar</button>
-        <button class="btn-sm" id="btnHtml">html</button>
-        <button class="btn-sm" id="btnRegen" style="display:none;">↻</button>
-      </div>
-      <div class="output-body" id="out">
-        <div class="placeholder">cargando…</div>
-      </div>
+    <!-- Presets -->
+    <div class="controls-row presets-row">
+      <span class="presets-label">presets</span>
+      <button class="preset-chip" data-p="short">párrafo corto</button>
+      <button class="preset-chip" data-p="article">artículo</button>
+      <button class="preset-chip" data-p="list">lista</button>
+      <button class="preset-chip" data-p="micro">microcopy</button>
+      <button class="preset-chip" data-p="dense">denso</button>
+      <button class="preset-chip" data-p="chaotic">caótico</button>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="output-panel">
+    <div class="output-bar">
+      <span class="stats" id="stats"></span>
+      <button class="btn-sm" id="btnCopy">copiar</button>
+      <button class="btn-sm" id="btnHtml">html</button>
+      <button class="btn-sm" id="btnRegen" style="display:none;">↻</button>
+    </div>
+    <div class="output-body" id="out">
+      <div class="placeholder">cargando…</div>
     </div>
   </div>
 </div>
 
 <script>
 const SOURCE = 'sources/rizoma.txt';
+const corpus = { text:'', words:[], sentences:[] };
+let lastPlain='', lastHtml='';
+let mCache=null, mHash=null;
+const $=id=>document.getElementById(id);
 
-const corpus = { text: '', words: [], sentences: [] };
-let lastPlain = '', lastHtml = '';
-let mCache = null, mHash = null;
-
-const $ = id => document.getElementById(id);
-
-// ─── Load source silently ────────────────────────────────────
+// ─── Load ────────────────────────────────────────────────────
 fetch(SOURCE)
-  .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
-  .then(t => {
-    t = t.trim();
-    corpus.text = t;
-    corpus.words = t.split(/\s+/).filter(Boolean);
-    corpus.sentences = t.replace(/\n+/g, ' ')
+  .then(r=>{if(!r.ok)throw new Error(r.status);return r.text();})
+  .then(t=>{
+    t=t.trim();
+    corpus.text=t;
+    corpus.words=t.split(/\s+/).filter(Boolean);
+    corpus.sentences=t.replace(/\n+/g,' ')
       .split(/(?<=[.!?…])\s+/)
-      .map(s => s.trim())
-      .filter(s => s.length > 5);
-    $('btnGen').disabled = false;
-    $('out').innerHTML = '<div class="placeholder">listo — generá texto</div>';
+      .map(s=>s.trim()).filter(s=>s.length>5);
+    $('btnGen').disabled=false;
+    $('out').innerHTML='<div class="placeholder">listo — generá texto</div>';
   })
-  .catch(() => {
-    $('out').innerHTML = '<div class="placeholder">error cargando source</div>';
+  .catch(()=>{
+    $('out').innerHTML='<div class="placeholder">error cargando source</div>';
   });
 
 // ─── Util ────────────────────────────────────────────────────
-const pick = a => a[Math.floor(Math.random() * a.length)];
-const ri = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
-const shuf = a => { const r=[...a]; for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];} return r; };
-const ucfirst = s => s.charAt(0).toUpperCase() + s.slice(1);
-const dot = s => { s=s.trim().replace(/[,;:]+$/,''); return /[.!?…]$/.test(s)?s:s+'.'; };
-const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const shuf=a=>{const r=[...a];for(let i=r.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[r[i],r[j]]=[r[j],r[i]];}return r;};
+const ucf=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const dot=s=>{s=s.trim().replace(/[,;:]+$/,'');return/[.!?…]$/.test(s)?s:s+'.';};
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 // ─── Markov ──────────────────────────────────────────────────
-function buildMarkov(order) {
-  const h = corpus.text.length+'_'+order;
-  if (mCache && mHash===h) return mCache;
-  const w = corpus.text.split(/\s+/).filter(Boolean);
-  const c = {};
-  for (let i=0; i<w.length-order; i++) {
-    const k = w.slice(i,i+order).join(' ');
-    if (!c[k]) c[k]=[];
+function buildMarkov(order){
+  const h=corpus.text.length+'_'+order;
+  if(mCache&&mHash===h)return mCache;
+  const w=corpus.text.split(/\s+/).filter(Boolean),c={};
+  for(let i=0;i<w.length-order;i++){
+    const k=w.slice(i,i+order).join(' ');
+    if(!c[k])c[k]=[];
     c[k].push(w[i+order]);
   }
-  mCache=c; mHash=h;
-  return c;
+  mCache=c;mHash=h;return c;
 }
 
-function runMarkov(n, order) {
-  const chain = buildMarkov(order);
-  const keys = Object.keys(chain);
-  if (!keys.length) return '';
-  let starts = keys.filter(k => /^[A-ZÁÉÍÓÚÑ¿¡]/.test(k));
-  if (!starts.length) starts = keys;
-  let cur = pick(starts);
-  const res = cur.split(' ');
-  for (let i=0; i<n-order; i++) {
-    const nx = chain[cur];
-    if (!nx) { cur=pick(starts); res.push(cur.split(' ').pop()); continue; }
-    res.push(pick(nx));
-    cur = res.slice(-order).join(' ');
+function runMarkov(n,order){
+  const chain=buildMarkov(order),keys=Object.keys(chain);
+  if(!keys.length)return'';
+  let starts=keys.filter(k=>/^[A-ZÁÉÍÓÚÑ¿¡]/.test(k));
+  if(!starts.length)starts=keys;
+  let cur=pick(starts);const res=cur.split(' ');
+  for(let i=0;i<n-order;i++){
+    const nx=chain[cur];
+    if(!nx){cur=pick(starts);res.push(cur.split(' ').pop());continue;}
+    res.push(pick(nx));cur=res.slice(-order).join(' ');
   }
   return res.join(' ');
 }
 
-// ─── Sentence generators ─────────────────────────────────────
-function makeSentences(n, algo, order, avgW) {
-  const out = [];
-
-  if (algo === 'fragments') {
-    for (let i=0; i<n; i++) out.push(pick(corpus.sentences));
-  }
-  else if (algo === 'markov') {
+// ─── Sentences ───────────────────────────────────────────────
+function makeSentences(n,algo,order,avgW){
+  const out=[];
+  if(algo==='fragments'){
+    for(let i=0;i<n;i++)out.push(pick(corpus.sentences));
+  }else if(algo==='markov'){
     let tries=0;
-    while (out.length<n && tries<n*12) {
-      const raw = runMarkov(ri(Math.max(3,avgW-4),avgW+4), order);
-      if (raw.length>10) out.push(dot(raw));
-      tries++;
+    while(out.length<n&&tries<n*12){
+      const raw=runMarkov(ri(Math.max(3,avgW-4),avgW+4),order);
+      if(raw.length>10)out.push(dot(raw));tries++;
+    }
+  }else if(algo==='shuffle'){
+    for(let i=0;i<n;i++)
+      out.push(dot(ucf(shuf(corpus.words).slice(0,ri(Math.max(3,avgW-4),avgW+4)).join(' '))));
+  }else{
+    for(let i=0;i<n;i++){
+      if(Math.random()<0.45&&corpus.sentences.length){out.push(pick(corpus.sentences));}
+      else{const raw=runMarkov(ri(Math.max(3,avgW-4),avgW+4),order);
+        out.push(raw.length>10?dot(raw):(corpus.sentences.length?pick(corpus.sentences):''));}
     }
   }
-  else if (algo === 'shuffle') {
-    for (let i=0; i<n; i++)
-      out.push(dot(ucfirst(shuf(corpus.words).slice(0, ri(Math.max(3,avgW-4),avgW+4)).join(' '))));
-  }
-  else { // hybrid
-    const frags = corpus.sentences;
-    for (let i=0; i<n; i++) {
-      if (Math.random()<0.45 && frags.length) {
-        out.push(pick(frags));
-      } else {
-        const raw = runMarkov(ri(Math.max(3,avgW-4),avgW+4), order);
-        out.push(raw.length>10 ? dot(raw) : (frags.length ? pick(frags) : ''));
-      }
-    }
-  }
-
   return out.filter(Boolean);
 }
 
 // ─── Generate ────────────────────────────────────────────────
-function generate() {
-  const algo = $('algo').value;
-  const unit = $('unit').value;
-  const amount = parseInt($('amount').value) || 4;
-  const spp = parseInt($('spp').value) || 5;
-  const avgW = parseInt($('wps').value) || 14;
-  const fmt = $('format').value;
-  const doCap = $('capitalize').value === 'yes';
-  const order = parseInt($('markovOrder').value) || 2;
+function generate(){
+  const algo=$('algo').value, unit=$('unit').value;
+  const amount=parseInt($('amount').value)||4;
+  const spp=parseInt($('spp').value)||5;
+  const avgW=parseInt($('wps').value)||14;
+  const fmt=$('format').value;
+  const doCap=$('capitalize').value==='yes';
+  const order=parseInt($('markovOrder').value)||2;
+  let paras=[];
 
-  let paras = [];
-
-  if (unit === 'words') {
+  if(unit==='words'){
     let t;
-    if (algo==='markov'||algo==='hybrid') t = runMarkov(amount, order);
-    else if (algo==='shuffle') t = shuf(corpus.words).slice(0,amount).join(' ');
-    else {
-      const p=[]; let wc=0;
-      while(wc<amount){const s=pick(corpus.sentences);p.push(s);wc+=s.split(/\s+/).length;}
-      t = p.join(' ').split(/\s+/).slice(0,amount).join(' ');
-    }
-    t = dot(t);
-    if (doCap) t = ucfirst(t);
-    paras = [t];
-  }
-  else if (unit === 'sentences') {
-    let s = makeSentences(amount, algo, order, avgW);
-    if (doCap) s = s.map(x => ucfirst(x));
-    paras = [s.join(' ')];
-  }
-  else {
-    for (let i=0; i<amount; i++) {
-      let s = makeSentences(ri(Math.max(1,spp-1), spp+1), algo, order, avgW);
-      if (doCap) s = s.map(x => ucfirst(x));
-      paras.push(s.join(' '));
+    if(algo==='markov'||algo==='hybrid')t=runMarkov(amount,order);
+    else if(algo==='shuffle')t=shuf(corpus.words).slice(0,amount).join(' ');
+    else{const p=[];let wc=0;while(wc<amount){const s=pick(corpus.sentences);p.push(s);wc+=s.split(/\s+/).length;}
+      t=p.join(' ').split(/\s+/).slice(0,amount).join(' ');}
+    t=dot(t);if(doCap)t=ucf(t);paras=[t];
+  }else if(unit==='sentences'){
+    let s=makeSentences(amount,algo,order,avgW);
+    if(doCap)s=s.map(x=>ucf(x));paras=[s.join(' ')];
+  }else{
+    for(let i=0;i<amount;i++){
+      let s=makeSentences(ri(Math.max(1,spp-1),spp+1),algo,order,avgW);
+      if(doCap)s=s.map(x=>ucf(x));paras.push(s.join(' '));
     }
   }
 
-  // Store outputs
-  lastPlain = paras.join('\n\n');
-  if (fmt === 'plain') {
-    lastHtml = lastPlain;
-  } else {
-    const inner = paras.map(p => `  <${fmt}>${p}</${fmt}>`).join('\n');
-    lastHtml = fmt === 'li' ? `<ul>\n${inner}\n</ul>` : inner;
-  }
+  lastPlain=paras.join('\n\n');
+  if(fmt==='plain'){lastHtml=lastPlain;}
+  else{const inner=paras.map(p=>`  <${fmt}>${p}</${fmt}>`).join('\n');
+    lastHtml=fmt==='li'?`<ul>\n${inner}\n</ul>`:inner;}
 
-  // Render
-  $('out').innerHTML = paras.map(p => `<p>${esc(p)}</p>`).join('');
-  const wc = lastPlain.split(/\s+/).filter(Boolean).length;
-  const sc = lastPlain.split(/[.!?…]+/).filter(s=>s.trim()).length;
-  $('stats').textContent = `${wc} palabras · ${sc} oraciones · ${lastPlain.length} chars`;
-  $('btnRegen').style.display = 'inline-block';
+  $('out').innerHTML=paras.map(p=>`<p>${esc(p)}</p>`).join('');
+  const wc=lastPlain.split(/\s+/).filter(Boolean).length;
+  const sc=lastPlain.split(/[.!?…]+/).filter(s=>s.trim()).length;
+  $('stats').textContent=`${wc} palabras · ${sc} oraciones · ${lastPlain.length} chars`;
+  $('btnRegen').style.display='inline-block';
 }
 
 // ─── Events ──────────────────────────────────────────────────
-$('btnGen').addEventListener('click', generate);
-$('btnRegen').addEventListener('click', generate);
+$('btnGen').addEventListener('click',generate);
+$('btnRegen').addEventListener('click',generate);
 
-$('algo').addEventListener('change', () => {
-  $('markovGroup').style.display = ['markov','hybrid'].includes($('algo').value) ? 'block' : 'none';
+$('algo').addEventListener('change',()=>{
+  $('markovGroup').style.display=['markov','hybrid'].includes($('algo').value)?'':'none';
 });
 
-function flash(btn, txt, orig) {
-  btn.textContent=txt; btn.classList.add('ok');
+function flash(btn,txt,orig){
+  btn.textContent=txt;btn.classList.add('ok');
   setTimeout(()=>{btn.textContent=orig;btn.classList.remove('ok');},1200);
 }
 
-$('btnCopy').addEventListener('click', () =>
+$('btnCopy').addEventListener('click',()=>
   navigator.clipboard.writeText(lastPlain).then(()=>flash($('btnCopy'),'✓','copiar')));
-$('btnHtml').addEventListener('click', () =>
+$('btnHtml').addEventListener('click',()=>
   navigator.clipboard.writeText(lastHtml).then(()=>flash($('btnHtml'),'✓','html')));
 
-// Presets
-const PRESETS = {
-  short:   { algo:'fragments', unit:'paragraphs', amount:1, spp:3, wps:10, format:'plain' },
-  article: { algo:'markov', unit:'paragraphs', amount:6, spp:5, wps:16, format:'p' },
-  list:    { algo:'fragments', unit:'sentences', amount:10, spp:5, wps:8, format:'li' },
-  micro:   { algo:'shuffle', unit:'words', amount:12, spp:5, wps:10, format:'plain' },
-  dense:   { algo:'hybrid', unit:'paragraphs', amount:3, spp:8, wps:20, format:'plain' },
-  chaotic: { algo:'shuffle', unit:'paragraphs', amount:4, spp:6, wps:12, format:'plain' }
+const PRESETS={
+  short:{algo:'fragments',unit:'paragraphs',amount:1,spp:3,wps:10,format:'plain'},
+  article:{algo:'markov',unit:'paragraphs',amount:6,spp:5,wps:16,format:'p'},
+  list:{algo:'fragments',unit:'sentences',amount:10,spp:5,wps:8,format:'li'},
+  micro:{algo:'shuffle',unit:'words',amount:12,spp:5,wps:10,format:'plain'},
+  dense:{algo:'hybrid',unit:'paragraphs',amount:3,spp:8,wps:20,format:'plain'},
+  chaotic:{algo:'shuffle',unit:'paragraphs',amount:4,spp:6,wps:12,format:'plain'}
 };
 
-document.querySelectorAll('.preset-chip').forEach(chip => {
-  chip.addEventListener('click', () => {
-    const c = PRESETS[chip.dataset.p];
-    if (!c) return;
-
-    // Highlight active preset
-    document.querySelectorAll('.preset-chip').forEach(x => x.classList.remove('active'));
+document.querySelectorAll('.preset-chip').forEach(chip=>{
+  chip.addEventListener('click',()=>{
+    const c=PRESETS[chip.dataset.p];if(!c)return;
+    document.querySelectorAll('.preset-chip').forEach(x=>x.classList.remove('active'));
     chip.classList.add('active');
-
-    $('algo').value=c.algo; $('unit').value=c.unit; $('amount').value=c.amount;
-    $('spp').value=c.spp; $('wps').value=c.wps; $('format').value=c.format;
+    $('algo').value=c.algo;$('unit').value=c.unit;$('amount').value=c.amount;
+    $('spp').value=c.spp;$('wps').value=c.wps;$('format').value=c.format;
     $('algo').dispatchEvent(new Event('change'));
-    if (!$('btnGen').disabled) generate();
+    if(!$('btnGen').disabled)generate();
   });
 });
 
-// Clear preset highlight on manual control change
-document.querySelectorAll('#algo,#unit,#amount,#spp,#wps,#format,#capitalize,#markovOrder').forEach(el => {
-  el.addEventListener('change', () => {
-    document.querySelectorAll('.preset-chip').forEach(x => x.classList.remove('active'));
-  });
+document.querySelectorAll('#algo,#unit,#amount,#spp,#wps,#format,#capitalize,#markovOrder').forEach(el=>{
+  el.addEventListener('change',()=>document.querySelectorAll('.preset-chip').forEach(x=>x.classList.remove('active')));
 });
 
-document.addEventListener('keydown', e => {
-  if ((e.metaKey||e.ctrlKey) && e.key==='Enter' && !$('btnGen').disabled) generate();
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key==='Enter'&&!$('btnGen').disabled)generate();
 });
 </script>
 
