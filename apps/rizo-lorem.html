@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>rizo-lorem</title>
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --bg2: #111113;
+    --border: #2a2a2d;
+    --text: #c8c8c8;
+    --text-dim: #666;
+    --text-bright: #e8e8e8;
+    --accent: #5a7a3a;
+    --accent-dim: #3d5228;
+    --accent-bright: #7aa04a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', 'Cascadia Code', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  a { color: var(--accent-bright); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  header {
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 1.5rem;
+  }
+
+  header .back { font-size: 12px; color: var(--text-dim); margin-bottom: 0.5rem; display: block; }
+  header .back:hover { color: var(--accent-bright); text-decoration: none; }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 400;
+    color: var(--text-bright);
+    letter-spacing: -0.02em;
+  }
+
+  h1 span { color: var(--accent); }
+
+  /* Controls bar */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: end;
+    margin-bottom: 1.5rem;
+  }
+
+  .field label {
+    display: block;
+    font-size: 10px;
+    color: var(--text-dim);
+    margin-bottom: 0.2rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .field select, .field input {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 12px;
+    padding: 0.35rem 0.5rem;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .field select:focus, .field input:focus { border-color: var(--accent); }
+  .field select { cursor: pointer; }
+  .field input { width: 60px; }
+
+  .btn-gen {
+    padding: 0.35rem 0.8rem;
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    color: var(--text-bright);
+    font-family: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-gen:hover { background: var(--accent); }
+  .btn-gen:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* Output */
+  .output {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .output-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .output-bar .stats {
+    flex: 1;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .btn-sm {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-dim);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 0.2rem 0.45rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-sm:hover { border-color: var(--accent); color: var(--text); }
+  .btn-sm.ok { border-color: var(--accent); color: var(--accent-bright); }
+
+  .output-body {
+    padding: 0.8rem;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+
+  .output-body p {
+    margin-bottom: 0.8em;
+    line-height: 1.7;
+  }
+
+  .output-body p:last-child { margin-bottom: 0; }
+
+  .placeholder {
+    color: var(--text-dim);
+    font-style: italic;
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <a class="back" href="./">← toolbox/</a>
+    <h1>rizo-<span>lorem</span></h1>
+  </header>
+
+  <div class="controls">
+    <div class="field">
+      <label>modo</label>
+      <select id="algo">
+        <option value="fragments">fragmentos</option>
+        <option value="markov">markov</option>
+        <option value="shuffle">shuffle</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>unidad</label>
+      <select id="unit">
+        <option value="paragraphs">párrafos</option>
+        <option value="sentences">oraciones</option>
+        <option value="words">palabras</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>cantidad</label>
+      <input type="number" id="amount" value="4" min="1" max="200">
+    </div>
+    <div class="field">
+      <label>formato</label>
+      <select id="format">
+        <option value="plain">plano</option>
+        <option value="p">&lt;p&gt;</option>
+        <option value="li">&lt;li&gt;</option>
+      </select>
+    </div>
+    <button class="btn-gen" id="btnGen" disabled>generar</button>
+  </div>
+
+  <div class="output">
+    <div class="output-bar">
+      <span class="stats" id="stats"></span>
+      <button class="btn-sm" id="btnCopy">copiar</button>
+      <button class="btn-sm" id="btnHtml">html</button>
+    </div>
+    <div class="output-body" id="out">
+      <div class="placeholder">cargando…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SOURCE = 'sources/rizoma.txt';
+
+let corpus = { text: '', words: [], sentences: [] };
+let lastPlain = '', lastHtml = '';
+let mCache = null, mHash = null;
+
+const $ = id => document.getElementById(id);
+const btnGen = $('btnGen');
+const out = $('out');
+const stats = $('stats');
+
+// ─── Load ────────────────────────────────────────────────────
+fetch(SOURCE)
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.text(); })
+  .then(t => {
+    t = t.trim();
+    corpus.text = t;
+    corpus.words = t.split(/\s+/).filter(Boolean);
+    corpus.sentences = t.replace(/\n+/g, ' ').split(/(?<=[.!?…])\s+/).map(s => s.trim()).filter(s => s.length > 5);
+    btnGen.disabled = false;
+    out.innerHTML = '<div class="placeholder">listo</div>';
+  })
+  .catch(() => {
+    out.innerHTML = '<div class="placeholder">error cargando source</div>';
+  });
+
+// ─── Util ────────────────────────────────────────────────────
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const ri = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a;
+const shuf = a => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const dot = s => { s = s.trim().replace(/[,;:]+$/, ''); return /[.!?…]$/.test(s) ? s : s + '.'; };
+const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// ─── Markov ──────────────────────────────────────────────────
+function markov(n) {
+  const order = 2;
+  const h = corpus.text.length + '_' + order;
+  if (!mCache || mHash !== h) {
+    const w = corpus.text.split(/\s+/).filter(Boolean);
+    mCache = {};
+    for (let i = 0; i < w.length - order; i++) {
+      const k = w.slice(i, i + order).join(' ');
+      if (!mCache[k]) mCache[k] = [];
+      mCache[k].push(w[i + order]);
+    }
+    mHash = h;
+  }
+  const keys = Object.keys(mCache);
+  if (!keys.length) return '';
+  let starts = keys.filter(k => /^[A-ZÁÉÍÓÚÑ¿¡]/.test(k));
+  if (!starts.length) starts = keys;
+  let cur = pick(starts);
+  const res = cur.split(' ');
+  for (let i = 0; i < n - 2; i++) {
+    const nx = mCache[cur];
+    if (!nx) { cur = pick(starts); res.push(cur.split(' ').pop()); continue; }
+    res.push(pick(nx));
+    cur = res.slice(-2).join(' ');
+  }
+  return res.join(' ');
+}
+
+// ─── Sentence generators ─────────────────────────────────────
+function sents(n, algo) {
+  const avg = 12;
+  const r = [];
+  if (algo === 'fragments') {
+    for (let i = 0; i < n; i++) r.push(pick(corpus.sentences));
+  } else if (algo === 'markov') {
+    let tries = 0;
+    while (r.length < n && tries < n * 10) {
+      const raw = markov(ri(Math.max(3, avg - 4), avg + 4));
+      if (raw.length > 10) r.push(dot(raw));
+      tries++;
+    }
+  } else {
+    for (let i = 0; i < n; i++)
+      r.push(dot(cap(shuf(corpus.words).slice(0, ri(Math.max(3, avg - 4), avg + 4)).join(' '))));
+  }
+  return r.map(s => cap(s));
+}
+
+// ─── Generate ────────────────────────────────────────────────
+function generate() {
+  const algo = $('algo').value;
+  const unit = $('unit').value;
+  const amount = parseInt($('amount').value) || 4;
+  const fmt = $('format').value;
+  let paras = [];
+
+  if (unit === 'words') {
+    let t;
+    if (algo === 'markov') t = markov(amount);
+    else if (algo === 'shuffle') t = shuf(corpus.words).slice(0, amount).join(' ');
+    else {
+      const p = []; let wc = 0;
+      while (wc < amount) { const s = pick(corpus.sentences); p.push(s); wc += s.split(/\s+/).length; }
+      t = p.join(' ').split(/\s+/).slice(0, amount).join(' ');
+    }
+    paras = [cap(dot(t))];
+  } else if (unit === 'sentences') {
+    paras = [sents(amount, algo).join(' ')];
+  } else {
+    for (let i = 0; i < amount; i++)
+      paras.push(sents(ri(3, 6), algo).join(' '));
+  }
+
+  lastPlain = paras.join('\n\n');
+  if (fmt === 'plain') lastHtml = lastPlain;
+  else {
+    const inner = paras.map(p => `  <${fmt}>${p}</${fmt}>`).join('\n');
+    lastHtml = fmt === 'li' ? `<ul>\n${inner}\n</ul>` : inner;
+  }
+
+  out.innerHTML = paras.map(p => `<p>${esc(p)}</p>`).join('');
+  const wc = lastPlain.split(/\s+/).filter(Boolean).length;
+  stats.textContent = `${wc} palabras · ${lastPlain.length} chars`;
+}
+
+// ─── Events ──────────────────────────────────────────────────
+btnGen.addEventListener('click', generate);
+
+function flash(btn, txt, orig) {
+  btn.textContent = txt; btn.classList.add('ok');
+  setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 1200);
+}
+
+$('btnCopy').addEventListener('click', () =>
+  navigator.clipboard.writeText(lastPlain).then(() => flash($('btnCopy'), '✓', 'copiar')));
+$('btnHtml').addEventListener('click', () =>
+  navigator.clipboard.writeText(lastHtml).then(() => flash($('btnHtml'), '✓', 'html')));
+
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && !btnGen.disabled) generate();
+});
+</script>
+
+</body>
+</html>
