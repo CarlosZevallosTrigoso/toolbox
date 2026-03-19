@@ -692,8 +692,14 @@ function renderElement(el) {
     c.setAttribute('data-placeholder','escribe aquí...');
     c.textContent = el.text || '';
     c.style.cssText = `font-size:${el.fontSize}px;font-family:${el.fontFamily};color:${el.color};font-weight:${el.fontWeight};text-align:${el.textAlign};${el.bgColor!=='transparent'?'background-color:'+el.bgColor+';':''}`;
-    c.addEventListener('input', () => { el.text = c.textContent; });
+    c.addEventListener('input', () => {
+      el.text = c.textContent;
+      // auto-grow: update model height to match rendered height
+      const newH = div.scrollHeight;
+      if (newH > el.h) el.h = newH;
+    });
     c.addEventListener('focus', () => { snapshot(); });
+    c.addEventListener('blur', () => { c.contentEditable = false; });
     div.appendChild(c);
   } else if (el.type === 'shape') {
     const inner = document.createElement('div');
@@ -714,20 +720,40 @@ function renderElement(el) {
 
   if (!el.visible) div.classList.add('layer-hidden');
 
+  // single click: select + drag (all types including text)
   div.addEventListener('mousedown', e => {
     if (e.target.classList.contains('handle')) { snapshot(); startResize(e, el, e.target.dataset.h); return; }
     if (currentTool==='select') {
-      e.stopPropagation(); selectElement(el);
-      if (el.type==='text' && e.target.classList.contains('content')) return;
+      e.stopPropagation();
+      // if text is in edit mode (contentEditable), let it handle clicks normally
+      if (el.type==='text' && e.target.contentEditable === 'true') return;
+      selectElement(el);
       snapshot(); startDrag(e, el);
     }
   });
+
+  // double click: enter text edit mode
+  if (el.type === 'text') {
+    div.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      const c = div.querySelector('.content');
+      if (c) {
+        c.contentEditable = true;
+        c.focus();
+        // place cursor at click position
+        const sel = window.getSelection();
+        if (sel.rangeCount) sel.collapseToEnd();
+      }
+    });
+  }
+
   canvas.appendChild(div);
 }
 
 function applyDomStyle(div, el) {
   let transform = el.rotation ? `rotate(${el.rotation}deg)` : '';
-  div.style.cssText = `left:${el.x}px;top:${el.y}px;width:${el.w}px;height:${el.h}px;z-index:${el.z};opacity:${el.opacity};filter:${el.filter||'none'};transform:${transform||'none'};`;
+  const heightProp = el.type === 'text' ? 'min-height' : 'height';
+  div.style.cssText = `left:${el.x}px;top:${el.y}px;width:${el.w}px;${heightProp}:${el.h}px;z-index:${el.z};opacity:${el.opacity};filter:${el.filter||'none'};transform:${transform||'none'};`;
 }
 
 // ══════════════════════════════════════
@@ -739,9 +765,6 @@ function selectElement(el) {
   const dom = document.getElementById(el.id);
   if (dom) {
     dom.classList.add('selected');
-    // enable text editing when selected
-    const content = dom.querySelector('.content');
-    if (content) content.contentEditable = true;
   }
   showProps(el); highlightLayer(el.id);
 }
@@ -908,26 +931,21 @@ function P(prop, val) {
   if (!selectedEl) return;
   const el = selectedEl;
 
-  // save state once per interaction
-  if (!P._s) { snapshot(); P._s = true; setTimeout(() => { P._s = false; }, 500); }
+  // snapshot once per property edit batch
+  if (!P._s) { snapshot(); P._s = true; }
 
   // update model
   if (prop === 'sysFont') { el._font = ''; el.fontFamily = val; }
-  else if (prop === 'x' || prop === 'y' || prop === 'w' || prop === 'h' ||
-           prop === 'rotation' || prop === 'opacity' || prop === 'filter' || prop === 'link') {
-    el[prop] = val;
-  } else {
-    el[prop] = val;
-  }
+  else { el[prop] = val; }
 
-  // for position: direct DOM manipulation (needs to be fast for dragging)
   const dom = document.getElementById(el.id);
   if (!dom) return;
 
+  // fast path: position (direct DOM, no re-render)
   if (prop === 'x') { dom.style.left = val + 'px'; return; }
   if (prop === 'y') { dom.style.top = val + 'px'; return; }
   if (prop === 'w') { dom.style.width = val + 'px'; return; }
-  if (prop === 'h') { dom.style.height = val + 'px'; return; }
+  if (prop === 'h') { dom.style.height = val + (el.type === 'text' ? 'px' : 'px'); if (el.type === 'text') dom.style.minHeight = val + 'px'; else dom.style.height = val + 'px'; return; }
   if (prop === 'rotation' || prop === 'opacity') {
     applyDomStyle(dom, el);
     if (prop === 'opacity') {
@@ -939,17 +957,27 @@ function P(prop, val) {
   if (prop === 'filter') { dom.style.filter = val || 'none'; return; }
   if (prop === 'link') return;
 
-  // for ALL visual properties (text, shape, image): full re-render
+  // visual properties: full re-render
+  // check if text was in edit mode before re-render
+  const wasEditing = dom.querySelector('.content[contenteditable="true"]');
   dom.remove();
   renderElement(el);
   const newDom = document.getElementById(el.id);
   if (newDom) {
     newDom.classList.add('selected');
-    const c = newDom.querySelector('.content');
-    if (c) c.contentEditable = true;
+    if (wasEditing) {
+      const c = newDom.querySelector('.content');
+      if (c) c.contentEditable = true;
+    }
   }
 }
 P._s = false;
+
+// reset P snapshot flag when user releases mouse or changes focus
+document.addEventListener('mouseup', () => { P._s = false; });
+document.addEventListener('focusin', e => {
+  if (e.target.closest('#propsContent')) P._s = false;
+});
 
 function updatePropInputs(el) {
   // called during drag — just re-render props
@@ -1145,6 +1173,11 @@ canvas.addEventListener('drop', e => {
 // KEYBOARD SHORTCUTS
 // ══════════════════════════════════════
 document.addEventListener('keydown', e => {
+  // Ctrl+Z / Ctrl+Y always work regardless of focus
+  if ((e.ctrlKey||e.metaKey)&&e.key==='z'&&!e.shiftKey) { e.preventDefault(); undo(); return; }
+  if ((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); return; }
+
+  // other shortcuts only when not editing text/inputs
   if (e.target.contentEditable==='true'||e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='SELECT') return;
   if (e.key==='v') setTool('select');
   if (e.key==='t') setTool('text');
@@ -1156,8 +1189,6 @@ document.addEventListener('keydown', e => {
   if ((e.key==='Delete'||e.key==='Backspace')&&selectedEl) deleteSelected();
   if (e.key==='Escape') deselectAll();
   if (e.key==='g') toggleSnap();
-  if ((e.ctrlKey||e.metaKey)&&e.key==='z') { e.preventDefault(); undo(); }
-  if ((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key==='z'))) { e.preventDefault(); redo(); }
   if (selectedEl && ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) {
     e.preventDefault(); snapshot();
     const s = e.shiftKey ? 10 : (snapOn ? gridSize : 1);
