@@ -785,8 +785,7 @@ function loadGFont(name) {
   loadedFonts.add(name);
   const link = document.createElement('link');
   link.rel = 'stylesheet';
-  link.crossOrigin = 'anonymous';
-  link.href = `https://fonts.googleapis.com/css2?family=${name.replace(/ /g,'+')}&display=swap`;
+  link.href = `https://fonts.googleapis.com/css?family=${name.replace(/ /g,'+')}&display=swap`;
   document.head.appendChild(link);
 }
 
@@ -954,9 +953,7 @@ function searchFonts(query, elId) {
   if (!query) { box.classList.remove('show'); return; }
   const q = query.toLowerCase();
   const matches = GFONTS.filter(f => f.toLowerCase().includes(q)).slice(0, 12);
-  // preload matched fonts for preview
-  matches.forEach(f => loadGFont(f));
-  box.innerHTML = matches.map(f => `<div class="font-result" style="font-family:'${f}',sans-serif" onmousedown="pickFont('${elId}','${f}')">${f}</div>`).join('');
+  box.innerHTML = matches.map(f => `<div class="font-result" onmousedown="pickFont('${elId}','${f}')">${f}</div>`).join('');
   // position dropdown below the input
   if (input && matches.length) {
     const rect = input.getBoundingClientRect();
@@ -973,7 +970,16 @@ function pickFont(elId, fontName) {
   el._font = fontName;
   el.fontFamily = `'${fontName}', sans-serif`;
   const c = document.querySelector(`#${elId} .content`);
-  if (c) c.style.fontFamily = el.fontFamily;
+  if (c) {
+    c.style.fontFamily = el.fontFamily;
+    // force re-render after font loads
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        c.style.fontFamily = 'sans-serif';
+        requestAnimationFrame(() => { c.style.fontFamily = el.fontFamily; });
+      });
+    }
+  }
   document.getElementById('fontResults').classList.remove('show');
   const searchInput = document.getElementById('fontSearch');
   if (searchInput) searchInput.value = fontName;
@@ -1239,14 +1245,19 @@ async function doImport() {
   }
 
   // load Google Fonts found in the HTML
-  const fontMatches = _importHtmlContent.match(/fonts\.googleapis\.com\/css2\?([^'"]+)/g);
+  const fontMatches = _importHtmlContent.match(/fonts\.googleapis\.com\/css2?\?([^'"<]+)/g);
   if (fontMatches) {
     fontMatches.forEach(url => {
-      const families = url.match(/family=([^&:'"]+)/g);
-      if (families) families.forEach(f => {
-        const name = decodeURIComponent(f.replace('family=', '')).replace(/\+/g, ' ');
-        loadGFont(name);
-      });
+      const familyParam = url.match(/family=([^'"<]+)/);
+      if (familyParam) {
+        // v1 uses | separator, v2 uses &family= for multiple
+        const raw = familyParam[1];
+        const names = raw.split(/[|&]/).filter(s => s && !s.startsWith('display'));
+        names.forEach(n => {
+          const clean = n.replace(/^family=/, '').replace(/:.+/, '').replace(/\+/g, ' ').trim();
+          if (clean) loadGFont(clean);
+        });
+      }
     });
   }
 
@@ -1425,10 +1436,11 @@ function generateHTML(opts = {}) {
   const usedFonts = new Set();
   elements.filter(e=>e.visible!==false).forEach(e => { if(e._font) usedFonts.add(e._font); });
 
-  let fontImport = '';
+  let fontLinks = '';
   if (usedFonts.size) {
-    const families = [...usedFonts].map(f => `family=${f.replace(/ /g,'+')}`).join('&');
-    fontImport = `@import url('https://fonts.googleapis.com/css2?${families}&display=swap');`;
+    const families = [...usedFonts].map(f => f.replace(/ /g,'+')).join('|');
+    const fontUrl = `https://fonts.googleapis.com/css?family=${families}&display=swap`;
+    fontLinks = `<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n<link rel="stylesheet" href="${fontUrl}">`;
   }
 
   let body = '';
@@ -1511,8 +1523,8 @@ async function downloadPDF() {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
+${fontLinks}
 <style>
-  ${fontImport}
   * { margin:0; padding:0; box-sizing:border-box; }
   body { ${bgStyle}; min-height:100vh; }
   .canvas { position:relative; width:100%; height:${h}px; overflow:hidden; }
