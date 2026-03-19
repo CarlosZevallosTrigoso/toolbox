@@ -6,16 +6,16 @@
 <title>rizo-lorem</title>
 <style>
   :root {
-    --bg: #0a0a0b;
-    --bg2: #111113;
-    --border: #2a2a2d;
-    --border-hover: #3a3a3d;
-    --text: #c8c8c8;
-    --text-dim: #666;
-    --text-bright: #e8e8e8;
+    --bg: #ffffff;
+    --bg2: #f5f5f4;
+    --border: #e0e0dc;
+    --border-hover: #ccccc8;
+    --text: #333;
+    --text-dim: #999;
+    --text-bright: #111;
     --accent: #5a7a3a;
-    --accent-dim: #3d5228;
-    --accent-bright: #7aa04a;
+    --accent-dim: #eaf0e2;
+    --accent-bright: #4a6a2e;
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -115,10 +115,10 @@
 
   .btn-gen {
     padding: 0.3rem 0.9rem;
-    background: var(--accent-dim);
-    border: 1px solid var(--accent);
+    background: var(--accent);
+    border: 1px solid var(--accent-bright);
     border-radius: 4px;
-    color: var(--text-bright);
+    color: #fff;
     font-family: inherit;
     font-size: 12px;
     cursor: pointer;
@@ -127,7 +127,7 @@
     align-self: end;
   }
 
-  .btn-gen:hover { background: var(--accent); }
+  .btn-gen:hover { background: var(--accent-bright); }
   .btn-gen:disabled { opacity: 0.3; cursor: not-allowed; }
 
   /* Presets row */
@@ -186,7 +186,7 @@
   }
 
   .btn-sm {
-    background: transparent;
+    background: var(--bg);
     border: 1px solid var(--border);
     border-radius: 3px;
     color: var(--text-dim);
@@ -209,6 +209,7 @@
   .output-body p {
     margin-bottom: 0.8em;
     line-height: 1.75;
+    color: var(--text);
   }
 
   .output-body p:last-child { margin-bottom: 0; }
@@ -225,7 +226,7 @@
 
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 3px; }
 
   @media (max-width: 600px) {
     .controls-row { gap: 0.4rem; }
@@ -276,9 +277,13 @@
       </div>
       <div class="field">
         <label>cantidad</label>
-        <input type="number" id="amount" value="4" min="1" max="200">
+        <input type="number" id="amount" value="4" min="1" max="2000">
       </div>
-      <div class="field">
+      <div class="field" id="splitGroup" style="display:none;">
+        <label>en ¶</label>
+        <input type="number" id="splitParas" value="4" min="1" max="50">
+      </div>
+      <div class="field" id="sppGroup">
         <label>orac/¶</label>
         <input type="number" id="spp" value="5" min="1" max="20">
       </div>
@@ -327,8 +332,8 @@
   <div class="output-panel">
     <div class="output-bar">
       <span class="stats" id="stats"></span>
-      <button class="btn-sm" id="btnCopy">copiar</button>
-      <button class="btn-sm" id="btnHtml">html</button>
+      <button class="btn-sm" id="btnCopy">copiar texto</button>
+      <button class="btn-sm" id="btnHtml">copiar html</button>
       <button class="btn-sm" id="btnRegen" style="display:none;">↻</button>
     </div>
     <div class="output-body" id="out">
@@ -420,6 +425,22 @@ function makeSentences(n,algo,order,avgW){
   return out.filter(Boolean);
 }
 
+// ─── Split words into N paragraphs ──────────────────────────
+function splitIntoParas(words, nParas) {
+  const total = words.length;
+  const base = Math.floor(total / nParas);
+  const extra = total % nParas;
+  const paras = [];
+  let idx = 0;
+  for (let i = 0; i < nParas; i++) {
+    const len = base + (i < extra ? 1 : 0);
+    const chunk = words.slice(idx, idx + len).join(' ');
+    if (chunk) paras.push(dot(chunk));
+    idx += len;
+  }
+  return paras;
+}
+
 // ─── Generate ────────────────────────────────────────────────
 function generate(){
   const algo=$('algo').value, unit=$('unit').value;
@@ -432,12 +453,28 @@ function generate(){
   let paras=[];
 
   if(unit==='words'){
-    let t;
-    if(algo==='markov'||algo==='hybrid')t=runMarkov(amount,order);
-    else if(algo==='shuffle')t=shuf(corpus.words).slice(0,amount).join(' ');
-    else{const p=[];let wc=0;while(wc<amount){const s=pick(corpus.sentences);p.push(s);wc+=s.split(/\s+/).length;}
-      t=p.join(' ').split(/\s+/).slice(0,amount).join(' ');}
-    t=dot(t);if(doCap)t=ucf(t);paras=[t];
+    // Generate a big blob of words
+    let allWords=[];
+    if(algo==='markov'||algo==='hybrid'){
+      allWords=runMarkov(amount,order).split(/\s+/);
+    }else if(algo==='shuffle'){
+      allWords=shuf(corpus.words).slice(0,amount);
+    }else{
+      const p=[];let wc=0;
+      while(wc<amount){const s=pick(corpus.sentences);p.push(s);wc+=s.split(/\s+/).length;}
+      allWords=p.join(' ').split(/\s+/).slice(0,amount);
+    }
+
+    const nParas=parseInt($('splitParas').value)||1;
+    if(nParas<=1){
+      let t=dot(allWords.join(' '));
+      if(doCap)t=ucf(t);
+      paras=[t];
+    }else{
+      paras=splitIntoParas(allWords,nParas);
+      if(doCap)paras=paras.map(p=>ucf(p));
+    }
+
   }else if(unit==='sentences'){
     let s=makeSentences(amount,algo,order,avgW);
     if(doCap)s=s.map(x=>ucf(x));paras=[s.join(' ')];
@@ -460,9 +497,27 @@ function generate(){
   $('btnRegen').style.display='inline-block';
 }
 
+// ─── Copy as plain text only ─────────────────────────────────
+function copyPlain(text) {
+  // Force plain text by using a Blob with text/plain MIME
+  const blob = new Blob([text], { type: 'text/plain' });
+  const item = new ClipboardItem({ 'text/plain': blob });
+  return navigator.clipboard.write([item]);
+}
+
 // ─── Events ──────────────────────────────────────────────────
 $('btnGen').addEventListener('click',generate);
 $('btnRegen').addEventListener('click',generate);
+
+// Show/hide fields based on unit
+function updateUnitFields(){
+  const isWords=$('unit').value==='words';
+  const isParas=$('unit').value==='paragraphs';
+  $('splitGroup').style.display=isWords?'':'none';
+  $('sppGroup').style.display=isParas?'':'none';
+}
+$('unit').addEventListener('change',updateUnitFields);
+updateUnitFields();
 
 $('algo').addEventListener('change',()=>{
   $('markovGroup').style.display=['markov','hybrid'].includes($('algo').value)?'':'none';
@@ -474,15 +529,15 @@ function flash(btn,txt,orig){
 }
 
 $('btnCopy').addEventListener('click',()=>
-  navigator.clipboard.writeText(lastPlain).then(()=>flash($('btnCopy'),'✓','copiar')));
+  copyPlain(lastPlain).then(()=>flash($('btnCopy'),'✓','copiar texto')));
 $('btnHtml').addEventListener('click',()=>
-  navigator.clipboard.writeText(lastHtml).then(()=>flash($('btnHtml'),'✓','html')));
+  copyPlain(lastHtml).then(()=>flash($('btnHtml'),'✓','copiar html')));
 
 const PRESETS={
   short:{algo:'fragments',unit:'paragraphs',amount:1,spp:3,wps:10,format:'plain'},
   article:{algo:'markov',unit:'paragraphs',amount:6,spp:5,wps:16,format:'p'},
   list:{algo:'fragments',unit:'sentences',amount:10,spp:5,wps:8,format:'li'},
-  micro:{algo:'shuffle',unit:'words',amount:12,spp:5,wps:10,format:'plain'},
+  micro:{algo:'shuffle',unit:'words',amount:12,splitParas:1,wps:10,format:'plain'},
   dense:{algo:'hybrid',unit:'paragraphs',amount:3,spp:8,wps:20,format:'plain'},
   chaotic:{algo:'shuffle',unit:'paragraphs',amount:4,spp:6,wps:12,format:'plain'}
 };
@@ -493,13 +548,15 @@ document.querySelectorAll('.preset-chip').forEach(chip=>{
     document.querySelectorAll('.preset-chip').forEach(x=>x.classList.remove('active'));
     chip.classList.add('active');
     $('algo').value=c.algo;$('unit').value=c.unit;$('amount').value=c.amount;
-    $('spp').value=c.spp;$('wps').value=c.wps;$('format').value=c.format;
+    $('spp').value=c.spp||5;$('wps').value=c.wps;$('format').value=c.format;
+    if(c.splitParas)$('splitParas').value=c.splitParas;
     $('algo').dispatchEvent(new Event('change'));
+    updateUnitFields();
     if(!$('btnGen').disabled)generate();
   });
 });
 
-document.querySelectorAll('#algo,#unit,#amount,#spp,#wps,#format,#capitalize,#markovOrder').forEach(el=>{
+document.querySelectorAll('#algo,#unit,#amount,#spp,#wps,#format,#capitalize,#markovOrder,#splitParas').forEach(el=>{
   el.addEventListener('change',()=>document.querySelectorAll('.preset-chip').forEach(x=>x.classList.remove('active')));
 });
 
