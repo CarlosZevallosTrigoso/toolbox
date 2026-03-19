@@ -17,7 +17,7 @@
     --accent-dim: #3d5228;
     --accent-bright: #7aa04a;
     --danger: #7a3a3a;
-    --canvas-bg: #0e0e10;
+    --canvas-bg: #ffffff;
     --element-border: rgba(90, 122, 58, 0.4);
     --element-selected: rgba(90, 122, 58, 0.8);
     --grid-color: rgba(255,255,255,0.03);
@@ -81,12 +81,12 @@
   /* ── canvas ── */
   .canvas-wrap {
     flex: 1; overflow: auto; background: var(--bg2);
-    display: flex; align-items: center; justify-content: center;
-    padding: 40px; position: relative;
+    padding: 40px;
   }
   #canvas {
-    width: 1200px; height: 800px; background: var(--canvas-bg);
+    width: 1200px; height: 800px; background: #ffffff;
     position: relative; box-shadow: 0 0 60px rgba(0,0,0,.5); cursor: crosshair;
+    margin: 0 auto;
   }
   #canvas.snap-grid {
     background-image: linear-gradient(var(--grid-color) 1px,transparent 1px),
@@ -118,7 +118,7 @@
   .ce .handle.mr { top:50%;right:0;transform:translateY(-50%);cursor:e-resize }
 
   .ce-text .content {
-    padding: 8px 12px; color: #e0e0e0; font-size: 16px; line-height: 1.5;
+    padding: 8px 12px; color: #333; font-size: 16px; line-height: 1.5;
     min-height: 1.5em; word-wrap: break-word; white-space: pre-wrap;
   }
   .ce-text .content:focus { outline: none; }
@@ -360,8 +360,8 @@
     </select>
     <div class="prop-row"><label>w</label><input type="number" id="mCW" value="1200"></div>
     <div class="prop-row"><label>h</label><input type="number" id="mCH" value="800"></div>
-    <div class="prop-row"><label>bg</label><input type="color" id="mCBg" value="#0e0e10">
-      <input type="text" id="mCBgText" value="#0e0e10" style="width:80px" placeholder="#hex o gradient"></div>
+    <div class="prop-row"><label>bg</label><input type="color" id="mCBg" value="#ffffff">
+      <input type="text" id="mCBgText" value="#ffffff" style="width:80px" placeholder="#hex o gradient"></div>
     <p style="color:var(--text-dim);font-size:10px;margin:-4px 0 8px">acepta hex, rgb, o css gradient</p>
     <div class="prop-row"><label>img</label><input type="text" id="mCBgImg" placeholder="url imagen de fondo (opcional)"></div>
     <div class="modal-actions">
@@ -440,7 +440,7 @@ let selectedEl = null;
 let nextZ = 1;
 let snapOn = true;
 let gridSize = 20;
-let canvasBg = '#0e0e10';
+let canvasBg = '#ffffff';
 let canvasBgImg = '';
 let loadedFonts = new Set();
 let undoStack = [];
@@ -554,7 +554,7 @@ function createElement(type, x, y, w, h, extra = {}) {
 function addText(x, y) {
   createElement('text', x-100, y-20, 200, 40, {
     text:'', fontSize:16, fontFamily:'system-ui, sans-serif', _font:'',
-    color:'#e0e0e0', fontWeight:'400', textAlign:'left', bgColor:'transparent',
+    color:'#333333', fontWeight:'400', textAlign:'left', bgColor:'transparent',
     name:'texto'
   });
 }
@@ -785,7 +785,7 @@ function showProps(el) {
         ${['left','center','right'].map(a=>`<option value="${a}"${el.textAlign===a?' selected':''}>${{left:'izq',center:'centro',right:'der'}[a]}</option>`).join('')}
       </select></div>
       <div class="prop-row"><label>col</label><input type="color" value="${el.color}" onchange="setTextP('${el.id}','color',this.value)"></div>
-      <div class="prop-row"><label>bg</label><input type="color" value="${el.bgColor==='transparent'?'#0e0e10':el.bgColor}" onchange="setTextP('${el.id}','bgColor',this.value)"></div>
+      <div class="prop-row"><label>bg</label><input type="color" value="${el.bgColor==='transparent'?'#ffffff':el.bgColor}" onchange="setTextP('${el.id}','bgColor',this.value)"></div>
     </div>`;
 
     // font selector with Google Fonts search
@@ -972,7 +972,7 @@ function toggleVis(id) {
 function showCanvasSettings() {
   document.getElementById('mCW').value = canvas.offsetWidth;
   document.getElementById('mCH').value = canvas.offsetHeight;
-  document.getElementById('mCBg').value = rgbToHex(canvasBg) || '#0e0e10';
+  document.getElementById('mCBg').value = rgbToHex(canvasBg) || '#ffffff';
   document.getElementById('mCBgText').value = canvasBg;
   document.getElementById('mCBgImg').value = canvasBgImg || '';
   openModal('canvasModal');
@@ -1071,7 +1071,7 @@ function handleLoad(e) {
       const proj = JSON.parse(ev.target.result);
       canvas.style.width = proj.canvas.w + 'px';
       canvas.style.height = proj.canvas.h + 'px';
-      canvasBg = proj.canvas.bg || '#0e0e10';
+      canvasBg = proj.canvas.bg || '#ffffff';
       canvas.style.background = canvasBg;
       canvasBgImg = proj.canvas.bgImg || '';
       if (canvasBgImg) { canvas.style.backgroundImage = `url(${canvasBgImg})`; canvas.style.backgroundSize = 'cover'; }
@@ -1193,8 +1193,8 @@ async function downloadPDF() {
 <style>
   ${fontImport}
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { ${bgStyle}; }
-  .canvas { position:relative; width:${w}px; height:${h}px; margin:0 auto; overflow:hidden; }
+  body { ${bgStyle}; min-height:100vh; }
+  .canvas { position:relative; width:100%; min-height:100vh; overflow:hidden; }
   @media print { #pdfLink { display:none !important; } }
 </style>
 </head>
@@ -1325,7 +1325,7 @@ document.querySelectorAll('.modal-bg').forEach(bg => {
   bg.addEventListener('mousedown', e => { if(e.target===bg) bg.classList.add('hidden'); });
 });
 
-canvas.style.backgroundColor = '#0e0e10';
+canvas.style.backgroundColor = '#ffffff';
 showDefaultProps(); updateCount();
 </script>
 </body>
