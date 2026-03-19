@@ -199,6 +199,13 @@
   }
   .layer-item .layer-vis:hover { color: var(--text); }
   .layer-item .layer-vis.off { color: var(--danger); }
+  .layer-item .layer-btn {
+    width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+    border: none; background: transparent; color: var(--text-dim); cursor: pointer; font-size: 9px;
+    padding: 0; opacity: 0; transition: opacity .15s;
+  }
+  .layer-item:hover .layer-btn { opacity: 1; }
+  .layer-item .layer-btn:hover { color: var(--accent-bright); }
 
   /* google fonts dropdown */
   .font-search-wrap { position: relative; }
@@ -1049,17 +1056,41 @@ document.addEventListener('click', e => {
 function updateLayers() {
   const list = document.getElementById('layersList');
   const sorted = [...elements].sort((a,b) => b.z - a.z);
-  list.innerHTML = sorted.map(el => {
+  list.innerHTML = sorted.map((el, i) => {
     const icons = {text:'T', shape:'■', image:'◻', embed:'⟨⟩'};
     return `<div class="layer-item${selectedEl?.id===el.id?' active':''}" data-id="${el.id}" onclick="selectElement(elements.find(e=>e.id==='${el.id}'))">
       <span class="layer-icon">${icons[el.type]||'?'}</span>
       <span class="layer-name">${esc(el.name)}</span>
+      <button class="layer-btn" onclick="event.stopPropagation();moveLayer('${el.id}','up')" title="traer adelante"${i===0?' disabled style="opacity:0;pointer-events:none"':''}>▲</button>
+      <button class="layer-btn" onclick="event.stopPropagation();moveLayer('${el.id}','down')" title="enviar atrás"${i===sorted.length-1?' disabled style="opacity:0;pointer-events:none"':''}>▼</button>
       <button class="layer-vis${el.visible?'':' off'}" onclick="event.stopPropagation();toggleVis('${el.id}')" title="visibilidad">${el.visible?'◉':'◌'}</button>
     </div>`;
   }).join('');
 }
 function highlightLayer(id) {
   document.querySelectorAll('.layer-item').forEach(li => li.classList.toggle('active', li.dataset.id===id));
+}
+function moveLayer(id, dir) {
+  snapshot();
+  const sorted = [...elements].sort((a,b) => b.z - a.z);
+  const idx = sorted.findIndex(e => e.id === id);
+  if (idx < 0) return;
+  // swap z values with neighbor
+  if (dir === 'up' && idx > 0) {
+    const tmp = sorted[idx].z;
+    sorted[idx].z = sorted[idx-1].z;
+    sorted[idx-1].z = tmp;
+  } else if (dir === 'down' && idx < sorted.length - 1) {
+    const tmp = sorted[idx].z;
+    sorted[idx].z = sorted[idx+1].z;
+    sorted[idx+1].z = tmp;
+  }
+  // apply z-index to DOM
+  elements.forEach(el => {
+    const dom = document.getElementById(el.id);
+    if (dom) dom.style.zIndex = el.z;
+  });
+  updateLayers();
 }
 function toggleVis(id) {
   const el = elements.find(e=>e.id===id); if(!el) return;
