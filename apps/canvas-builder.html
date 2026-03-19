@@ -400,23 +400,22 @@
       <h3 style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);margin-bottom:8px;font-weight:400">opciones</h3>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--text);margin-bottom:8px">
         <input type="checkbox" id="exportPdfBtn" style="accent-color:var(--accent)">
-        incluir botón "descargar pdf" en la página
+        incluir enlace "pdf" en la página
       </label>
       <div id="pdfBtnOptions" style="display:none;padding-left:22px;margin-bottom:8px">
-        <div class="prop-row"><label style="width:auto;font-size:10px">texto del botón</label></div>
-        <input type="text" id="pdfBtnLabel" value="descargar pdf" style="margin-bottom:6px">
+        <div class="prop-row"><label style="width:auto;font-size:10px">texto</label></div>
+        <input type="text" id="pdfBtnLabel" value="pdf" style="margin-bottom:6px">
         <div class="prop-row"><label style="width:auto;font-size:10px">posición</label></div>
         <select id="pdfBtnPosition">
           <option value="bottom-right">abajo derecha</option>
           <option value="bottom-left">abajo izquierda</option>
           <option value="top-right">arriba derecha</option>
           <option value="top-left">arriba izquierda</option>
-          <option value="bottom-center">abajo centro</option>
         </select>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--text);margin-top:8px">
-          <input type="checkbox" id="pdfBtnDark" checked style="accent-color:var(--accent)">
-          estilo oscuro (match con fondos oscuros)
-        </label>
+        <div class="prop-row" style="margin-top:6px"><label style="width:auto;font-size:10px">color del texto</label></div>
+        <input type="color" id="pdfBtnColor" value="#555555" style="width:40px;height:24px;margin-bottom:6px">
+        <div class="prop-row" style="margin-top:4px"><label style="width:auto;font-size:10px">tamaño (px)</label></div>
+        <input type="number" id="pdfBtnSize" value="11" min="8" max="24" style="width:60px;margin-bottom:6px">
       </div>
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:11px;color:var(--text);margin-bottom:4px">
         <input type="checkbox" id="exportMinify" style="accent-color:var(--accent)">
@@ -1099,9 +1098,8 @@ function generateHTML(opts = {}) {
   const w = canvas.offsetWidth, h = canvas.offsetHeight;
   const title = opts.title || 'página';
   const includePdf = opts.includePdf || false;
-  const pdfLabel = opts.pdfLabel || 'descargar pdf';
+  const pdfLabel = opts.pdfLabel || 'pdf';
   const pdfPosition = opts.pdfPosition || 'bottom-right';
-  const pdfDark = opts.pdfDark !== false;
 
   const usedFonts = new Set();
   elements.filter(e=>e.visible!==false).forEach(e => { if(e._font) usedFonts.add(e._font); });
@@ -1142,62 +1140,46 @@ function generateHTML(opts = {}) {
   let bgStyle = canvasBg.includes('gradient') ? `background:${canvasBg}` : `background-color:${canvasBg}`;
   if (canvasBgImg) bgStyle += `;background-image:url(${canvasBgImg});background-size:cover;background-position:center`;
 
-  // PDF button injection
+  // PDF link injection
   let pdfScript = '';
-  let pdfButton = '';
+  let pdfLink = '';
   if (includePdf) {
+    const pdfColor = opts.pdfColor || '#555555';
+    const pdfSize = opts.pdfSize || 11;
     const posMap = {
-      'bottom-right': 'bottom:20px;right:20px',
-      'bottom-left': 'bottom:20px;left:20px',
-      'top-right': 'top:20px;right:20px',
-      'top-left': 'top:20px;left:20px',
-      'bottom-center': 'bottom:20px;left:50%;transform:translateX(-50%)'
+      'bottom-right': 'bottom:12px;right:14px',
+      'bottom-left': 'bottom:12px;left:14px',
+      'top-right': 'top:12px;right:14px',
+      'top-left': 'top:12px;left:14px'
     };
     const posCSS = posMap[pdfPosition] || posMap['bottom-right'];
-    const btnBg = pdfDark ? 'background:rgba(10,10,11,0.85);color:#b0b0b0;border:1px solid rgba(255,255,255,0.1)' : 'background:rgba(255,255,255,0.9);color:#333;border:1px solid rgba(0,0,0,0.15)';
 
-    pdfButton = `
-<button id="pdfBtn" onclick="downloadPDF()" style="position:fixed;${posCSS};${btnBg};font-family:ui-monospace,monospace;font-size:12px;padding:8px 16px;cursor:pointer;z-index:9999;transition:all .2s;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)"
-  onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">${esc(pdfLabel)}</button>`;
+    pdfLink = `  <span id="pdfLink" onclick="downloadPDF()" style="position:absolute;${posCSS};font-family:ui-monospace,'SF Mono','Fira Code',monospace;font-size:${pdfSize}px;color:${pdfColor};cursor:pointer;letter-spacing:.5px;transition:opacity .2s;z-index:999;user-select:none;-webkit-user-select:none" onmouseover="this.style.opacity='.6'" onmouseout="this.style.opacity='1'">${esc(pdfLabel)}</span>\n`;
 
     pdfScript = `
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js"><\/script>
+<script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"><\/script>
 <script>
 async function downloadPDF() {
-  const btn = document.getElementById('pdfBtn');
-  const origText = btn.textContent;
-  btn.textContent = 'generando...';
-  btn.disabled = true;
+  const link = document.getElementById('pdfLink');
+  const orig = link.textContent;
+  link.textContent = '...';
   try {
     const el = document.querySelector('.canvas');
-    // hide PDF button during capture
-    btn.style.display = 'none';
-    const c = await html2canvas(el, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: null
-    });
-    btn.style.display = '';
+    link.style.display = 'none';
+    const c = await html2canvas(el, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: null });
+    link.style.display = '';
     const imgData = c.toDataURL('image/png');
-    const { jsPDF } = window.jspdf;
-    // calculate PDF dimensions from canvas
-    const cW = el.offsetWidth;
-    const cH = el.offsetHeight;
-    const pxToMm = 0.264583;
-    const pdfW = cW * pxToMm;
-    const pdfH = cH * pxToMm;
-    const orientation = pdfW > pdfH ? 'landscape' : 'portrait';
-    const pdf = new jsPDF({ orientation, unit: 'mm', format: [pdfW, pdfH] });
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
-    pdf.save(document.title.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
-  } catch(err) {
-    console.error('Error generating PDF:', err);
-    alert('Error al generar el PDF. Revisa la consola para detalles.');
-  }
-  btn.textContent = origText;
-  btn.disabled = false;
+    const JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JsPDF) throw new Error('jsPDF not loaded');
+    const cW = el.offsetWidth, cH = el.offsetHeight;
+    const mm = 0.264583;
+    const pW = cW*mm, pH = cH*mm;
+    const pdf = new JsPDF({ orientation: pW>pH?'landscape':'portrait', unit:'mm', format:[pW,pH] });
+    pdf.addImage(imgData, 'PNG', 0, 0, pW, pH);
+    pdf.save(document.title.replace(/[^a-zA-Z0-9]/g,'_') + '.pdf');
+  } catch(e) { console.error(e); alert('error al generar pdf'); }
+  link.textContent = orig;
 }
 <\/script>`;
   }
@@ -1213,13 +1195,12 @@ async function downloadPDF() {
   * { margin:0; padding:0; box-sizing:border-box; }
   body { ${bgStyle}; }
   .canvas { position:relative; width:${w}px; height:${h}px; margin:0 auto; overflow:hidden; }
-  @media print { #pdfBtn { display:none !important; } }
+  @media print { #pdfLink { display:none !important; } }
 </style>
 </head>
 <body>
 <div class="canvas">
-${body}</div>
-${pdfButton}
+${pdfLink}${body}</div>
 ${pdfScript}
 </body>
 </html>`;
@@ -1245,9 +1226,10 @@ function doExport() {
   const opts = {
     title: document.getElementById('exportTitle').value.trim() || 'página',
     includePdf: document.getElementById('exportPdfBtn').checked,
-    pdfLabel: document.getElementById('pdfBtnLabel').value.trim() || 'descargar pdf',
+    pdfLabel: document.getElementById('pdfBtnLabel').value.trim() || 'pdf',
     pdfPosition: document.getElementById('pdfBtnPosition').value,
-    pdfDark: document.getElementById('pdfBtnDark').checked,
+    pdfColor: document.getElementById('pdfBtnColor').value,
+    pdfSize: +document.getElementById('pdfBtnSize').value || 11,
     minify: document.getElementById('exportMinify').checked
   };
   const html = generateHTML(opts);
@@ -1272,7 +1254,7 @@ function exportPDF() {
 
   // dynamically load html2canvas + jsPDF
   loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js')
-    .then(() => loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js'))
+    .then(() => loadScript('https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js'))
     .then(async () => {
       try {
         const c = await html2canvas(canvas, {
@@ -1282,12 +1264,13 @@ function exportPDF() {
           backgroundColor: null
         });
         const imgData = c.toDataURL('image/png');
-        const { jsPDF } = window.jspdf;
+        const JsPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+        if (!JsPDF) throw new Error('jsPDF no se cargó correctamente');
         const cW = canvas.offsetWidth, cH = canvas.offsetHeight;
         const pxToMm = 0.264583;
         const pdfW = cW * pxToMm, pdfH = cH * pxToMm;
         const orientation = pdfW > pdfH ? 'landscape' : 'portrait';
-        const pdf = new jsPDF({ orientation, unit: 'mm', format: [pdfW, pdfH] });
+        const pdf = new JsPDF({ orientation, unit: 'mm', format: [pdfW, pdfH] });
         pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
         pdf.save('canvas.pdf');
       } catch(err) {
