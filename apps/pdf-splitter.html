@@ -489,8 +489,9 @@ fileInput.addEventListener('change', () => { if (fileInput.files[0]) loadFile(fi
 async function loadFile(file) {
   if (file.type !== 'application/pdf') { showError('solo se aceptan archivos pdf.'); return; }
   try {
-    pdfBytes = await file.arrayBuffer();
-    pdfDoc = await PDFDocument.load(pdfBytes);
+    const rawBuffer = await file.arrayBuffer();
+    pdfBytes = new Uint8Array(rawBuffer);
+    pdfDoc = await PDFDocument.load(pdfBytes.slice());
     totalPages = pdfDoc.getPageCount();
     fileName.textContent = file.name;
     filePages.textContent = totalPages + ' pág.';
@@ -500,8 +501,7 @@ async function loadFile(file) {
     hideError();
 
     // Load with pdf.js for viewer
-    const typedArray = new Uint8Array(pdfBytes);
-    pdfJsDoc = await pdfjsLib.getDocument({ data: typedArray }).promise;
+    pdfJsDoc = await pdfjsLib.getDocument({ data: pdfBytes.slice() }).promise;
     renderThumbnails();
     viewer.classList.add('visible');
   } catch (err) {
@@ -706,7 +706,7 @@ btnSplit.addEventListener('click', async () => {
   resultsList.innerHTML = '';
 
   try {
-    const srcDoc = await PDFDocument.load(pdfBytes);
+    const srcDoc = await PDFDocument.load(pdfBytes.slice());
     const baseName = fileName.textContent.replace(/\.pdf$/i, '');
 
     for (let i = 0; i < ranges.length; i++) {
