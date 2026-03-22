@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>pdf-splitter</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
     font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
-    background: #0a0a0b;
-    color: #999;
+    background: #ffffff;
+    color: #666;
     min-height: 100vh;
     padding: 3rem 2.5rem;
     font-size: 0.88rem;
@@ -25,25 +26,25 @@
   .back-link {
     display: inline-block;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #444;
+    color: #bbb;
     text-decoration: none;
     margin-bottom: 1.2rem;
     font-size: 0.82rem;
   }
-  .back-link:hover { color: #888; }
+  .back-link:hover { color: #666; }
 
   h1 {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.88rem;
     font-weight: normal;
-    color: #555;
+    color: #999;
     margin-bottom: 2rem;
   }
 
   /* Drop zone */
   .dropzone {
-    border: 1px dashed #2a2a2e;
-    background: #111113;
+    border: 1px dashed #d8d8dc;
+    background: #fafafa;
     padding: 2.5rem 2rem;
     cursor: pointer;
     transition: all 0.2s;
@@ -52,17 +53,17 @@
   }
   .dropzone:hover, .dropzone.dragover {
     border-color: #5a7a3a;
-    background: rgba(90, 140, 60, 0.04);
+    background: rgba(90, 140, 60, 0.03);
   }
   .dropzone input { display: none; }
-  .dropzone-label { color: #666; }
-  .dropzone-label strong { color: #aaa; font-weight: 500; }
+  .dropzone-label { color: #999; }
+  .dropzone-label strong { color: #555; font-weight: 500; }
 
   /* File info */
   .file-info {
     display: none;
-    background: #111113;
-    border: 1px solid #222225;
+    background: #fafafa;
+    border: 1px solid #e8e8ec;
     border-radius: 4px;
     padding: 0.9rem 1.2rem;
     margin-bottom: 2rem;
@@ -72,7 +73,7 @@
   .file-info.visible { display: flex; }
   .file-name {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #ccc;
+    color: #333;
     font-size: 0.85rem;
     flex: 1;
     overflow: hidden;
@@ -88,7 +89,7 @@
   .btn-clear {
     background: none;
     border: none;
-    color: #555;
+    color: #aaa;
     cursor: pointer;
     font-family: inherit;
     font-size: 0.88rem;
@@ -96,36 +97,36 @@
     border-radius: 3px;
     transition: all 0.15s;
   }
-  .btn-clear:hover { color: #ccc; background: #1a1a1e; }
+  .btn-clear:hover { color: #555; background: #f0f0f2; }
 
   /* Mode tabs */
   .mode-tabs {
     display: flex;
     gap: 0;
     margin-bottom: 1.5rem;
-    border: 1px solid #222225;
+    border: 1px solid #e0e0e4;
     border-radius: 4px;
     overflow: hidden;
-    max-width: 360px;
+    max-width: 480px;
   }
   .mode-tab {
     flex: 1;
-    background: #111113;
+    background: #fafafa;
     border: none;
     font-family: inherit;
     font-size: 0.82rem;
     font-weight: 500;
-    color: #555;
+    color: #aaa;
     cursor: pointer;
     padding: 0.6rem 1rem;
     transition: all 0.15s;
   }
-  .mode-tab + .mode-tab { border-left: 1px solid #222225; }
+  .mode-tab + .mode-tab { border-left: 1px solid #e0e0e4; }
   .mode-tab.active {
-    color: #ccc;
-    background: #18181c;
+    color: #444;
+    background: #f0f0f2;
   }
-  .mode-tab:hover:not(.active) { color: #888; background: #141416; }
+  .mode-tab:hover:not(.active) { color: #777; background: #f5f5f7; }
 
   /* Panels */
   .panel { display: none; margin-bottom: 2rem; }
@@ -133,7 +134,7 @@
 
   .field-label {
     display: block;
-    color: #666;
+    color: #999;
     font-size: 0.8rem;
     font-weight: 500;
     text-transform: uppercase;
@@ -142,20 +143,20 @@
   }
 
   .field-hint {
-    color: #444;
+    color: #bbb;
     margin-bottom: 0.7rem;
     font-size: 0.84rem;
   }
   .field-hint code {
-    color: #777;
+    color: #888;
     font-size: 0.82rem;
   }
 
   input[type="text"], input[type="number"] {
-    background: #111113;
-    border: 1px solid #222225;
+    background: #fafafa;
+    border: 1px solid #e0e0e4;
     border-radius: 4px;
-    color: #ccc;
+    color: #333;
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
     font-size: 0.85rem;
     padding: 0.6rem 0.8rem;
@@ -165,7 +166,7 @@
     transition: border-color 0.2s;
   }
   input:focus { border-color: #5a7a3a; }
-  input::placeholder { color: #333; }
+  input::placeholder { color: #ccc; }
 
   .chunk-row {
     display: flex;
@@ -173,13 +174,13 @@
     gap: 0.75rem;
   }
   .chunk-row input { width: 100px; }
-  .chunk-row span { color: #555; }
+  .chunk-row span { color: #999; }
 
   /* Actions */
   .btn-split {
     background: #5a7a3a;
     border: none;
-    color: #e8e8ec;
+    color: #fff;
     font-family: inherit;
     font-size: 0.84rem;
     font-weight: 500;
@@ -192,12 +193,109 @@
   .btn-split:hover { background: #6a8e46; }
   .btn-split:disabled { opacity: 0.3; cursor: not-allowed; }
 
-  /* Results */
+  /* ── PDF Viewer ── */
+  .viewer {
+    display: none;
+    margin-bottom: 2rem;
+  }
+  .viewer.visible { display: block; }
+
+  .viewer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+  .viewer-label {
+    color: #999;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .viewer-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+  .viewer-btn {
+    background: none;
+    border: 1px solid #e0e0e4;
+    color: #999;
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 0.25rem 0.7rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s;
+  }
+  .viewer-btn:hover { border-color: #5a7a3a; color: #5a7a3a; }
+
+  .viewer-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 0.75rem;
+    max-height: 420px;
+    overflow-y: auto;
+    padding: 0.5rem;
+    border: 1px solid #e8e8ec;
+    border-radius: 4px;
+    background: #fafafa;
+  }
+  .viewer-grid::-webkit-scrollbar { width: 6px; }
+  .viewer-grid::-webkit-scrollbar-track { background: transparent; }
+  .viewer-grid::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+  .page-thumb {
+    position: relative;
+    cursor: pointer;
+    border: 2px solid transparent;
+    border-radius: 4px;
+    overflow: hidden;
+    transition: all 0.15s;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .page-thumb:hover { border-color: #ccc; }
+  .page-thumb.selected { border-color: #5a7a3a; box-shadow: 0 0 0 1px #5a7a3a; }
+  .page-thumb canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .page-num {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    text-align: center;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-size: 0.72rem;
+    color: #999;
+    background: rgba(255,255,255,0.88);
+    padding: 0.15rem 0;
+    pointer-events: none;
+  }
+  .page-thumb.selected .page-num {
+    color: #5a7a3a;
+    font-weight: 600;
+  }
+
+  .viewer-selection-hint {
+    color: #bbb;
+    font-size: 0.82rem;
+    margin-top: 0.6rem;
+  }
+  .viewer-selection-hint strong {
+    color: #5a7a3a;
+    font-weight: 500;
+  }
+
+  /* ── Results ── */
   .results { display: none; }
   .results.visible { display: block; }
 
   .results-header {
-    color: #555;
+    color: #999;
     font-size: 0.8rem;
     font-weight: 500;
     text-transform: uppercase;
@@ -209,40 +307,53 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.6rem 1rem;
-    background: #111113;
-    border: 1px solid #1a1a1e;
+    padding: 0.5rem 0.8rem;
+    background: #fafafa;
+    border: 1px solid #e8e8ec;
     border-radius: 4px;
     margin-bottom: 0.4rem;
-    max-width: 500px;
+    max-width: 600px;
     transition: border-color 0.15s;
+    gap: 0.6rem;
   }
-  .result-item:hover { border-color: #2a2a2e; }
+  .result-item:hover { border-color: #d0d0d4; }
 
-  .result-name {
+  .result-name-input {
     font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #aaa;
+    color: #333;
     font-size: 0.82rem;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 0.25rem 0.4rem;
+    flex: 1;
+    min-width: 0;
+    outline: none;
+    transition: all 0.15s;
   }
-  .result-pages { color: #555; margin-left: 0.75rem; font-size: 0.82rem; }
+  .result-name-input:hover { border-color: #e0e0e4; background: #fff; }
+  .result-name-input:focus { border-color: #5a7a3a; background: #fff; }
+
+  .result-pages { color: #aaa; white-space: nowrap; font-size: 0.82rem; }
 
   .btn-download {
     background: none;
-    border: 1px solid #222225;
-    color: #777;
+    border: 1px solid #e0e0e4;
+    color: #999;
     font-family: inherit;
     font-size: 0.8rem;
     padding: 0.3rem 0.8rem;
     cursor: pointer;
     border-radius: 3px;
     transition: all 0.15s;
+    white-space: nowrap;
   }
   .btn-download:hover { border-color: #5a7a3a; color: #5a7a3a; }
 
   .btn-download-all {
     background: none;
-    border: 1px solid #222225;
-    color: #777;
+    border: 1px solid #e0e0e4;
+    color: #999;
     font-family: inherit;
     font-size: 0.84rem;
     cursor: pointer;
@@ -278,9 +389,24 @@
   <button class="btn-clear" id="btnClear">✕</button>
 </div>
 
+<!-- PDF Page Viewer -->
+<div class="viewer" id="viewer">
+  <div class="viewer-header">
+    <span class="viewer-label">páginas</span>
+    <div class="viewer-actions">
+      <button class="viewer-btn" id="btnSelectAll">seleccionar todas</button>
+      <button class="viewer-btn" id="btnDeselectAll">deseleccionar</button>
+      <button class="viewer-btn" id="btnUseSelection">usar selección →</button>
+    </div>
+  </div>
+  <div class="viewer-grid" id="viewerGrid"></div>
+  <div class="viewer-selection-hint" id="selectionHint"></div>
+</div>
+
 <div class="mode-tabs" id="modeTabs">
   <button class="mode-tab active" data-mode="ranges">por rangos</button>
   <button class="mode-tab" data-mode="chunks">partes iguales</button>
+  <button class="mode-tab" data-mode="selection">por selección visual</button>
 </div>
 
 <div class="panel active" id="panelRanges">
@@ -297,6 +423,10 @@
   </div>
 </div>
 
+<div class="panel" id="panelSelection">
+  <div class="field-hint">selecciona páginas en el visor de arriba y presiona <code>usar selección →</code></div>
+</div>
+
 <div class="error-msg" id="errorMsg"></div>
 
 <button class="btn-split" id="btnSplit" disabled>fragmentar</button>
@@ -308,13 +438,17 @@
 </div>
 
 <script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
 const { PDFDocument } = PDFLib;
 
 let pdfBytes = null;
 let pdfDoc = null;
+let pdfJsDoc = null;
 let totalPages = 0;
 let generatedFiles = [];
 let currentMode = 'ranges';
+let selectedPages = new Set();
 
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
@@ -325,6 +459,7 @@ const btnClear = document.getElementById('btnClear');
 const modeTabs = document.getElementById('modeTabs');
 const panelRanges = document.getElementById('panelRanges');
 const panelChunks = document.getElementById('panelChunks');
+const panelSelection = document.getElementById('panelSelection');
 const inputRanges = document.getElementById('inputRanges');
 const inputChunks = document.getElementById('inputChunks');
 const btnSplit = document.getElementById('btnSplit');
@@ -332,6 +467,14 @@ const results = document.getElementById('results');
 const resultsList = document.getElementById('resultsList');
 const btnDownloadAll = document.getElementById('btnDownloadAll');
 const errorMsg = document.getElementById('errorMsg');
+const viewer = document.getElementById('viewer');
+const viewerGrid = document.getElementById('viewerGrid');
+const selectionHint = document.getElementById('selectionHint');
+const btnSelectAll = document.getElementById('btnSelectAll');
+const btnDeselectAll = document.getElementById('btnDeselectAll');
+const btnUseSelection = document.getElementById('btnUseSelection');
+
+// ── File loading ──
 
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
@@ -355,20 +498,127 @@ async function loadFile(file) {
     btnSplit.disabled = false;
     results.classList.remove('visible');
     hideError();
+
+    // Load with pdf.js for viewer
+    const typedArray = new Uint8Array(pdfBytes);
+    pdfJsDoc = await pdfjsLib.getDocument({ data: typedArray }).promise;
+    renderThumbnails();
+    viewer.classList.add('visible');
   } catch (err) {
     showError('no se pudo leer el pdf.');
   }
 }
 
+// ── Thumbnail viewer ──
+
+async function renderThumbnails() {
+  viewerGrid.innerHTML = '';
+  selectedPages.clear();
+  updateSelectionHint();
+
+  for (let i = 1; i <= totalPages; i++) {
+    const page = await pdfJsDoc.getPage(i);
+    const vp = page.getViewport({ scale: 0.4 });
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'page-thumb';
+    wrapper.dataset.page = i;
+
+    const canvas = document.createElement('canvas');
+    canvas.width = vp.width;
+    canvas.height = vp.height;
+
+    const numLabel = document.createElement('div');
+    numLabel.className = 'page-num';
+    numLabel.textContent = i;
+
+    wrapper.appendChild(canvas);
+    wrapper.appendChild(numLabel);
+    viewerGrid.appendChild(wrapper);
+
+    const ctx = canvas.getContext('2d');
+    page.render({ canvasContext: ctx, viewport: vp });
+
+    wrapper.addEventListener('click', () => togglePage(i, wrapper));
+  }
+}
+
+function togglePage(pageNum, el) {
+  if (selectedPages.has(pageNum)) {
+    selectedPages.delete(pageNum);
+    el.classList.remove('selected');
+  } else {
+    selectedPages.add(pageNum);
+    el.classList.add('selected');
+  }
+  updateSelectionHint();
+}
+
+function updateSelectionHint() {
+  if (selectedPages.size === 0) {
+    selectionHint.innerHTML = '';
+    return;
+  }
+  const sorted = [...selectedPages].sort((a, b) => a - b);
+  const rangeStr = compactRanges(sorted);
+  selectionHint.innerHTML = `<strong>${selectedPages.size}</strong> página${selectedPages.size > 1 ? 's' : ''} seleccionada${selectedPages.size > 1 ? 's' : ''}: ${rangeStr}`;
+}
+
+function compactRanges(pages) {
+  if (!pages.length) return '';
+  const ranges = [];
+  let start = pages[0], end = pages[0];
+  for (let i = 1; i < pages.length; i++) {
+    if (pages[i] === end + 1) { end = pages[i]; }
+    else { ranges.push(start === end ? `${start}` : `${start}-${end}`); start = end = pages[i]; }
+  }
+  ranges.push(start === end ? `${start}` : `${start}-${end}`);
+  return ranges.join(', ');
+}
+
+btnSelectAll.addEventListener('click', () => {
+  viewerGrid.querySelectorAll('.page-thumb').forEach(el => {
+    const p = parseInt(el.dataset.page);
+    selectedPages.add(p);
+    el.classList.add('selected');
+  });
+  updateSelectionHint();
+});
+
+btnDeselectAll.addEventListener('click', () => {
+  selectedPages.clear();
+  viewerGrid.querySelectorAll('.page-thumb').forEach(el => el.classList.remove('selected'));
+  updateSelectionHint();
+});
+
+btnUseSelection.addEventListener('click', () => {
+  if (selectedPages.size === 0) { showError('selecciona al menos una página.'); return; }
+  hideError();
+  // Switch to selection mode
+  modeTabs.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  modeTabs.querySelector('[data-mode="selection"]').classList.add('active');
+  currentMode = 'selection';
+  panelRanges.classList.remove('active');
+  panelChunks.classList.remove('active');
+  panelSelection.classList.add('active');
+});
+
+// ── Clear ──
+
 btnClear.addEventListener('click', () => {
-  pdfBytes = null; pdfDoc = null; totalPages = 0;
+  pdfBytes = null; pdfDoc = null; pdfJsDoc = null; totalPages = 0;
   fileInput.value = '';
   fileInfo.classList.remove('visible');
   btnSplit.disabled = true;
   results.classList.remove('visible');
+  viewer.classList.remove('visible');
+  viewerGrid.innerHTML = '';
+  selectedPages.clear();
   generatedFiles = [];
   hideError();
 });
+
+// ── Mode tabs ──
 
 modeTabs.querySelectorAll('.mode-tab').forEach(tab => {
   tab.addEventListener('click', () => {
@@ -377,9 +627,12 @@ modeTabs.querySelectorAll('.mode-tab').forEach(tab => {
     currentMode = tab.dataset.mode;
     panelRanges.classList.toggle('active', currentMode === 'ranges');
     panelChunks.classList.toggle('active', currentMode === 'chunks');
+    panelSelection.classList.toggle('active', currentMode === 'selection');
     hideError();
   });
 });
+
+// ── Parsing ──
 
 function parseRanges(str) {
   const ranges = [];
@@ -414,6 +667,22 @@ function chunkRanges(chunkSize) {
   return ranges;
 }
 
+function selectionRanges() {
+  if (selectedPages.size === 0) throw new Error('selecciona al menos una página en el visor.');
+  const sorted = [...selectedPages].sort((a, b) => a - b);
+  // Group consecutive pages into ranges
+  const ranges = [];
+  let start = sorted[0], end = sorted[0];
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] === end + 1) { end = sorted[i]; }
+    else { ranges.push({ start, end }); start = end = sorted[i]; }
+  }
+  ranges.push({ start, end });
+  return ranges;
+}
+
+// ── Split ──
+
 btnSplit.addEventListener('click', async () => {
   if (!pdfBytes) return;
   hideError();
@@ -421,8 +690,10 @@ btnSplit.addEventListener('click', async () => {
   try {
     if (currentMode === 'ranges') {
       ranges = parseRanges(inputRanges.value);
-    } else {
+    } else if (currentMode === 'chunks') {
       ranges = chunkRanges(parseInt(inputChunks.value) || 0);
+    } else {
+      ranges = selectionRanges();
     }
   } catch (err) {
     showError(err.message);
@@ -461,23 +732,40 @@ btnSplit.addEventListener('click', async () => {
   btnSplit.textContent = 'fragmentar';
 });
 
+// ── Results with editable names ──
+
 function renderResults() {
   resultsList.innerHTML = '';
   generatedFiles.forEach((f, i) => {
     const div = document.createElement('div');
     div.className = 'result-item';
     const pageCount = f.end - f.start + 1;
-    div.innerHTML = `
-      <div>
-        <span class="result-name">${f.name}</span>
-        <span class="result-pages">${pageCount} pág.</span>
-      </div>
-      <button class="btn-download" data-idx="${i}">descargar</button>
-    `;
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'result-name-input';
+    nameInput.value = f.name;
+    nameInput.addEventListener('change', () => {
+      let val = nameInput.value.trim();
+      if (!val) val = f.name;
+      if (!val.toLowerCase().endsWith('.pdf')) val += '.pdf';
+      generatedFiles[i].customName = val;
+      nameInput.value = val;
+    });
+
+    const pagesSpan = document.createElement('span');
+    pagesSpan.className = 'result-pages';
+    pagesSpan.textContent = pageCount + ' pág.';
+
+    const btn = document.createElement('button');
+    btn.className = 'btn-download';
+    btn.textContent = 'descargar';
+    btn.addEventListener('click', () => download(generatedFiles[i]));
+
+    div.appendChild(nameInput);
+    div.appendChild(pagesSpan);
+    div.appendChild(btn);
     resultsList.appendChild(div);
-  });
-  resultsList.querySelectorAll('.btn-download').forEach(btn => {
-    btn.addEventListener('click', () => download(generatedFiles[btn.dataset.idx]));
   });
   results.classList.add('visible');
 }
@@ -485,7 +773,7 @@ function renderResults() {
 function download(f) {
   const a = document.createElement('a');
   a.href = f.url;
-  a.download = f.name;
+  a.download = f.customName || f.name;
   a.click();
 }
 
