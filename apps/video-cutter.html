@@ -383,9 +383,56 @@
     font-family: var(--mono);
     font-size: 10px;
   }
+
+  /* loading overlay */
+  .loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    transition: opacity 0.4s;
+  }
+  .loading-overlay.done {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .loader-spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-text {
+    font-size: 12px;
+    color: var(--text-dim);
+    text-align: center;
+    line-height: 1.6;
+  }
+  .loader-text span {
+    display: block;
+    font-size: 10px;
+    margin-top: 4px;
+    color: #444;
+  }
 </style>
 </head>
 <body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-spinner"></div>
+  <div class="loader-text">
+    cargando ffmpeg.wasm...
+    <span>primera vez puede tomar ~30s</span>
+  </div>
+</div>
 
 <div class="container">
   <div class="header">
@@ -518,14 +565,20 @@ async function initFFmpeg() {
       $('progressText').textContent = `procesando: ${pct}%`;
     });
     ffmpeg.on('log', ({ message }) => console.log('[ffmpeg]', message));
+    const workerBase = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm';
     await ffmpeg.load({
       coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
       wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+      classWorkerURL: await toBlobURL(`${workerBase}/worker.js`, 'text/javascript'),
     });
     state.ffmpegReady = true;
+    $('loadingOverlay').classList.add('done');
+    setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500);
     setStatus('ffmpeg listo — arrastra un video para comenzar', '');
   } catch (e) {
     console.error(e);
+    $('loadingOverlay').classList.add('done');
+    setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500);
     setStatus('error cargando ffmpeg: ' + e.message, 'error');
   }
 }
