@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<script src="coi-serviceworker.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>video-cutter</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
     --bg: #0a0a0b;
     --bg2: #111113;
@@ -21,7 +21,6 @@
     --yellow: #8a7a3a;
     --mono: 'Fira Code', 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
   }
-
   body {
     font-family: var(--mono);
     background: var(--bg);
@@ -30,16 +29,13 @@
     line-height: 1.5;
     min-height: 100vh;
   }
-
   a { color: var(--green); text-decoration: none; }
   a:hover { color: var(--green-hover); }
-
   .container {
     max-width: 900px;
     margin: 0 auto;
     padding: 24px 20px;
   }
-
   .header {
     display: flex;
     align-items: baseline;
@@ -50,7 +46,6 @@
   }
   .header .back { font-size: 12px; }
   .header h1 { font-size: 14px; font-weight: 400; text-transform: lowercase; }
-
   .dropzone {
     border: 1px dashed var(--border);
     border-radius: 4px;
@@ -67,7 +62,6 @@
   .dropzone p { color: var(--text-dim); font-size: 12px; margin-top: 8px; }
   .dropzone .icon { font-size: 24px; opacity: 0.4; }
   .dropzone input { display: none; }
-
   .player-wrap {
     display: none;
     background: var(--bg2);
@@ -107,7 +101,6 @@
     color: var(--text-dim);
     margin-left: auto;
   }
-
   .timeline-section { display: none; margin-bottom: 16px; }
   .timeline-container {
     background: var(--bg2);
@@ -161,7 +154,6 @@
     pointer-events: none;
     z-index: 5;
   }
-
   .time-inputs {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
@@ -193,7 +185,6 @@
     color: var(--text-dim);
     padding-bottom: 8px;
   }
-
   .export-section {
     display: none;
     background: var(--bg2);
@@ -209,7 +200,6 @@
     margin-bottom: 12px;
     color: var(--text-dim);
   }
-
   .mode-selector {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -255,7 +245,6 @@
     background: rgba(138, 122, 58, 0.2);
     color: var(--yellow);
   }
-
   .reencode-options {
     display: none;
     grid-template-columns: 1fr 1fr;
@@ -283,7 +272,6 @@
     color: var(--text-dim);
     margin-bottom: 4px;
   }
-
   .note-box {
     font-size: 10px;
     color: var(--text-dim);
@@ -293,7 +281,6 @@
     line-height: 1.5;
   }
   .note-box.warn { border-left-color: var(--yellow); }
-
   .btn-export {
     background: var(--green);
     color: #fff;
@@ -309,7 +296,6 @@
   }
   .btn-export:hover { background: var(--green-hover); }
   .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
-
   .btn-reset {
     background: none;
     color: var(--text-dim);
@@ -323,7 +309,6 @@
     transition: border-color 0.2s, color 0.2s;
   }
   .btn-reset:hover { border-color: var(--red); color: var(--red); }
-
   .progress-section { display: none; margin-bottom: 16px; }
   .progress-bar-track {
     height: 6px;
@@ -344,7 +329,6 @@
     color: var(--text-dim);
     text-align: center;
   }
-
   .status-bar {
     font-size: 11px;
     color: var(--text-dim);
@@ -354,7 +338,6 @@
   }
   .status-bar.error { color: var(--red); }
   .status-bar.success { color: var(--green); }
-
   .file-info {
     display: none;
     font-size: 11px;
@@ -366,7 +349,6 @@
     margin-bottom: 16px;
   }
   .file-info span { color: var(--text); }
-
   .kbd-hints {
     display: none;
     font-size: 10px;
@@ -383,7 +365,6 @@
     font-family: var(--mono);
     font-size: 10px;
   }
-
   /* loading overlay */
   .loading-overlay {
     position: fixed;
@@ -471,7 +452,6 @@
 </style>
 </head>
 <body>
-
 <div class="loading-overlay" id="loadingOverlay">
   <div class="loader-box">
     <div class="loader-header">
@@ -505,22 +485,18 @@
     </div>
   </div>
 </div>
-
 <div class="container">
   <div class="header">
     <a href="https://carloszevallostrigoso.github.io/toolbox/" class="back">← toolbox/</a>
     <h1>video-cutter</h1>
   </div>
-
   <div class="dropzone" id="dropzone">
     <div class="icon">▶</div>
     <p>arrastra un video aquí o haz clic para seleccionar</p>
     <p>mp4 · mkv · webm · avi · mov · ogg · m4v</p>
     <input type="file" id="fileInput" accept="video/*,.mkv,.m4v">
   </div>
-
   <div class="file-info" id="fileInfo"></div>
-
   <div class="player-wrap" id="playerWrap">
     <video id="video" preload="metadata"></video>
     <div class="player-controls">
@@ -537,7 +513,6 @@
       <kbd>espacio</kbd> play/pause · <kbd>←</kbd><kbd>→</kbd> ±5s · <kbd>,</kbd><kbd>.</kbd> ±1 frame · <kbd>i</kbd> inicio · <kbd>o</kbd> fin
     </div>
   </div>
-
   <div class="timeline-section" id="timelineSection">
     <div class="timeline-container">
       <div class="timeline-track" id="timelineTrack">
@@ -559,10 +534,8 @@
       </div>
     </div>
   </div>
-
   <div class="export-section" id="exportSection">
     <h3>exportar</h3>
-
     <div class="mode-selector">
       <div class="mode-card active" id="modeFast" data-mode="fast">
         <div class="mode-badge badge-fast">rápido</div>
@@ -575,14 +548,12 @@
         <div class="mode-desc">re-codifica a h.264/aac. permite cambiar resolución. corte preciso al frame. más lento y usa más memoria.</div>
       </div>
     </div>
-
     <div class="note-box" id="noteFast">
       corte directo es casi instantáneo porque no procesa los frames — solo copia el segmento. ideal para archivos grandes. si necesitas corte exacto al frame o cambiar resolución, usa el modo completo.
     </div>
     <div class="note-box warn" id="noteReencode" style="display:none;">
       re-codificar archivos grandes (&gt;500MB) puede ser muy lento en el navegador y consumir mucha memoria. para esos casos, el corte directo es mejor opción.
     </div>
-
     <div class="reencode-options" id="reencodeOptions">
       <div>
         <label>resolución</label>
@@ -595,23 +566,19 @@
         <input type="number" id="crfInput" value="23" min="0" max="51">
       </div>
     </div>
-
     <button class="btn-export" id="btnExport">✂ cortar y descargar (rápido)</button>
     <div style="text-align: center;">
       <button class="btn-reset" id="btnReset">✕ cargar otro video</button>
     </div>
   </div>
-
   <div class="progress-section" id="progressSection">
     <div class="progress-bar-track">
       <div class="progress-bar-fill" id="progressFill"></div>
     </div>
     <div class="progress-text" id="progressText">cargando ffmpeg...</div>
   </div>
-
-  <div class="status-bar" id="status">cargando ffmpeg.wasm — primera vez puede tomar ~30s...</div>
+  <div class="status-bar" id="status">cargando ffmpeg.wasm...</div>
 </div>
-
 <script type="module">
 import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
 import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
@@ -623,7 +590,6 @@ const state = {
   ffmpegReady: false, dragging: null,
   mode: 'fast',
 };
-
 const ffmpeg = new FFmpeg();
 const $ = id => document.getElementById(id);
 
@@ -632,21 +598,16 @@ const loaderState = { totalBytes: 0, loadedBytes: 0, startTime: 0 };
 
 function updateLoaderUI() {
   const pct = loaderState.totalBytes > 0
-    ? Math.round((loaderState.loadedBytes / loaderState.totalBytes) * 100)
-    : 0;
+    ? Math.round((loaderState.loadedBytes / loaderState.totalBytes) * 100) : 0;
   $('loaderBarFill').style.width = pct + '%';
   $('loaderPct').textContent = pct + '%';
-
   const elapsed = (performance.now() - loaderState.startTime) / 1000;
   $('loaderElapsed').textContent = elapsed.toFixed(1) + 's';
-
   if (elapsed > 0.5 && loaderState.loadedBytes > 0) {
     const speed = loaderState.loadedBytes / elapsed;
-    if (speed > 1048576) {
-      $('loaderSpeed').textContent = (speed / 1048576).toFixed(1) + ' MB/s';
-    } else {
-      $('loaderSpeed').textContent = (speed / 1024).toFixed(0) + ' KB/s';
-    }
+    $('loaderSpeed').textContent = speed > 1048576
+      ? (speed / 1048576).toFixed(1) + ' MB/s'
+      : (speed / 1024).toFixed(0) + ' KB/s';
   }
 }
 
@@ -660,18 +621,14 @@ async function fetchWithProgress(url, mimeType, fileId) {
   const row = $('lf-' + fileId);
   const sizeEl = $('lf-' + fileId + '-size');
   const iconEl = row.querySelector('.loader-file-icon');
-
   row.classList.add('active');
   iconEl.textContent = '◔';
-
   const resp = await fetch(url);
   const contentLength = parseInt(resp.headers.get('content-length') || '0', 10);
   loaderState.totalBytes += contentLength;
-
   const reader = resp.body.getReader();
   const chunks = [];
   let received = 0;
-
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
@@ -681,15 +638,12 @@ async function fetchWithProgress(url, mimeType, fileId) {
     sizeEl.textContent = fmtBytes(received) + (contentLength ? ' / ' + fmtBytes(contentLength) : '');
     updateLoaderUI();
   }
-
   const blob = new Blob(chunks, { type: mimeType });
   const blobUrl = URL.createObjectURL(blob);
-
   row.classList.remove('active');
   row.classList.add('done');
   iconEl.textContent = '✓';
   sizeEl.textContent = fmtBytes(received);
-
   return blobUrl;
 }
 
@@ -698,7 +652,6 @@ async function initFFmpeg() {
   try {
     const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
     const workerBase = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm';
-
     ffmpeg.on('progress', ({ progress }) => {
       const pct = Math.min(100, Math.round(progress * 100));
       $('progressFill').style.width = pct + '%';
@@ -708,16 +661,13 @@ async function initFFmpeg() {
 
     $('loaderTitle').textContent = 'descargando ffmpeg-core.js...';
     const coreURL = await fetchWithProgress(`${base}/ffmpeg-core.js`, 'text/javascript', 'core');
-
     $('loaderTitle').textContent = 'descargando ffmpeg-core.wasm...';
     const wasmURL = await fetchWithProgress(`${base}/ffmpeg-core.wasm`, 'application/wasm', 'wasm');
-
     $('loaderTitle').textContent = 'descargando worker.js...';
     const classWorkerURL = await fetchWithProgress(`${workerBase}/worker.js`, 'text/javascript', 'worker');
 
     $('loaderTitle').textContent = 'inicializando...';
     $('loaderSpinner').style.borderTopColor = 'var(--green)';
-
     await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
 
     const elapsed = ((performance.now() - loaderState.startTime) / 1000).toFixed(1);
@@ -726,7 +676,6 @@ async function initFFmpeg() {
     $('loaderPct').textContent = '100%';
     $('loaderSpinner').style.animation = 'none';
     $('loaderSpinner').style.borderColor = 'var(--green)';
-
     state.ffmpegReady = true;
     setTimeout(() => {
       $('loadingOverlay').classList.add('done');
@@ -970,24 +919,18 @@ $('btnReset').addEventListener('click', () => {
 $('btnExport').addEventListener('click', async () => {
   if (!state.ffmpegReady) { setStatus('ffmpeg aún no está listo', 'error'); return; }
   if (!state.file) return;
-
   $('btnExport').disabled = true;
   $('progressSection').style.display = 'block';
   $('progressFill').style.width = '0%';
   setStatus('procesando...', '');
-
   try {
     const ext = getExt(state.fileName);
     const inp = 'input.' + ext;
     const out = 'output.mp4';
-
     $('progressText').textContent = 'cargando archivo en memoria...';
     await ffmpeg.writeFile(inp, await fetchFile(state.file));
-
     let args;
-
     if (state.mode === 'fast') {
-      // -ss BEFORE -i → fast input seeking, stream copy
       args = [
         '-ss', String(state.startTime),
         '-i', inp,
@@ -998,7 +941,6 @@ $('btnExport').addEventListener('click', async () => {
       ];
       $('progressText').textContent = 'cortando (stream copy)...';
     } else {
-      // Re-encode: fast coarse seek then precise trim
       const seek = Math.max(0, state.startTime - 1);
       const offset = state.startTime - seek;
       const dur = state.endTime - state.startTime;
@@ -1024,9 +966,7 @@ $('btnExport').addEventListener('click', async () => {
       );
       $('progressText').textContent = 're-codificando...';
     }
-
     await ffmpeg.exec(args);
-
     const data = await ffmpeg.readFile(out);
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const url = URL.createObjectURL(blob);
@@ -1036,10 +976,8 @@ $('btnExport').addEventListener('click', async () => {
     a.download = `${baseName}_cut.mp4`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-
     await ffmpeg.deleteFile(inp).catch(() => {});
     await ffmpeg.deleteFile(out).catch(() => {});
-
     $('progressFill').style.width = '100%';
     $('progressText').textContent = '¡listo!';
     setStatus('exportación completada — archivo descargado', 'success');
