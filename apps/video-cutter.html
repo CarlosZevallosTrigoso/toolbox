@@ -400,37 +400,109 @@
     opacity: 0;
     pointer-events: none;
   }
+  .loader-box {
+    width: 340px;
+    max-width: 90vw;
+  }
+  .loader-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
   .loader-spinner {
-    width: 32px;
-    height: 32px;
+    width: 18px;
+    height: 18px;
     border: 2px solid var(--border);
     border-top-color: var(--green);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
-    margin-bottom: 16px;
+    flex-shrink: 0;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .loader-text {
+  .loader-title {
     font-size: 12px;
-    color: var(--text-dim);
-    text-align: center;
-    line-height: 1.6;
+    color: var(--text);
   }
-  .loader-text span {
-    display: block;
+  .loader-bar-track {
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .loader-bar-fill {
+    height: 100%;
+    background: var(--green);
+    width: 0%;
+    border-radius: 2px;
+    transition: width 0.15s;
+  }
+  .loader-stats {
+    display: flex;
+    justify-content: space-between;
     font-size: 10px;
-    margin-top: 4px;
-    color: #444;
+    color: var(--text-dim);
+    margin-bottom: 16px;
   }
+  .loader-files {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .loader-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: #444;
+    transition: color 0.2s;
+  }
+  .loader-file.active { color: var(--text-dim); }
+  .loader-file.done { color: var(--green); }
+  .loader-file.error { color: var(--red); }
+  .loader-file-icon {
+    width: 14px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .loader-file-name { flex: 1; }
+  .loader-file-size { text-align: right; min-width: 60px; }
 </style>
 </head>
 <body>
 
 <div class="loading-overlay" id="loadingOverlay">
-  <div class="loader-spinner"></div>
-  <div class="loader-text">
-    cargando ffmpeg.wasm...
-    <span>primera vez puede tomar ~30s</span>
+  <div class="loader-box">
+    <div class="loader-header">
+      <div class="loader-spinner" id="loaderSpinner"></div>
+      <div class="loader-title" id="loaderTitle">cargando ffmpeg.wasm...</div>
+    </div>
+    <div class="loader-bar-track">
+      <div class="loader-bar-fill" id="loaderBarFill"></div>
+    </div>
+    <div class="loader-stats">
+      <span id="loaderPct">0%</span>
+      <span id="loaderSpeed">—</span>
+      <span id="loaderElapsed">0.0s</span>
+    </div>
+    <div class="loader-files">
+      <div class="loader-file" id="lf-core">
+        <span class="loader-file-icon">○</span>
+        <span class="loader-file-name">ffmpeg-core.js</span>
+        <span class="loader-file-size" id="lf-core-size">—</span>
+      </div>
+      <div class="loader-file" id="lf-wasm">
+        <span class="loader-file-icon">○</span>
+        <span class="loader-file-name">ffmpeg-core.wasm</span>
+        <span class="loader-file-size" id="lf-wasm-size">—</span>
+      </div>
+      <div class="loader-file" id="lf-worker">
+        <span class="loader-file-icon">○</span>
+        <span class="loader-file-name">worker.js</span>
+        <span class="loader-file-size" id="lf-worker-size">—</span>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -542,7 +614,7 @@
 
 <script type="module">
 import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
-import { fetchFile, toBlobURL } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
 
 const state = {
   file: null, fileName: '', duration: 0,
@@ -556,29 +628,120 @@ const ffmpeg = new FFmpeg();
 const $ = id => document.getElementById(id);
 
 // ── FFmpeg init ──
+const loaderState = { totalBytes: 0, loadedBytes: 0, startTime: 0 };
+
+function updateLoaderUI() {
+  const pct = loaderState.totalBytes > 0
+    ? Math.round((loaderState.loadedBytes / loaderState.totalBytes) * 100)
+    : 0;
+  $('loaderBarFill').style.width = pct + '%';
+  $('loaderPct').textContent = pct + '%';
+
+  const elapsed = (performance.now() - loaderState.startTime) / 1000;
+  $('loaderElapsed').textContent = elapsed.toFixed(1) + 's';
+
+  if (elapsed > 0.5 && loaderState.loadedBytes > 0) {
+    const speed = loaderState.loadedBytes / elapsed;
+    if (speed > 1048576) {
+      $('loaderSpeed').textContent = (speed / 1048576).toFixed(1) + ' MB/s';
+    } else {
+      $('loaderSpeed').textContent = (speed / 1024).toFixed(0) + ' KB/s';
+    }
+  }
+}
+
+function fmtBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
+}
+
+async function fetchWithProgress(url, mimeType, fileId) {
+  const row = $('lf-' + fileId);
+  const sizeEl = $('lf-' + fileId + '-size');
+  const iconEl = row.querySelector('.loader-file-icon');
+
+  row.classList.add('active');
+  iconEl.textContent = '◔';
+
+  const resp = await fetch(url);
+  const contentLength = parseInt(resp.headers.get('content-length') || '0', 10);
+  loaderState.totalBytes += contentLength;
+
+  const reader = resp.body.getReader();
+  const chunks = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    loaderState.loadedBytes += value.length;
+    sizeEl.textContent = fmtBytes(received) + (contentLength ? ' / ' + fmtBytes(contentLength) : '');
+    updateLoaderUI();
+  }
+
+  const blob = new Blob(chunks, { type: mimeType });
+  const blobUrl = URL.createObjectURL(blob);
+
+  row.classList.remove('active');
+  row.classList.add('done');
+  iconEl.textContent = '✓';
+  sizeEl.textContent = fmtBytes(received);
+
+  return blobUrl;
+}
+
 async function initFFmpeg() {
+  loaderState.startTime = performance.now();
   try {
     const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
+    const workerBase = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm';
+
     ffmpeg.on('progress', ({ progress }) => {
       const pct = Math.min(100, Math.round(progress * 100));
       $('progressFill').style.width = pct + '%';
       $('progressText').textContent = `procesando: ${pct}%`;
     });
     ffmpeg.on('log', ({ message }) => console.log('[ffmpeg]', message));
-    const workerBase = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm';
-    await ffmpeg.load({
-      coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
-      wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
-      classWorkerURL: await toBlobURL(`${workerBase}/worker.js`, 'text/javascript'),
-    });
+
+    $('loaderTitle').textContent = 'descargando ffmpeg-core.js...';
+    const coreURL = await fetchWithProgress(`${base}/ffmpeg-core.js`, 'text/javascript', 'core');
+
+    $('loaderTitle').textContent = 'descargando ffmpeg-core.wasm...';
+    const wasmURL = await fetchWithProgress(`${base}/ffmpeg-core.wasm`, 'application/wasm', 'wasm');
+
+    $('loaderTitle').textContent = 'descargando worker.js...';
+    const classWorkerURL = await fetchWithProgress(`${workerBase}/worker.js`, 'text/javascript', 'worker');
+
+    $('loaderTitle').textContent = 'inicializando...';
+    $('loaderSpinner').style.borderTopColor = 'var(--green)';
+
+    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+
+    const elapsed = ((performance.now() - loaderState.startTime) / 1000).toFixed(1);
+    $('loaderTitle').textContent = `listo — ${fmtBytes(loaderState.loadedBytes)} en ${elapsed}s`;
+    $('loaderBarFill').style.width = '100%';
+    $('loaderPct').textContent = '100%';
+    $('loaderSpinner').style.animation = 'none';
+    $('loaderSpinner').style.borderColor = 'var(--green)';
+
     state.ffmpegReady = true;
-    $('loadingOverlay').classList.add('done');
-    setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500);
+    setTimeout(() => {
+      $('loadingOverlay').classList.add('done');
+      setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500);
+    }, 800);
     setStatus('ffmpeg listo — arrastra un video para comenzar', '');
   } catch (e) {
     console.error(e);
-    $('loadingOverlay').classList.add('done');
-    setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500);
+    $('loaderTitle').textContent = 'error: ' + e.message;
+    $('loaderSpinner').style.animation = 'none';
+    $('loaderSpinner').style.borderColor = 'var(--red)';
+    setTimeout(() => {
+      $('loadingOverlay').classList.add('done');
+      setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500);
+    }, 2000);
     setStatus('error cargando ffmpeg: ' + e.message, 'error');
   }
 }
