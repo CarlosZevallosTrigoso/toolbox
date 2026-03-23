@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+<script>
+  window.coi = {
+    coepCredentialless: () => false,
+    quiet: true
+  };
+</script>
 <script src="coi-serviceworker.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -668,7 +674,18 @@ async function initFFmpeg() {
 
     $('loaderTitle').textContent = 'inicializando...';
     $('loaderSpinner').style.borderTopColor = 'var(--green)';
-    await ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+
+    // Check cross-origin isolation
+    if (!window.crossOriginIsolated) {
+      throw new Error('SharedArrayBuffer no disponible — recarga con ctrl+shift+R');
+    }
+
+    // Load with timeout safety net
+    const loadPromise = ffmpeg.load({ coreURL, wasmURL, classWorkerURL });
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('timeout — recarga la página')), 15000)
+    );
+    await Promise.race([loadPromise, timeoutPromise]);
 
     const elapsed = ((performance.now() - loaderState.startTime) / 1000).toFixed(1);
     $('loaderTitle').textContent = `listo — ${fmtBytes(loaderState.loadedBytes)} en ${elapsed}s`;
