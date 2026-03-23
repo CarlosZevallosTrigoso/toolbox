@@ -1,16 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<script>
-  window.coi = {
-    coepCredentialless: () => false,
-    quiet: true
-  };
-</script>
-<script src="coi-serviceworker.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>video-cutter</title>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -37,393 +31,138 @@
   }
   a { color: var(--green); text-decoration: none; }
   a:hover { color: var(--green-hover); }
-  .container {
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 24px 20px;
-  }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
   .header {
-    display: flex;
-    align-items: baseline;
-    gap: 12px;
-    margin-bottom: 24px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border);
+    display: flex; align-items: baseline; gap: 12px;
+    margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
   }
   .header .back { font-size: 12px; }
   .header h1 { font-size: 14px; font-weight: 400; text-transform: lowercase; }
   .dropzone {
-    border: 1px dashed var(--border);
-    border-radius: 4px;
-    padding: 48px 24px;
-    text-align: center;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
-    margin-bottom: 20px;
+    border: 1px dashed var(--border); border-radius: 4px; padding: 48px 24px;
+    text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 20px;
   }
-  .dropzone:hover, .dropzone.dragover {
-    border-color: var(--green);
-    background: var(--green-faint);
-  }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--green); background: var(--green-faint); }
   .dropzone p { color: var(--text-dim); font-size: 12px; margin-top: 8px; }
   .dropzone .icon { font-size: 24px; opacity: 0.4; }
   .dropzone input { display: none; }
   .player-wrap {
-    display: none;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    overflow: hidden;
-    margin-bottom: 16px;
+    display: none; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 4px; overflow: hidden; margin-bottom: 16px;
   }
-  .player-wrap video {
-    width: 100%;
-    display: block;
-    max-height: 480px;
-    background: #000;
-  }
+  .player-wrap video { width: 100%; display: block; max-height: 480px; background: #000; }
   .player-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    border-top: 1px solid var(--border);
-    flex-wrap: wrap;
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    border-top: 1px solid var(--border); flex-wrap: wrap;
   }
   .player-controls button {
-    background: none;
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 4px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: border-color 0.2s, color 0.2s;
+    background: none; border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 12px; padding: 4px 10px; border-radius: 3px;
+    cursor: pointer; transition: border-color 0.2s, color 0.2s;
   }
   .player-controls button:hover { border-color: var(--green); color: var(--green); }
-  .player-controls .time-display {
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-left: auto;
-  }
+  .player-controls .time-display { font-size: 11px; color: var(--text-dim); margin-left: auto; }
   .timeline-section { display: none; margin-bottom: 16px; }
-  .timeline-container {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 16px;
-  }
+  .timeline-container { background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 16px; }
   .timeline-track {
-    position: relative;
-    height: 48px;
-    background: var(--bg3);
-    border-radius: 3px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    user-select: none;
-    overflow: hidden;
+    position: relative; height: 48px; background: var(--bg3); border-radius: 3px;
+    margin-bottom: 12px; cursor: pointer; user-select: none; overflow: hidden;
   }
   .timeline-selection {
-    position: absolute;
-    top: 0; bottom: 0;
-    background: rgba(90, 122, 58, 0.25);
-    border-left: 2px solid var(--green);
-    border-right: 2px solid var(--green);
-    pointer-events: none;
+    position: absolute; top: 0; bottom: 0; background: rgba(90, 122, 58, 0.25);
+    border-left: 2px solid var(--green); border-right: 2px solid var(--green); pointer-events: none;
   }
   .timeline-handle {
-    position: absolute;
-    top: -4px; bottom: -4px;
-    width: 14px;
-    cursor: ew-resize;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: absolute; top: -4px; bottom: -4px; width: 14px; cursor: ew-resize;
+    z-index: 10; display: flex; align-items: center; justify-content: center;
   }
-  .timeline-handle::after {
-    content: '';
-    display: block;
-    width: 4px;
-    height: 20px;
-    background: var(--green);
-    border-radius: 2px;
-  }
+  .timeline-handle::after { content: ''; display: block; width: 4px; height: 20px; background: var(--green); border-radius: 2px; }
   .timeline-handle.start { left: 0; transform: translateX(-50%); }
   .timeline-handle.end { right: 0; transform: translateX(50%); }
-  .timeline-playhead {
-    position: absolute;
-    top: 0; bottom: 0;
-    width: 2px;
-    background: var(--text);
-    pointer-events: none;
-    z-index: 5;
-  }
-  .time-inputs {
-    display: grid;
-    grid-template-columns: 1fr 1fr auto;
-    gap: 12px;
-    align-items: end;
-  }
-  .time-input-group label {
-    display: block;
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-bottom: 4px;
-    text-transform: lowercase;
-  }
+  .timeline-playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--text); pointer-events: none; z-index: 5; }
+  .time-inputs { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end; }
+  .time-input-group label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; text-transform: lowercase; }
   .time-input-group input {
-    width: 100%;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 6px 8px;
-    border-radius: 3px;
-    outline: none;
-    transition: border-color 0.2s;
+    width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 12px; padding: 6px 8px; border-radius: 3px; outline: none; transition: border-color 0.2s;
   }
   .time-input-group input:focus { border-color: var(--green); }
-  .duration-display {
-    font-size: 11px;
-    color: var(--text-dim);
-    padding-bottom: 8px;
-  }
+  .duration-display { font-size: 11px; color: var(--text-dim); padding-bottom: 8px; }
   .export-section {
-    display: none;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 16px;
-    margin-bottom: 16px;
+    display: none; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 16px; margin-bottom: 16px;
   }
-  .export-section h3 {
-    font-size: 12px;
-    font-weight: 400;
-    text-transform: lowercase;
-    margin-bottom: 12px;
-    color: var(--text-dim);
-  }
-  .mode-selector {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
+  .export-section h3 { font-size: 12px; font-weight: 400; text-transform: lowercase; margin-bottom: 12px; color: var(--text-dim); }
+  .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
   .mode-card {
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 12px;
-    cursor: pointer;
-    transition: border-color 0.2s, background 0.2s;
+    border: 1px solid var(--border); border-radius: 4px; padding: 12px;
+    cursor: pointer; transition: border-color 0.2s, background 0.2s;
   }
   .mode-card:hover { border-color: var(--green); }
-  .mode-card.active {
-    border-color: var(--green);
-    background: var(--green-faint);
-  }
-  .mode-card .mode-title {
-    font-size: 12px;
-    color: var(--text);
-    margin-bottom: 4px;
-  }
-  .mode-card .mode-desc {
-    font-size: 10px;
-    color: var(--text-dim);
-    line-height: 1.4;
-  }
-  .mode-card .mode-badge {
-    display: inline-block;
-    font-size: 9px;
-    padding: 1px 5px;
-    border-radius: 2px;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .badge-fast {
-    background: rgba(90, 122, 58, 0.2);
-    color: var(--green);
-  }
-  .badge-full {
-    background: rgba(138, 122, 58, 0.2);
-    color: var(--yellow);
-  }
-  .reencode-options {
-    display: none;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 16px;
-  }
+  .mode-card.active { border-color: var(--green); background: var(--green-faint); }
+  .mode-card .mode-title { font-size: 12px; color: var(--text); margin-bottom: 4px; }
+  .mode-card .mode-desc { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
+  .mode-card .mode-badge { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 2px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-fast { background: rgba(90, 122, 58, 0.2); color: var(--green); }
+  .badge-full { background: rgba(138, 122, 58, 0.2); color: var(--yellow); }
+  .reencode-options { display: none; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
   .reencode-options.visible { display: grid; }
-  .reencode-options select,
-  .reencode-options input {
-    width: 100%;
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 6px 8px;
-    border-radius: 3px;
-    outline: none;
+  .reencode-options select, .reencode-options input {
+    width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 12px; padding: 6px 8px; border-radius: 3px; outline: none;
   }
-  .reencode-options select:focus,
-  .reencode-options input:focus { border-color: var(--green); }
-  .reencode-options label {
-    display: block;
-    font-size: 11px;
-    color: var(--text-dim);
-    margin-bottom: 4px;
-  }
-  .note-box {
-    font-size: 10px;
-    color: var(--text-dim);
-    padding: 8px 10px;
-    border-left: 2px solid var(--border);
-    margin-bottom: 14px;
-    line-height: 1.5;
-  }
+  .reencode-options select:focus, .reencode-options input:focus { border-color: var(--green); }
+  .reencode-options label { display: block; font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+  .note-box { font-size: 10px; color: var(--text-dim); padding: 8px 10px; border-left: 2px solid var(--border); margin-bottom: 14px; line-height: 1.5; }
   .note-box.warn { border-left-color: var(--yellow); }
   .btn-export {
-    background: var(--green);
-    color: #fff;
-    border: none;
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 10px 20px;
-    border-radius: 3px;
-    cursor: pointer;
-    transition: background 0.2s;
-    width: 100%;
-    text-transform: lowercase;
+    background: var(--green); color: #fff; border: none; font-family: var(--mono);
+    font-size: 13px; padding: 10px 20px; border-radius: 3px; cursor: pointer;
+    transition: background 0.2s; width: 100%; text-transform: lowercase;
   }
   .btn-export:hover { background: var(--green-hover); }
   .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-reset {
-    background: none;
-    color: var(--text-dim);
-    border: 1px solid var(--border);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 6px 14px;
-    border-radius: 3px;
-    cursor: pointer;
-    margin-top: 10px;
-    transition: border-color 0.2s, color 0.2s;
+    background: none; color: var(--text-dim); border: 1px solid var(--border);
+    font-family: var(--mono); font-size: 12px; padding: 6px 14px; border-radius: 3px;
+    cursor: pointer; margin-top: 10px; transition: border-color 0.2s, color 0.2s;
   }
   .btn-reset:hover { border-color: var(--red); color: var(--red); }
   .progress-section { display: none; margin-bottom: 16px; }
-  .progress-bar-track {
-    height: 6px;
-    background: var(--bg3);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-  .progress-bar-fill {
-    height: 100%;
-    background: var(--green);
-    width: 0%;
-    transition: width 0.3s;
-    border-radius: 3px;
-  }
-  .progress-text {
-    font-size: 11px;
-    color: var(--text-dim);
-    text-align: center;
-  }
-  .status-bar {
-    font-size: 11px;
-    color: var(--text-dim);
-    padding: 8px 0;
-    text-align: center;
-    min-height: 32px;
-  }
+  .progress-bar-track { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+  .progress-bar-fill { height: 100%; background: var(--green); width: 0%; transition: width 0.3s; border-radius: 3px; }
+  .progress-text { font-size: 11px; color: var(--text-dim); text-align: center; }
+  .status-bar { font-size: 11px; color: var(--text-dim); padding: 8px 0; text-align: center; min-height: 32px; }
   .status-bar.error { color: var(--red); }
   .status-bar.success { color: var(--green); }
   .file-info {
-    display: none;
-    font-size: 11px;
-    color: var(--text-dim);
-    padding: 8px 12px;
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    margin-bottom: 16px;
+    display: none; font-size: 11px; color: var(--text-dim); padding: 8px 12px;
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 16px;
   }
   .file-info span { color: var(--text); }
   .kbd-hints {
-    display: none;
-    font-size: 10px;
-    color: var(--text-dim);
-    text-align: center;
-    padding: 6px 12px;
-    border-top: 1px solid var(--border);
+    display: none; font-size: 10px; color: var(--text-dim); text-align: center;
+    padding: 6px 12px; border-top: 1px solid var(--border);
   }
-  .kbd-hints kbd {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 1px 5px;
-    font-family: var(--mono);
-    font-size: 10px;
-  }
+  .kbd-hints kbd { background: var(--bg3); border: 1px solid var(--border); border-radius: 2px; padding: 1px 5px; font-family: var(--mono); font-size: 10px; }
   /* loading overlay */
   .loading-overlay {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-    transition: opacity 0.4s;
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; transition: opacity 0.4s;
   }
   .loading-overlay.done { opacity: 0; pointer-events: none; }
   .loader-box { width: 340px; max-width: 90vw; }
-  .loader-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
+  .loader-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
   .loader-spinner {
-    width: 18px; height: 18px;
-    border: 2px solid var(--border);
-    border-top-color: var(--green);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    flex-shrink: 0;
+    width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--green);
+    border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loader-title { font-size: 12px; color: var(--text); }
-  .loader-bar-track {
-    height: 4px; background: var(--bg3);
-    border-radius: 2px; overflow: hidden; margin-bottom: 12px;
-  }
-  .loader-bar-fill {
-    height: 100%; background: var(--green);
-    width: 0%; border-radius: 2px; transition: width 0.15s;
-  }
-  .loader-stats {
-    display: flex; justify-content: space-between;
-    font-size: 10px; color: var(--text-dim); margin-bottom: 16px;
-  }
-  .loader-files { display: flex; flex-direction: column; gap: 6px; }
-  .loader-file {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 10px; color: #444; transition: color 0.2s;
-  }
-  .loader-file.active { color: var(--text-dim); }
-  .loader-file.done { color: var(--green); }
-  .loader-file.error { color: var(--red); }
-  .loader-file-icon { width: 14px; text-align: center; flex-shrink: 0; }
-  .loader-file-name { flex: 1; }
-  .loader-file-size { text-align: right; min-width: 60px; }
+  .loader-bar-track { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+  .loader-bar-fill { height: 100%; background: var(--green); width: 0%; border-radius: 2px; transition: width 0.15s; }
+  .loader-sub { font-size: 10px; color: var(--text-dim); text-align: center; }
 </style>
 </head>
 <body>
@@ -436,28 +175,7 @@
     <div class="loader-bar-track">
       <div class="loader-bar-fill" id="loaderBarFill"></div>
     </div>
-    <div class="loader-stats">
-      <span id="loaderPct">0%</span>
-      <span id="loaderSpeed">—</span>
-      <span id="loaderElapsed">0.0s</span>
-    </div>
-    <div class="loader-files">
-      <div class="loader-file" id="lf-core">
-        <span class="loader-file-icon">○</span>
-        <span class="loader-file-name">ffmpeg-core.js</span>
-        <span class="loader-file-size" id="lf-core-size">—</span>
-      </div>
-      <div class="loader-file" id="lf-wasm">
-        <span class="loader-file-icon">○</span>
-        <span class="loader-file-name">ffmpeg-core.wasm</span>
-        <span class="loader-file-size" id="lf-wasm-size">—</span>
-      </div>
-      <div class="loader-file" id="lf-worker">
-        <span class="loader-file-icon">○</span>
-        <span class="loader-file-name">worker.js</span>
-        <span class="loader-file-size" id="lf-worker-size">—</span>
-      </div>
-    </div>
+    <div class="loader-sub" id="loaderSub">descargando ~31 MB</div>
   </div>
 </div>
 <div class="container">
@@ -532,9 +250,7 @@
     <div class="reencode-options" id="reencodeOptions">
       <div>
         <label>resolución</label>
-        <select id="resolutionSelect">
-          <option value="original">original</option>
-        </select>
+        <select id="resolutionSelect"><option value="original">original</option></select>
       </div>
       <div>
         <label>calidad (crf 0–51, menor = mejor)</label>
@@ -547,16 +263,14 @@
     </div>
   </div>
   <div class="progress-section" id="progressSection">
-    <div class="progress-bar-track">
-      <div class="progress-bar-fill" id="progressFill"></div>
-    </div>
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
     <div class="progress-text" id="progressText">cargando ffmpeg...</div>
   </div>
   <div class="status-bar" id="status">cargando ffmpeg.wasm...</div>
 </div>
-<script type="module">
-import { FFmpeg } from 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js';
-import { fetchFile } from 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js';
+<script>
+const { createFFmpeg, fetchFile } = FFmpeg;
+const $ = id => document.getElementById(id);
 
 const state = {
   file: null, fileName: '', duration: 0,
@@ -565,121 +279,49 @@ const state = {
   ffmpegReady: false, dragging: null,
   mode: 'fast',
 };
-const ffmpeg = new FFmpeg();
-const $ = id => document.getElementById(id);
 
-// ── Loader ──
-const loaderState = { totalBytes: 0, loadedBytes: 0, startTime: 0 };
-
-function updateLoaderUI() {
-  const pct = loaderState.totalBytes > 0
-    ? Math.round((loaderState.loadedBytes / loaderState.totalBytes) * 100) : 0;
-  $('loaderBarFill').style.width = pct + '%';
-  $('loaderPct').textContent = pct + '%';
-  const elapsed = (performance.now() - loaderState.startTime) / 1000;
-  $('loaderElapsed').textContent = elapsed.toFixed(1) + 's';
-  if (elapsed > 0.5 && loaderState.loadedBytes > 0) {
-    const speed = loaderState.loadedBytes / elapsed;
-    $('loaderSpeed').textContent = speed > 1048576
-      ? (speed / 1048576).toFixed(1) + ' MB/s'
-      : (speed / 1024).toFixed(0) + ' KB/s';
-  }
-}
-
-function fmtBytes(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b / 1024).toFixed(0) + ' KB';
-  return (b / 1048576).toFixed(1) + ' MB';
-}
-
-// Download with progress. Returns { blobUrl, size } if makeBlobUrl=true, otherwise { size }.
-async function fetchWithProgress(url, mimeType, fileId, makeBlobUrl) {
-  const row = $('lf-' + fileId);
-  const sizeEl = $('lf-' + fileId + '-size');
-  const iconEl = row.querySelector('.loader-file-icon');
-  row.classList.add('active');
-  iconEl.textContent = '◔';
-  const resp = await fetch(url);
-  const contentLength = parseInt(resp.headers.get('content-length') || '0', 10);
-  loaderState.totalBytes += contentLength;
-  const reader = resp.body.getReader();
-  const chunks = [];
-  let received = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    chunks.push(value);
-    received += value.length;
-    loaderState.loadedBytes += value.length;
-    sizeEl.textContent = fmtBytes(received) + (contentLength ? ' / ' + fmtBytes(contentLength) : '');
-    updateLoaderUI();
-  }
-  row.classList.remove('active');
-  row.classList.add('done');
-  iconEl.textContent = '✓';
-  sizeEl.textContent = fmtBytes(received);
-  if (makeBlobUrl) {
-    const blob = new Blob(chunks, { type: mimeType });
-    return { blobUrl: URL.createObjectURL(blob), size: received };
-  }
-  return { size: received };
-}
-
-async function initFFmpeg() {
-  loaderState.startTime = performance.now();
-  try {
-    const base = 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/esm';
-    const workerBase = 'https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm';
-
-    ffmpeg.on('progress', ({ progress }) => {
-      const pct = Math.min(100, Math.round(progress * 100));
+// ── FFmpeg 0.11.x — no SharedArrayBuffer needed ──
+const ffmpeg = createFFmpeg({
+  corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+  log: false,
+  progress: ({ ratio }) => {
+    if (state.ffmpegReady) {
+      // progress during export
+      const pct = Math.min(100, Math.round(ratio * 100));
       $('progressFill').style.width = pct + '%';
       $('progressText').textContent = `procesando: ${pct}%`;
-    });
-    ffmpeg.on('log', ({ message }) => console.log('[ffmpeg]', message));
-
-    if (!window.crossOriginIsolated) {
-      throw new Error('SharedArrayBuffer no disponible — recarga con ctrl+shift+R');
+    } else {
+      // progress during load
+      const pct = Math.min(100, Math.round(ratio * 100));
+      $('loaderBarFill').style.width = pct + '%';
+      if (ratio > 0 && ratio < 1) {
+        $('loaderSub').textContent = `descargando... ${pct}%`;
+      }
     }
+  },
+});
 
-    // Download all 3 with progress for the verbose UI.
-    // core.js and core.wasm: download to warm browser cache, then pass direct URLs to ffmpeg.
-    // worker.js: needs blob URL for CORS Worker construction.
-    $('loaderTitle').textContent = 'descargando ffmpeg-core.js...';
-    await fetchWithProgress(`${base}/ffmpeg-core.js`, 'text/javascript', 'core', false);
-
-    $('loaderTitle').textContent = 'descargando ffmpeg-core.wasm...';
-    await fetchWithProgress(`${base}/ffmpeg-core.wasm`, 'application/wasm', 'wasm', false);
-
-    $('loaderTitle').textContent = 'descargando worker.js...';
-    const worker = await fetchWithProgress(`${workerBase}/worker.js`, 'text/javascript', 'worker', true);
-
-    $('loaderTitle').textContent = 'inicializando...';
-    $('loaderSpinner').style.borderTopColor = 'var(--green)';
-
-    // core.js and core.wasm are already in browser cache from the fetches above,
-    // so ffmpeg's internal Worker will load them instantly.
-    await ffmpeg.load({
-      coreURL: `${base}/ffmpeg-core.js`,
-      wasmURL: `${base}/ffmpeg-core.wasm`,
-      classWorkerURL: worker.blobUrl,
-    });
-
-    const elapsed = ((performance.now() - loaderState.startTime) / 1000).toFixed(1);
-    $('loaderTitle').textContent = `listo — ${fmtBytes(loaderState.loadedBytes)} en ${elapsed}s`;
+async function initFFmpeg() {
+  const t0 = performance.now();
+  try {
+    $('loaderTitle').textContent = 'cargando ffmpeg.wasm...';
+    await ffmpeg.load();
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(1);
+    $('loaderTitle').textContent = `listo — ${elapsed}s`;
     $('loaderBarFill').style.width = '100%';
-    $('loaderPct').textContent = '100%';
+    $('loaderSub').textContent = '';
     $('loaderSpinner').style.animation = 'none';
     $('loaderSpinner').style.borderColor = 'var(--green)';
     state.ffmpegReady = true;
     setTimeout(() => {
       $('loadingOverlay').classList.add('done');
       setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500);
-    }, 800);
+    }, 600);
     setStatus('ffmpeg listo — arrastra un video para comenzar', '');
   } catch (e) {
     console.error(e);
     $('loaderTitle').textContent = 'error: ' + e.message;
+    $('loaderSub').textContent = '';
     $('loaderSpinner').style.animation = 'none';
     $('loaderSpinner').style.borderColor = 'var(--red)';
     setTimeout(() => {
@@ -923,23 +565,23 @@ $('btnExport').addEventListener('click', async () => {
     const inp = 'input.' + ext;
     const out = 'output.mp4';
     $('progressText').textContent = 'cargando archivo en memoria...';
-    await ffmpeg.writeFile(inp, await fetchFile(state.file));
-    let args;
+    ffmpeg.FS('writeFile', inp, await fetchFile(state.file));
     if (state.mode === 'fast') {
-      args = [
+      $('progressText').textContent = 'cortando (stream copy)...';
+      await ffmpeg.run(
         '-ss', String(state.startTime),
         '-i', inp,
         '-t', String(state.endTime - state.startTime),
         '-c', 'copy',
         '-avoid_negative_ts', 'make_zero',
         '-y', out
-      ];
-      $('progressText').textContent = 'cortando (stream copy)...';
+      );
     } else {
+      $('progressText').textContent = 're-codificando...';
       const seek = Math.max(0, state.startTime - 1);
       const offset = state.startTime - seek;
       const dur = state.endTime - state.startTime;
-      args = [
+      const args = [
         '-ss', String(seek),
         '-i', inp,
         '-ss', String(offset),
@@ -959,10 +601,9 @@ $('btnExport').addEventListener('click', async () => {
         '-movflags', '+faststart',
         '-y', out
       );
-      $('progressText').textContent = 're-codificando...';
+      await ffmpeg.run(...args);
     }
-    await ffmpeg.exec(args);
-    const data = await ffmpeg.readFile(out);
+    const data = ffmpeg.FS('readFile', out);
     const blob = new Blob([data.buffer], { type: 'video/mp4' });
     const url = URL.createObjectURL(blob);
     const baseName = state.fileName.replace(/\.[^/.]+$/, '');
@@ -971,8 +612,8 @@ $('btnExport').addEventListener('click', async () => {
     a.download = `${baseName}_cut.mp4`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
-    await ffmpeg.deleteFile(inp).catch(() => {});
-    await ffmpeg.deleteFile(out).catch(() => {});
+    try { ffmpeg.FS('unlink', inp); } catch(e) {}
+    try { ffmpeg.FS('unlink', out); } catch(e) {}
     $('progressFill').style.width = '100%';
     $('progressText').textContent = '¡listo!';
     setStatus('exportación completada — archivo descargado', 'success');
