@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>stegano</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Fira Code', 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    background: #ffffff;
+    color: #666;
+    min-height: 100vh;
+    padding: 3rem 2.5rem;
+    font-size: 0.88rem;
+    line-height: 1.7;
+  }
+
+  .back-link {
+    display: inline-block;
+    color: #999;
+    text-decoration: none;
+    margin-bottom: 1.2rem;
+    font-size: 0.82rem;
+  }
+  .back-link:hover { color: #5a7a3a; }
+
+  h1 {
+    font-size: 0.88rem;
+    font-weight: normal;
+    color: #888;
+    margin-bottom: 0.3rem;
+  }
+
+  .subtitle {
+    font-size: 0.78rem;
+    color: #bbb;
+    margin-bottom: 2rem;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #eee;
+  }
+  .tab {
+    padding: 0.6rem 1.5rem;
+    font-family: inherit;
+    font-size: 0.82rem;
+    color: #aaa;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .tab:hover { color: #666; }
+  .tab.active {
+    color: #5a7a3a;
+    border-bottom-color: #5a7a3a;
+  }
+
+  /* Panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* Drop zone */
+  .dropzone {
+    border: 1px dashed #ddd;
+    background: #fafafa;
+    padding: 2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+    border-radius: 4px;
+    text-align: center;
+  }
+  .dropzone:hover, .dropzone.dragover {
+    border-color: #5a7a3a;
+    background: rgba(90, 140, 60, 0.03);
+  }
+  .dropzone.has-image {
+    border-style: solid;
+    border-color: #ddd;
+    padding: 0;
+    overflow: hidden;
+    text-align: left;
+  }
+  .dropzone-label { color: #999; }
+  .dropzone-label strong { color: #666; font-weight: 500; }
+
+  .image-preview {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    padding: 1rem 1.25rem;
+  }
+  .image-preview img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 3px;
+    border: 1px solid #e0e0e0;
+    flex-shrink: 0;
+  }
+  .image-info { flex: 1; min-width: 0; }
+  .image-info .name {
+    color: #444;
+    font-size: 0.85rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.15rem;
+  }
+  .image-info .meta {
+    color: #aaa;
+    font-size: 0.78rem;
+  }
+  .image-info .meta .accent { color: #5a7a3a; }
+  .btn-clear {
+    background: none;
+    border: 1px solid transparent;
+    color: #bbb;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.88rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .btn-clear:hover { color: #c45; border-color: #c45; }
+
+  /* Fields */
+  .field {
+    margin-bottom: 1.25rem;
+  }
+  .field label {
+    display: block;
+    font-size: 0.78rem;
+    color: #aaa;
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 0.35rem;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 100px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #444;
+    font-family: inherit;
+    font-size: 0.84rem;
+    padding: 0.75rem;
+    outline: none;
+    resize: vertical;
+    line-height: 1.6;
+    transition: border-color 0.2s;
+  }
+  textarea:focus { border-color: #5a7a3a; }
+  textarea::placeholder { color: #ccc; }
+
+  input[type="password"], input[type="text"] {
+    width: 100%;
+    max-width: 360px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #444;
+    font-family: inherit;
+    font-size: 0.84rem;
+    padding: 0.55rem 0.75rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="password"]:focus, input[type="text"]:focus { border-color: #5a7a3a; }
+  input::placeholder { color: #ccc; }
+
+  .password-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    max-width: 360px;
+  }
+  .password-row input { flex: 1; }
+  .btn-toggle-pw {
+    background: none;
+    border: 1px solid #ddd;
+    color: #aaa;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.78rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .btn-toggle-pw:hover { border-color: #5a7a3a; color: #5a7a3a; }
+
+  .capacity-info {
+    font-size: 0.75rem;
+    color: #bbb;
+    margin-top: 0.35rem;
+  }
+  .capacity-info .warn { color: #c45; }
+
+  /* Buttons */
+  .btn-primary {
+    background: #5a7a3a;
+    border: none;
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 500;
+    padding: 0.6rem 1.6rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+  }
+  .btn-primary:hover { background: #6a8e46; }
+  .btn-primary:disabled {
+    background: #ddd;
+    color: #aaa;
+    cursor: not-allowed;
+  }
+
+  /* Result areas */
+  .result {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+    background: #fafafa;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    display: none;
+  }
+  .result.visible { display: block; }
+
+  .result-label {
+    font-size: 0.75rem;
+    color: #aaa;
+    text-transform: lowercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .decoded-message {
+    font-size: 0.84rem;
+    color: #444;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+
+  .result-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+
+  .btn-secondary {
+    background: none;
+    border: 1px solid #ddd;
+    color: #888;
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0.45rem 1rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .btn-secondary:hover { border-color: #5a7a3a; color: #5a7a3a; }
+
+  /* Error */
+  .error-msg {
+    color: #c45;
+    font-size: 0.82rem;
+    margin-top: 1rem;
+    display: none;
+  }
+  .error-msg.visible { display: block; }
+
+  /* Toast */
+  .status-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2.5rem;
+    color: #5a7a3a;
+    font-size: 0.82rem;
+    background: #fff;
+    border: 1px solid #5a7a3a;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    animation: fadeOut 0.3s ease 2.5s forwards;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    z-index: 100;
+  }
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+  /* How it works */
+  .how-it-works {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid #eee;
+    color: #bbb;
+    font-size: 0.78rem;
+    line-height: 1.8;
+    max-width: 600px;
+  }
+  .how-it-works strong { color: #aaa; font-weight: 500; }
+
+  @media (max-width: 600px) {
+    body { padding: 2rem 1.25rem; }
+    .tabs { gap: 0; }
+    .tab { padding: 0.5rem 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<a href="../index.html" class="back-link">← toolbox/</a>
+<h1>stegano — mensajes ocultos en imágenes</h1>
+<p class="subtitle">aes-256-gcm + lsb steganography · exporta png</p>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('encode')">ocultar</button>
+  <button class="tab" onclick="switchTab('decode')">revelar</button>
+</div>
+
+<!-- ═══ ENCODE PANEL ═══ -->
+<div id="panel-encode" class="panel active">
+  <div class="dropzone" id="dropEncode" onclick="document.getElementById('fileEncode').click()">
+    <div class="dropzone-label">arrastra una imagen o <strong>haz clic</strong> — png, jpg, webp</div>
+    <input type="file" id="fileEncode" accept="image/*" style="display:none">
+  </div>
+
+  <div class="field">
+    <label>mensaje</label>
+    <textarea id="messageInput" placeholder="escribe el mensaje a ocultar..." oninput="updateCapacity()"></textarea>
+    <div class="capacity-info" id="capacityInfo"></div>
+  </div>
+
+  <div class="field">
+    <label>contraseña</label>
+    <div class="password-row">
+      <input type="password" id="pwEncode" placeholder="contraseña de cifrado">
+      <button class="btn-toggle-pw" onclick="togglePw('pwEncode', this)">ver</button>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="btnEncode" onclick="encodeMessage()" disabled>ocultar mensaje</button>
+  <div class="error-msg" id="errorEncode"></div>
+
+  <div class="result" id="resultEncode">
+    <div class="result-label">imagen generada</div>
+    <div class="result-actions">
+      <button class="btn-primary" onclick="downloadEncoded()">descargar png</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DECODE PANEL ═══ -->
+<div id="panel-decode" class="panel">
+  <div class="dropzone" id="dropDecode" onclick="document.getElementById('fileDecode').click()">
+    <div class="dropzone-label">arrastra la imagen con mensaje oculto</div>
+    <input type="file" id="fileDecode" accept="image/png" style="display:none">
+  </div>
+
+  <div class="field">
+    <label>contraseña</label>
+    <div class="password-row">
+      <input type="password" id="pwDecode" placeholder="contraseña de descifrado">
+      <button class="btn-toggle-pw" onclick="togglePw('pwDecode', this)">ver</button>
+    </div>
+  </div>
+
+  <button class="btn-primary" id="btnDecode" onclick="decodeMessage()" disabled>revelar mensaje</button>
+  <div class="error-msg" id="errorDecode"></div>
+
+  <div class="result" id="resultDecode">
+    <div class="result-label">mensaje oculto</div>
+    <div class="decoded-message" id="decodedText"></div>
+    <div class="result-actions">
+      <button class="btn-secondary" onclick="copyDecoded()">copiar</button>
+    </div>
+  </div>
+</div>
+
+<div class="how-it-works">
+  <strong>cómo funciona</strong> — el mensaje se cifra con <strong>aes-256-gcm</strong> derivando la clave de tu contraseña via <strong>pbkdf2</strong> (100k iteraciones). los bits cifrados se insertan en el bit menos significativo (lsb) de cada canal rgb. la imagen resultante es visualmente idéntica al original. solo puede extraerse con la contraseña correcta. siempre exporta como <strong>png</strong> (lossless) para preservar los datos.
+</div>
+
+<canvas id="workCanvas" style="display:none"></canvas>
+
+<script>
+/* ─── State ─── */
+let encodeImg = null;  // { canvas, w, h, name }
+let decodeImg = null;  // { canvas, w, h, name }
+let encodedCanvas = null;
+
+/* ─── Tab switching ─── */
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', (tab === 'encode' && i === 0) || (tab === 'decode' && i === 1));
+  });
+  document.getElementById('panel-encode').classList.toggle('active', tab === 'encode');
+  document.getElementById('panel-decode').classList.toggle('active', tab === 'decode');
+}
+
+/* ─── Password toggle ─── */
+function togglePw(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = 'ocultar';
+  } else {
+    inp.type = 'password';
+    btn.textContent = 'ver';
+  }
+}
+
+/* ─── Dropzones ─── */
+function setupDropzone(dropId, fileId, callback) {
+  const dz = document.getElementById(dropId);
+  const fi = document.getElementById(fileId);
+
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    dz.classList.remove('dragover');
+    if (e.dataTransfer.files.length) callback(e.dataTransfer.files[0], dz);
+  });
+  fi.addEventListener('change', e => {
+    if (e.target.files.length) callback(e.target.files[0], dz);
+    fi.value = '';
+  });
+}
+
+function loadImageToCanvas(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      resolve({ canvas: c, w: img.naturalWidth, h: img.naturalHeight, name: file.name, size: file.size });
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('no se pudo leer')); };
+    img.src = url;
+  });
+}
+
+function renderDropzonePreview(dz, data) {
+  dz.classList.add('has-image');
+  dz.onclick = null;
+  const fmtSize = data.size < 1048576 ? (data.size / 1024).toFixed(1) + ' KB' : (data.size / 1048576).toFixed(2) + ' MB';
+  dz.innerHTML = `
+    <div class="image-preview">
+      <img src="${data.canvas.toDataURL('image/png')}" alt="">
+      <div class="image-info">
+        <div class="name">${data.name}</div>
+        <div class="meta">${data.w}×${data.h} · ${fmtSize} · capacidad: <span class="accent">${formatBytes(maxPayloadBytes(data.w, data.h))}</span></div>
+      </div>
+      <button class="btn-clear" onclick="event.stopPropagation(); clearDropzone('${dz.id}')">✕</button>
+    </div>
+  `;
+}
+
+function clearDropzone(dropId) {
+  const dz = document.getElementById(dropId);
+  dz.classList.remove('has-image');
+  const isEncode = dropId === 'dropEncode';
+  const fileId = isEncode ? 'fileEncode' : 'fileDecode';
+  dz.onclick = () => document.getElementById(fileId).click();
+  dz.innerHTML = `<div class="dropzone-label">${isEncode ? 'arrastra una imagen o <strong>haz clic</strong> — png, jpg, webp' : 'arrastra la imagen con mensaje oculto'}</div><input type="file" id="${fileId}" accept="${isEncode ? 'image/*' : 'image/png'}" style="display:none">`;
+  if (isEncode) {
+    encodeImg = null;
+    document.getElementById('btnEncode').disabled = true;
+    document.getElementById('capacityInfo').textContent = '';
+    setupDropzone(dropId, fileId, onEncodeFile);
+  } else {
+    decodeImg = null;
+    document.getElementById('btnDecode').disabled = true;
+    setupDropzone(dropId, fileId, onDecodeFile);
+  }
+}
+
+async function onEncodeFile(file, dz) {
+  try {
+    encodeImg = await loadImageToCanvas(file);
+    renderDropzonePreview(dz, encodeImg);
+    updateCapacity();
+    checkEncodeReady();
+  } catch (e) {
+    showToast('error: ' + e.message);
+  }
+}
+
+async function onDecodeFile(file, dz) {
+  try {
+    decodeImg = await loadImageToCanvas(file);
+    renderDropzonePreview(dz, decodeImg);
+    document.getElementById('btnDecode').disabled = false;
+    hideError('errorDecode');
+    document.getElementById('resultDecode').classList.remove('visible');
+  } catch (e) {
+    showToast('error: ' + e.message);
+  }
+}
+
+setupDropzone('dropEncode', 'fileEncode', onEncodeFile);
+setupDropzone('dropDecode', 'fileDecode', onDecodeFile);
+
+/* ─── Capacity ─── */
+// Header: 16 salt + 12 IV + 4 length = 32 bytes
+const HEADER_BYTES = 32;
+
+function maxPayloadBytes(w, h) {
+  const totalBits = w * h * 3; // 3 bits per pixel (R, G, B LSBs)
+  return Math.floor(totalBits / 8) - HEADER_BYTES;
+}
+
+function formatBytes(b) {
+  if (b <= 0) return '0 B';
+  if (b < 1024) return b + ' B';
+  return (b / 1024).toFixed(1) + ' KB';
+}
+
+function updateCapacity() {
+  const info = document.getElementById('capacityInfo');
+  if (!encodeImg) { info.textContent = ''; return; }
+  const msg = document.getElementById('messageInput').value;
+  const msgBytes = new TextEncoder().encode(msg).length;
+  // AES-GCM adds 16 bytes auth tag
+  const estimatedCipherLen = msgBytes + 16;
+  const maxB = maxPayloadBytes(encodeImg.w, encodeImg.h);
+  const remaining = maxB - estimatedCipherLen;
+  if (remaining < 0) {
+    info.innerHTML = `<span class="warn">mensaje demasiado largo — excede capacidad por ${formatBytes(-remaining)}</span>`;
+  } else {
+    info.textContent = `~${formatBytes(estimatedCipherLen)} de ${formatBytes(maxB)} disponibles`;
+  }
+  checkEncodeReady();
+}
+
+function checkEncodeReady() {
+  const msg = document.getElementById('messageInput').value;
+  document.getElementById('btnEncode').disabled = !encodeImg || !msg.trim();
+}
+
+document.getElementById('messageInput').addEventListener('input', checkEncodeReady);
+
+/* ─── Crypto helpers (Web Crypto API) ─── */
+async function deriveKey(password, salt) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+async function encryptText(text, password) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const key = await deriveKey(password, salt);
+  const enc = new TextEncoder();
+  const cipherBuf = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    enc.encode(text)
+  );
+  return { salt, iv, cipher: new Uint8Array(cipherBuf) };
+}
+
+async function decryptData(salt, iv, cipher, password) {
+  const key = await deriveKey(password, salt);
+  const plainBuf = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    cipher
+  );
+  return new TextDecoder().decode(plainBuf);
+}
+
+/* ─── LSB Steganography ─── */
+function embedBits(imageData, payload) {
+  // payload is Uint8Array
+  // We write into LSB of R, G, B channels (skip A)
+  const pixels = imageData.data;
+  const totalBits = payload.length * 8;
+  const availableBits = (pixels.length / 4) * 3; // 3 channels per pixel
+
+  if (totalBits > availableBits) {
+    throw new Error('imagen demasiado pequeña para este mensaje');
+  }
+
+  let bitIdx = 0;
+  for (let px = 0; px < pixels.length / 4 && bitIdx < totalBits; px++) {
+    for (let ch = 0; ch < 3 && bitIdx < totalBits; ch++) {
+      const bytePos = Math.floor(bitIdx / 8);
+      const bitPos = 7 - (bitIdx % 8);
+      const bit = (payload[bytePos] >> bitPos) & 1;
+      const i = px * 4 + ch;
+      pixels[i] = (pixels[i] & 0xFE) | bit;
+      bitIdx++;
+    }
+  }
+}
+
+function extractBits(imageData, byteCount) {
+  const pixels = imageData.data;
+  const result = new Uint8Array(byteCount);
+  let bitIdx = 0;
+  const totalBits = byteCount * 8;
+
+  for (let px = 0; px < pixels.length / 4 && bitIdx < totalBits; px++) {
+    for (let ch = 0; ch < 3 && bitIdx < totalBits; ch++) {
+      const i = px * 4 + ch;
+      const bit = pixels[i] & 1;
+      const bytePos = Math.floor(bitIdx / 8);
+      const bitPos = 7 - (bitIdx % 8);
+      result[bytePos] |= (bit << bitPos);
+      bitIdx++;
+    }
+  }
+  return result;
+}
+
+/* ─── Pack / Unpack payload ─── */
+function packPayload(salt, iv, cipher) {
+  // [16 salt][12 iv][4 length BE][cipher]
+  const len = cipher.length;
+  const lenBytes = new Uint8Array(4);
+  lenBytes[0] = (len >> 24) & 0xFF;
+  lenBytes[1] = (len >> 16) & 0xFF;
+  lenBytes[2] = (len >> 8) & 0xFF;
+  lenBytes[3] = len & 0xFF;
+
+  const total = new Uint8Array(16 + 12 + 4 + len);
+  total.set(salt, 0);
+  total.set(iv, 16);
+  total.set(lenBytes, 28);
+  total.set(cipher, 32);
+  return total;
+}
+
+function unpackHeader(headerBytes) {
+  const salt = headerBytes.slice(0, 16);
+  const iv = headerBytes.slice(16, 28);
+  const len = (headerBytes[28] << 24) | (headerBytes[29] << 16) | (headerBytes[30] << 8) | headerBytes[31];
+  return { salt, iv, cipherLen: len };
+}
+
+/* ─── Encode action ─── */
+async function encodeMessage() {
+  hideError('errorEncode');
+  document.getElementById('resultEncode').classList.remove('visible');
+
+  const msg = document.getElementById('messageInput').value.trim();
+  const pw = document.getElementById('pwEncode').value;
+
+  if (!encodeImg) return showError('errorEncode', 'arrastra una imagen primero');
+  if (!msg) return showError('errorEncode', 'escribe un mensaje');
+  if (!pw) return showError('errorEncode', 'ingresa una contraseña');
+
+  try {
+    const { salt, iv, cipher } = await encryptText(msg, pw);
+    const payload = packPayload(salt, iv, cipher);
+    const maxB = maxPayloadBytes(encodeImg.w, encodeImg.h) + HEADER_BYTES;
+
+    if (payload.length > maxB) {
+      return showError('errorEncode', 'mensaje demasiado largo para esta imagen');
+    }
+
+    // Clone canvas
+    const c = document.createElement('canvas');
+    c.width = encodeImg.w;
+    c.height = encodeImg.h;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(encodeImg.canvas, 0, 0);
+    const imgData = ctx.getImageData(0, 0, c.width, c.height);
+
+    embedBits(imgData, payload);
+    ctx.putImageData(imgData, 0, 0);
+
+    encodedCanvas = c;
+    document.getElementById('resultEncode').classList.add('visible');
+    showToast('mensaje oculto correctamente');
+  } catch (e) {
+    showError('errorEncode', 'error: ' + e.message);
+  }
+}
+
+/* ─── Decode action ─── */
+async function decodeMessage() {
+  hideError('errorDecode');
+  document.getElementById('resultDecode').classList.remove('visible');
+
+  const pw = document.getElementById('pwDecode').value;
+
+  if (!decodeImg) return showError('errorDecode', 'arrastra una imagen primero');
+  if (!pw) return showError('errorDecode', 'ingresa la contraseña');
+
+  try {
+    const ctx = decodeImg.canvas.getContext('2d');
+    const imgData = ctx.getImageData(0, 0, decodeImg.w, decodeImg.h);
+
+    // Extract header first (32 bytes)
+    const headerBytes = extractBits(imgData, HEADER_BYTES);
+    const { salt, iv, cipherLen } = unpackHeader(headerBytes);
+
+    // Sanity check
+    const maxB = maxPayloadBytes(decodeImg.w, decodeImg.h);
+    if (cipherLen <= 0 || cipherLen > maxB) {
+      return showError('errorDecode', 'no se encontró mensaje oculto o contraseña incorrecta');
+    }
+
+    // Extract full payload
+    const fullPayload = extractBits(imgData, HEADER_BYTES + cipherLen);
+    const cipher = fullPayload.slice(HEADER_BYTES);
+
+    const text = await decryptData(salt, iv, cipher, pw);
+    document.getElementById('decodedText').textContent = text;
+    document.getElementById('resultDecode').classList.add('visible');
+    showToast('mensaje revelado');
+  } catch (e) {
+    showError('errorDecode', 'contraseña incorrecta o no hay mensaje oculto');
+  }
+}
+
+/* ─── Download ─── */
+function downloadEncoded() {
+  if (!encodedCanvas) return;
+  const baseName = encodeImg.name.replace(/\.[^.]+$/, '');
+  const a = document.createElement('a');
+  a.href = encodedCanvas.toDataURL('image/png');
+  a.download = `${baseName}_stegano.png`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  showToast('png descargado');
+}
+
+/* ─── Copy decoded ─── */
+function copyDecoded() {
+  const text = document.getElementById('decodedText').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('copiado'));
+}
+
+/* ─── Helpers ─── */
+function showError(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg;
+  el.classList.add('visible');
+}
+function hideError(id) {
+  const el = document.getElementById(id);
+  el.textContent = '';
+  el.classList.remove('visible');
+}
+
+function showToast(msg) {
+  const toast = document.createElement('div');
+  toast.className = 'status-toast';
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+</script>
+</body>
+</html>
