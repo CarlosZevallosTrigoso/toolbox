@@ -9,41 +9,37 @@
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
-    background: #0a0a0b;
-    color: #999;
+    font-family: 'Fira Code', 'JetBrains Mono', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+    background: #ffffff;
+    color: #666;
     min-height: 100vh;
     padding: 3rem 2.5rem;
     font-size: 0.88rem;
     line-height: 1.7;
   }
 
-  code, .mono {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-  }
-
   .back-link {
     display: inline-block;
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #444;
+    font-family: inherit;
+    color: #999;
     text-decoration: none;
     margin-bottom: 1.2rem;
     font-size: 0.82rem;
   }
-  .back-link:hover { color: #888; }
+  .back-link:hover { color: #5a7a3a; }
 
   h1 {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-family: inherit;
     font-size: 0.88rem;
     font-weight: normal;
-    color: #555;
+    color: #888;
     margin-bottom: 2rem;
   }
 
   /* Drop zone */
   .dropzone {
-    border: 1px dashed #2a2a2e;
-    background: #111113;
+    border: 1px dashed #ddd;
+    background: #fafafa;
     padding: 2.5rem 2rem;
     cursor: pointer;
     transition: all 0.2s;
@@ -52,11 +48,31 @@
   }
   .dropzone:hover, .dropzone.dragover {
     border-color: #5a7a3a;
-    background: rgba(90, 140, 60, 0.04);
+    background: rgba(90, 140, 60, 0.03);
   }
-  .dropzone-label { color: #666; }
-  .dropzone-label strong { color: #aaa; font-weight: 500; }
+  .dropzone-label { color: #999; }
+  .dropzone-label strong { color: #666; font-weight: 500; }
   #fileInput { display: none; }
+
+  /* Format badges in dropzone */
+  .format-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+  }
+  .format-badge {
+    font-size: 0.72rem;
+    color: #aaa;
+    border: 1px solid #e0e0e0;
+    padding: 0.1rem 0.45rem;
+    border-radius: 3px;
+    letter-spacing: 0.02em;
+  }
+  .format-badge.unsupported {
+    opacity: 0.35;
+    text-decoration: line-through;
+  }
 
   /* Image list */
   .image-list {
@@ -66,13 +82,13 @@
   }
 
   .image-card {
-    background: #111113;
-    border: 1px solid #1e1e22;
+    background: #fafafa;
+    border: 1px solid #eee;
     border-radius: 4px;
     padding: 1.25rem 1.5rem;
     transition: border-color 0.15s;
   }
-  .image-card:hover { border-color: #2a2a2e; }
+  .image-card:hover { border-color: #ccc; }
 
   .image-card-header {
     display: flex;
@@ -80,7 +96,7 @@
     gap: 1.2rem;
     margin-bottom: 1.2rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #1a1a1e;
+    border-bottom: 1px solid #eee;
   }
 
   .thumb-container {
@@ -88,8 +104,8 @@
     height: 56px;
     overflow: hidden;
     flex-shrink: 0;
-    background: #18181c;
-    border: 1px solid #222225;
+    background: #f0f0f0;
+    border: 1px solid #e0e0e0;
     border-radius: 3px;
     display: flex;
     align-items: center;
@@ -104,18 +120,18 @@
 
   .image-meta { flex: 1; min-width: 0; }
   .image-meta h3 {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-family: inherit;
     font-size: 0.85rem;
     font-weight: normal;
-    color: #ccc;
+    color: #444;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     margin-bottom: 0.25rem;
   }
   .meta-tags {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #555;
+    font-family: inherit;
+    color: #aaa;
     font-size: 0.8rem;
   }
   .meta-tags .accent { color: #5a7a3a; }
@@ -123,7 +139,7 @@
   .btn-remove {
     background: none;
     border: 1px solid transparent;
-    color: #444;
+    color: #bbb;
     cursor: pointer;
     font-family: inherit;
     font-size: 0.88rem;
@@ -150,18 +166,18 @@
 
   .control-group label {
     font-size: 0.78rem;
-    color: #555;
+    color: #aaa;
     font-weight: 500;
-    text-transform: uppercase;
+    text-transform: lowercase;
     letter-spacing: 0.04em;
   }
 
   select, input[type="number"] {
-    background: #0e0e10;
-    border: 1px solid #222225;
+    background: #fff;
+    border: 1px solid #ddd;
     border-radius: 4px;
-    color: #ccc;
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    color: #444;
+    font-family: inherit;
     font-size: 0.84rem;
     padding: 0.5rem 0.7rem;
     outline: none;
@@ -169,7 +185,7 @@
     width: 130px;
   }
   select:focus, input[type="number"]:focus { border-color: #5a7a3a; }
-  select option { background: #111113; color: #ccc; }
+  select option { background: #fff; color: #444; }
 
   .quality-header {
     display: flex;
@@ -177,7 +193,7 @@
     align-items: center;
   }
   .quality-value {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-family: inherit;
     color: #5a7a3a;
     font-size: 0.82rem;
   }
@@ -186,7 +202,7 @@
     -webkit-appearance: none;
     width: 130px;
     height: 3px;
-    background: #222225;
+    background: #ddd;
     outline: none;
     cursor: pointer;
     border-radius: 2px;
@@ -199,7 +215,8 @@
     border-radius: 50%;
     background: #5a7a3a;
     cursor: pointer;
-    border: 2px solid #0a0a0b;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #ddd;
   }
   input[type="range"]::-moz-range-thumb {
     width: 12px;
@@ -207,7 +224,8 @@
     border-radius: 50%;
     background: #5a7a3a;
     cursor: pointer;
-    border: 2px solid #0a0a0b;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #ddd;
   }
 
   /* Resize row */
@@ -221,23 +239,23 @@
 
   .resize-link {
     background: none;
-    border: 1px solid #222225;
-    color: #444;
+    border: 1px solid #ddd;
+    color: #bbb;
     cursor: pointer;
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-family: inherit;
     font-size: 0.8rem;
     padding: 0.45rem 0.6rem;
     border-radius: 3px;
     transition: all 0.15s;
   }
-  .resize-link.linked { color: #5a7a3a; border-color: #3a4a2a; background: rgba(90, 140, 60, 0.06); }
+  .resize-link.linked { color: #5a7a3a; border-color: #5a7a3a; background: rgba(90, 140, 60, 0.05); }
 
   .resize-pct { width: 80px; }
 
   .btn-export {
     background: #5a7a3a;
     border: none;
-    color: #e8e8ec;
+    color: #fff;
     font-family: inherit;
     font-size: 0.82rem;
     font-weight: 500;
@@ -254,22 +272,22 @@
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.25rem;
-    background: #111113;
-    border: 1px solid #1e1e22;
+    background: #fafafa;
+    border: 1px solid #eee;
     border-radius: 4px;
     margin-top: 1.25rem;
   }
   .batch-info {
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #555;
+    font-family: inherit;
+    color: #aaa;
     font-size: 0.82rem;
   }
   .batch-actions { display: flex; gap: 0.75rem; }
 
   .btn-batch {
     background: none;
-    border: 1px solid #222225;
-    color: #777;
+    border: 1px solid #ddd;
+    color: #888;
     font-family: inherit;
     font-size: 0.82rem;
     padding: 0.45rem 1rem;
@@ -282,7 +300,7 @@
   .btn-batch.primary {
     background: #5a7a3a;
     border-color: #5a7a3a;
-    color: #e8e8ec;
+    color: #fff;
     font-weight: 500;
   }
   .btn-batch.primary:hover { background: #6a8e46; }
@@ -291,7 +309,7 @@
   .preview-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.92);
+    background: rgba(255,255,255,0.95);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -305,15 +323,16 @@
     max-height: 85vh;
     object-fit: contain;
     border-radius: 4px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   }
   .preview-info {
     position: fixed;
     bottom: 2rem;
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
-    color: #555;
+    font-family: inherit;
+    color: #aaa;
     font-size: 0.82rem;
-    background: #111113;
-    border: 1px solid #222225;
+    background: #fff;
+    border: 1px solid #eee;
     padding: 0.5rem 1rem;
     border-radius: 4px;
   }
@@ -323,18 +342,25 @@
     position: fixed;
     bottom: 2rem;
     right: 2.5rem;
-    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    font-family: inherit;
     color: #5a7a3a;
     font-size: 0.82rem;
-    background: #111113;
-    border: 1px solid #3a4a2a;
+    background: #fff;
+    border: 1px solid #5a7a3a;
     padding: 0.6rem 1rem;
     border-radius: 4px;
     animation: fadeOut 0.3s ease 2.5s forwards;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
   }
   @keyframes fadeOut {
     from { opacity: 1; }
     to { opacity: 0; }
+  }
+
+  /* Warning toast */
+  .status-toast.warn {
+    color: #b08000;
+    border-color: #d4a017;
   }
 
   @media (max-width: 600px) {
@@ -350,8 +376,9 @@
 <h1>imageforge — conversor y compresor</h1>
 
 <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
-  <div class="dropzone-label">arrastra imágenes aquí o <strong>haz clic</strong> — .tiff .jpg .png .webp</div>
-  <input type="file" id="fileInput" multiple accept=".tiff,.tif,.jpg,.jpeg,.png,.webp,image/tiff,image/jpeg,image/png,image/webp">
+  <div class="dropzone-label">arrastra imágenes aquí o <strong>haz clic</strong></div>
+  <div class="format-badges" id="formatBadges"></div>
+  <input type="file" id="fileInput" multiple accept=".tiff,.tif,.jpg,.jpeg,.png,.webp,.avif,.bmp,.gif,.ico,.svg,.heic,.heif,image/*">
 </div>
 
 <div id="imageList" class="image-list"></div>
@@ -368,6 +395,83 @@ const fileInput = document.getElementById('fileInput');
 const imageList = document.getElementById('imageList');
 const batchBar = document.getElementById('batchBar');
 
+/* ─── Format support detection ─── */
+const INPUT_FORMATS = [
+  { ext: 'jpg',  label: 'JPG',  mime: 'image/jpeg', supported: true },
+  { ext: 'png',  label: 'PNG',  mime: 'image/png',  supported: true },
+  { ext: 'webp', label: 'WebP', mime: 'image/webp', supported: true },
+  { ext: 'avif', label: 'AVIF', mime: 'image/avif', supported: false },
+  { ext: 'gif',  label: 'GIF',  mime: 'image/gif',  supported: true },
+  { ext: 'bmp',  label: 'BMP',  mime: 'image/bmp',  supported: true },
+  { ext: 'ico',  label: 'ICO',  mime: 'image/x-icon', supported: true },
+  { ext: 'svg',  label: 'SVG',  mime: 'image/svg+xml', supported: true },
+  { ext: 'tiff', label: 'TIFF', mime: 'image/tiff', supported: true },
+  { ext: 'heic', label: 'HEIC', mime: 'image/heic', supported: false },
+];
+
+const OUTPUT_FORMATS = [
+  { value: 'jpeg', label: 'JPEG', hasQuality: true,  supported: true },
+  { value: 'png',  label: 'PNG',  hasQuality: false, supported: true },
+  { value: 'webp', label: 'WebP', hasQuality: true,  supported: true },
+  { value: 'avif', label: 'AVIF', hasQuality: true,  supported: false },
+];
+
+// Detect AVIF decode support
+function detectAvifDecode() {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img.width > 0 && img.height > 0);
+    img.onerror = () => resolve(false);
+    img.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADybWV0YQAAAAAAAAAoaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAGxpYmF2aWYAAAAADnBpdG0AAAAAAAEAAAAeaWxvYwAAAABEAAABAAEAAAABAAABGgAAAB0AAAAoaWluZgAAAAAAAQAAABppbmZlAgAAAAABAABhdjAxQ29sb3IAAAAAamlwcnAAAABLaXBjbwAAABRpc3BlAAAAAAAAAAIAAAACAAAAEHBpeGkAAAAAAwgICAAAAAxhdjFDgQ0MAAAAABNjb2xybmNseAACAAIAAYAAAAAXaXBtYQAAAAAAAAABAAEEAQKDBAAAACVtZGF0EgAKBzgABhAQ0AIy';
+  });
+}
+
+// Detect AVIF encode support
+function detectAvifEncode() {
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    return c.toDataURL('image/avif').startsWith('data:image/avif');
+  } catch { return false; }
+}
+
+// Detect HEIC decode support
+function detectHeicDecode() {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img.width > 0);
+    img.onerror = () => resolve(false);
+    // Minimal HEIC test — most browsers won't decode this, Safari might
+    img.src = 'data:image/heic;base64,AAAAA';
+    setTimeout(() => resolve(false), 500);
+  });
+}
+
+async function initFormatSupport() {
+  const avifDecode = await detectAvifDecode();
+  const avifEncode = detectAvifEncode();
+  const heicDecode = await detectHeicDecode();
+
+  INPUT_FORMATS.find(f => f.ext === 'avif').supported = avifDecode;
+  INPUT_FORMATS.find(f => f.ext === 'heic').supported = heicDecode;
+  OUTPUT_FORMATS.find(f => f.value === 'avif').supported = avifEncode;
+
+  renderFormatBadges();
+}
+
+function renderFormatBadges() {
+  const container = document.getElementById('formatBadges');
+  container.innerHTML = INPUT_FORMATS.map(f =>
+    `<span class="format-badge ${f.supported ? '' : 'unsupported'}" title="${f.supported ? 'soportado' : 'no soportado en este navegador'}">.${f.ext}</span>`
+  ).join('');
+}
+
+initFormatSupport();
+
+/* ─── Accepted file extensions ─── */
+const ACCEPTED_EXT = /\.(tiff|tif|jpg|jpeg|png|webp|avif|bmp|gif|ico|svg|heic|heif)$/i;
+
+/* ─── Drag & drop / file input ─── */
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
 dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
 dropzone.addEventListener('drop', e => {
@@ -382,7 +486,8 @@ fileInput.addEventListener('change', e => {
 
 function handleFiles(files) {
   for (const file of files) {
-    if (!file.type.match(/image\/(tiff|jpeg|png|webp)/) && !file.name.match(/\.(tiff|tif|jpg|jpeg|png|webp)$/i)) continue;
+    const isImage = file.type.startsWith('image/') || ACCEPTED_EXT.test(file.name);
+    if (!isImage) continue;
     const id = ++idCounter;
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -394,6 +499,8 @@ function handleFiles(files) {
 
 function processImage(file, arrayBuf, id) {
   const isTiff = file.name.match(/\.(tiff|tif)$/i) || file.type === 'image/tiff';
+  const isSvg = file.name.match(/\.svg$/i) || file.type === 'image/svg+xml';
+
   if (isTiff) {
     try {
       const ifds = UTIF.decode(arrayBuf);
@@ -410,8 +517,29 @@ function processImage(file, arrayBuf, id) {
     } catch (err) {
       showToast('error al leer tiff: ' + err.message);
     }
+  } else if (isSvg) {
+    // SVG: render to canvas via blob URL + Image
+    const svgBlob = new Blob([arrayBuf], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      // Default SVG to 1024 wide if no intrinsic size
+      const w = img.naturalWidth || 1024;
+      const h = img.naturalHeight || 1024;
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      addImage(id, file, canvas.toDataURL('image/png'), w, h);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      showToast('error al leer svg: ' + file.name);
+    };
+    img.src = url;
   } else {
-    const blob = new Blob([arrayBuf], { type: file.type });
+    // All other raster formats: let the browser decode
+    const blob = new Blob([arrayBuf], { type: file.type || 'image/png' });
     const url = URL.createObjectURL(blob);
     const img = new Image();
     img.onload = () => {
@@ -422,7 +550,11 @@ function processImage(file, arrayBuf, id) {
       URL.revokeObjectURL(url);
       addImage(id, file, canvas.toDataURL('image/png'), img.naturalWidth, img.naturalHeight);
     };
-    img.onerror = () => showToast('error al leer: ' + file.name);
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      const ext = file.name.split('.').pop().toUpperCase();
+      showToast(`formato ${ext} no soportado en este navegador`, true);
+    };
     img.src = url;
   }
 }
@@ -450,14 +582,27 @@ function formatSize(bytes) {
 }
 
 function getExtFromFormat(fmt) {
-  return { jpeg: 'jpg', png: 'png', webp: 'webp' }[fmt] || fmt;
+  return { jpeg: 'jpg', png: 'png', webp: 'webp', avif: 'avif' }[fmt] || fmt;
 }
 
 function getMime(fmt) { return 'image/' + fmt; }
 
+function formatHasQuality(fmt) {
+  const f = OUTPUT_FORMATS.find(o => o.value === fmt);
+  return f ? f.hasQuality : false;
+}
+
+function buildFormatOptions(selectedFormat) {
+  return OUTPUT_FORMATS
+    .filter(f => f.supported)
+    .map(f => `<option value="${f.value}" ${selectedFormat === f.value ? 'selected' : ''}>${f.label}</option>`)
+    .join('');
+}
+
 function renderList() {
   imageList.innerHTML = '';
   images.forEach(entry => {
+    const noQuality = !formatHasQuality(entry.format);
     const card = document.createElement('div');
     card.className = 'image-card';
     card.innerHTML = `
@@ -475,20 +620,18 @@ function renderList() {
         <div class="control-group">
           <label>formato</label>
           <select onchange="updateEntry(${entry.id},'format',this.value)">
-            <option value="jpeg" ${entry.format==='jpeg'?'selected':''}>JPEG</option>
-            <option value="png" ${entry.format==='png'?'selected':''}>PNG</option>
-            <option value="webp" ${entry.format==='webp'?'selected':''}>WebP</option>
+            ${buildFormatOptions(entry.format)}
           </select>
         </div>
         <div class="control-group">
           <div class="quality-header">
             <label>calidad</label>
-            <span class="quality-value" id="qval-${entry.id}">${entry.quality}%</span>
+            <span class="quality-value" id="qval-${entry.id}">${noQuality ? '—' : entry.quality + '%'}</span>
           </div>
           <input type="range" min="5" max="100" step="1" value="${entry.quality}"
             oninput="updateQuality(${entry.id}, this.value)"
             id="qslider-${entry.id}"
-            ${entry.format === 'png' ? 'disabled style="opacity:0.2"' : ''}>
+            ${noQuality ? 'disabled style="opacity:0.2"' : ''}>
         </div>
         <div class="control-group" style="justify-content:end">
           <button class="btn-export" onclick="exportImage(${entry.id})">exportar</button>
@@ -540,9 +683,12 @@ function updateEntry(id, key, val) {
   if (!e) return;
   e[key] = val;
   if (key === 'format') {
+    const noQuality = !formatHasQuality(val);
     const slider = document.getElementById('qslider-' + id);
-    slider.disabled = val === 'png';
-    slider.style.opacity = val === 'png' ? '0.2' : '1';
+    const qval = document.getElementById('qval-' + id);
+    slider.disabled = noQuality;
+    slider.style.opacity = noQuality ? '0.2' : '1';
+    qval.textContent = noQuality ? '—' : e.quality + '%';
   }
 }
 
@@ -608,9 +754,16 @@ function exportImage(id) {
     ctx.drawImage(img, 0, 0, e.newW, e.newH);
     const quality = e.quality / 100;
     const mime = getMime(e.format);
-    const dataUrl = e.format === 'png' ? canvas.toDataURL(mime) : canvas.toDataURL(mime, quality);
+    const dataUrl = formatHasQuality(e.format) ? canvas.toDataURL(mime, quality) : canvas.toDataURL(mime);
+
+    // Check if browser actually encoded in the requested format
+    const actualMime = dataUrl.substring(5, dataUrl.indexOf(';'));
+    if (actualMime !== mime) {
+      showToast(`${e.format.toUpperCase()} no soportado, exportando como PNG`, true);
+    }
+
     const baseName = e.file.name.replace(/\.[^.]+$/, '');
-    const ext = getExtFromFormat(e.format);
+    const ext = actualMime === mime ? getExtFromFormat(e.format) : 'png';
     downloadDataUrl(dataUrl, `${baseName}.${ext}`);
     showToast(`exportado: ${baseName}.${ext}`);
   };
@@ -646,9 +799,9 @@ function previewImage(id) {
   overlay.style.display = 'flex';
 }
 
-function showToast(msg) {
+function showToast(msg, warn) {
   const toast = document.createElement('div');
-  toast.className = 'status-toast';
+  toast.className = 'status-toast' + (warn ? ' warn' : '');
   toast.textContent = msg;
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
