@@ -378,7 +378,7 @@
 <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
   <div class="dropzone-label">arrastra imágenes aquí o <strong>haz clic</strong></div>
   <div class="format-badges" id="formatBadges"></div>
-  <input type="file" id="fileInput" multiple accept=".tiff,.tif,.jpg,.jpeg,.png,.webp,.avif,.bmp,.gif,.ico,.svg,.heic,.heif,image/*">
+  <input type="file" id="fileInput" multiple accept=".tiff,.tif,.jpg,.jpeg,.png,.webp,.avif,.bmp,.gif,.ico,.svg,.heic,.heif,.jxl,image/*">
 </div>
 
 <div id="imageList" class="image-list"></div>
@@ -407,6 +407,7 @@ const INPUT_FORMATS = [
   { ext: 'svg',  label: 'SVG',  mime: 'image/svg+xml', supported: true },
   { ext: 'tiff', label: 'TIFF', mime: 'image/tiff', supported: true },
   { ext: 'heic', label: 'HEIC', mime: 'image/heic', supported: false },
+  { ext: 'jxl',  label: 'JXL',  mime: 'image/jxl',  supported: false },
 ];
 
 const OUTPUT_FORMATS = [
@@ -414,6 +415,7 @@ const OUTPUT_FORMATS = [
   { value: 'png',  label: 'PNG',  hasQuality: false, supported: true },
   { value: 'webp', label: 'WebP', hasQuality: true,  supported: true },
   { value: 'avif', label: 'AVIF', hasQuality: true,  supported: false },
+  { value: 'jxl',  label: 'JXL',  hasQuality: true,  supported: false },
 ];
 
 // Detect AVIF decode support
@@ -441,20 +443,44 @@ function detectHeicDecode() {
     const img = new Image();
     img.onload = () => resolve(img.width > 0);
     img.onerror = () => resolve(false);
-    // Minimal HEIC test — most browsers won't decode this, Safari might
     img.src = 'data:image/heic;base64,AAAAA';
     setTimeout(() => resolve(false), 500);
   });
+}
+
+// Detect JPEG XL decode support
+function detectJxlDecode() {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img.width > 0 && img.height > 0);
+    img.onerror = () => resolve(false);
+    // Minimal JPEG XL codestream (1x1 pixel)
+    img.src = 'data:image/jxl;base64,/woAEBAQCABASA==';
+    setTimeout(() => resolve(false), 500);
+  });
+}
+
+// Detect JPEG XL encode support
+function detectJxlEncode() {
+  try {
+    const c = document.createElement('canvas');
+    c.width = c.height = 1;
+    return c.toDataURL('image/jxl').startsWith('data:image/jxl');
+  } catch { return false; }
 }
 
 async function initFormatSupport() {
   const avifDecode = await detectAvifDecode();
   const avifEncode = detectAvifEncode();
   const heicDecode = await detectHeicDecode();
+  const jxlDecode = await detectJxlDecode();
+  const jxlEncode = detectJxlEncode();
 
   INPUT_FORMATS.find(f => f.ext === 'avif').supported = avifDecode;
   INPUT_FORMATS.find(f => f.ext === 'heic').supported = heicDecode;
+  INPUT_FORMATS.find(f => f.ext === 'jxl').supported = jxlDecode;
   OUTPUT_FORMATS.find(f => f.value === 'avif').supported = avifEncode;
+  OUTPUT_FORMATS.find(f => f.value === 'jxl').supported = jxlEncode;
 
   renderFormatBadges();
 }
@@ -469,7 +495,7 @@ function renderFormatBadges() {
 initFormatSupport();
 
 /* ─── Accepted file extensions ─── */
-const ACCEPTED_EXT = /\.(tiff|tif|jpg|jpeg|png|webp|avif|bmp|gif|ico|svg|heic|heif)$/i;
+const ACCEPTED_EXT = /\.(tiff|tif|jpg|jpeg|png|webp|avif|bmp|gif|ico|svg|heic|heif|jxl)$/i;
 
 /* ─── Drag & drop / file input ─── */
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
@@ -582,7 +608,7 @@ function formatSize(bytes) {
 }
 
 function getExtFromFormat(fmt) {
-  return { jpeg: 'jpg', png: 'png', webp: 'webp', avif: 'avif' }[fmt] || fmt;
+  return { jpeg: 'jpg', png: 'png', webp: 'webp', avif: 'avif', jxl: 'jxl' }[fmt] || fmt;
 }
 
 function getMime(fmt) { return 'image/' + fmt; }
