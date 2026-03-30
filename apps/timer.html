@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Temporizador de Precisión</title>
+    <link id="favicon" rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPj/HwADBwIAMCbHYQAAAABJRU5ErkJggg==">
     <style>
         :root {
             --color-100: #e8f5e9; --color-75: #f1f8e9; --color-50: #fff9c4; 
@@ -44,11 +45,10 @@
             font-variant-numeric: tabular-nums;
         }
 
-        /* Controles ajustados de tamaño sin usar scale para evitar errores de centrado */
         .group { margin-bottom: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 
         button {
-            padding: 6px 12px; font-size: 0.75rem; /* Reducción directa del tamaño */
+            padding: 6px 12px; font-size: 0.75rem;
             text-transform: uppercase; border: 1.5px solid var(--text-color);
             background: rgba(255, 255, 255, 0.2); color: var(--text-color);
             cursor: pointer; border-radius: 4px; font-weight: 700;
@@ -126,11 +126,16 @@
 
     <script>
         let countdown;
-        let timeLeftMs = 0; // now in milliseconds
-        let totalTimeAtStart = 0; // in ms
+        let timeLeftMs = 0;
+        let totalTimeAtStart = 0;
         let isPaused = true;
         let targetTime = null;
         let lastTick = null;
+
+        // Tab alert state
+        let tabAlertInterval = null;
+        let tabAlertState = false;
+        const defaultTitle = 'Temporizador de Precisión';
 
         const showUnits = { h: true, m: true, s: true, ms: false };
 
@@ -138,6 +143,68 @@
         const progressBar = document.querySelector('#progress-bar');
         const btnStart = document.querySelector('#btn-start');
         const body = document.body;
+        const faviconEl = document.querySelector('#favicon');
+
+        // --- Favicon generation via canvas ---
+        const favCanvas = document.createElement('canvas');
+        favCanvas.width = 32;
+        favCanvas.height = 32;
+        const favCtx = favCanvas.getContext('2d');
+
+        function generateFavicon(color) {
+            favCtx.clearRect(0, 0, 32, 32);
+            favCtx.beginPath();
+            favCtx.arc(16, 16, 14, 0, Math.PI * 2);
+            favCtx.fillStyle = color;
+            favCtx.fill();
+            return favCanvas.toDataURL('image/png');
+        }
+
+        const faviconNormal = generateFavicon('#2c3e50');
+        const faviconAlert = generateFavicon('#e53935');
+        const faviconBlank = generateFavicon('transparent');
+
+        faviconEl.href = faviconNormal;
+
+        function getSessionName() {
+            const el = document.querySelector('#timer-title');
+            return el.textContent.trim() || 'TIMER';
+        }
+
+        // --- Tab alert: flashing title + favicon ---
+        function startTabAlert() {
+            if (tabAlertInterval) return;
+            tabAlertState = false;
+            tabAlertInterval = setInterval(() => {
+                tabAlertState = !tabAlertState;
+                if (tabAlertState) {
+                    document.title = '🔴 ¡TIEMPO!';
+                    faviconEl.href = faviconAlert;
+                } else {
+                    document.title = '⚪ ' + getSessionName();
+                    faviconEl.href = faviconBlank;
+                }
+            }, 600);
+        }
+
+        function stopTabAlert() {
+            if (tabAlertInterval) {
+                clearInterval(tabAlertInterval);
+                tabAlertInterval = null;
+            }
+            faviconEl.href = faviconNormal;
+            document.title = defaultTitle;
+        }
+
+        // --- Tab title with countdown ---
+        function updateTabTitle(timeStr) {
+            if (tabAlertInterval) return; // don't override alert
+            if (totalTimeAtStart > 0 && timeLeftMs > 0) {
+                document.title = timeStr + ' — ' + getSessionName();
+            } else if (totalTimeAtStart === 0) {
+                document.title = defaultTitle;
+            }
+        }
 
         function toggleUnit(label, unit) {
             const cb = label.querySelector('input');
@@ -145,7 +212,6 @@
             showUnits[unit] = cb.checked;
             label.classList.toggle('active', cb.checked);
             updateUI();
-            // Switch interval rate based on ms visibility
             if (!isPaused) { runTimer(); }
         }
 
@@ -195,7 +261,6 @@
             clearInterval(countdown);
 
             if (showUnits.ms) {
-                // Use requestAnimationFrame for smooth ms display
                 function tick() {
                     const now = performance.now();
                     if (targetTime) {
@@ -210,6 +275,7 @@
                         isPaused = true;
                         btnStart.textContent = "Iniciar";
                         body.classList.add('finished');
+                        startTabAlert();
                         updateUI();
                         return;
                     }
@@ -219,7 +285,6 @@
                 lastTick = performance.now();
                 countdown = requestAnimationFrame(tick);
             } else {
-                // 1-second interval when ms not shown
                 countdown = setInterval(() => {
                     if (targetTime) {
                         timeLeftMs = targetTime - new Date();
@@ -233,6 +298,7 @@
                         isPaused = true;
                         btnStart.textContent = "Iniciar";
                         body.classList.add('finished');
+                        startTabAlert();
                     }
                     updateUI();
                 }, 1000);
@@ -242,6 +308,7 @@
         function resetTimer() {
             cancelAnimationFrame(countdown);
             clearInterval(countdown);
+            stopTabAlert();
             timeLeftMs = 0;
             totalTimeAtStart = 0;
             targetTime = null;
@@ -256,7 +323,7 @@
             const h = Math.floor(totalSec / 3600);
             const m = Math.floor((totalSec % 3600) / 60);
             const s = Math.floor(totalSec % 60);
-            const ms = Math.floor((totalSec % 1) * 100); // centiseconds
+            const ms = Math.floor((totalSec % 1) * 100);
 
             const parts = [];
             if (showUnits.h) parts.push(parts.length ? String(h).padStart(2, '0') : String(h));
@@ -267,6 +334,9 @@
             if (showUnits.ms) text += '.' + String(ms).padStart(2, '0');
 
             display.textContent = text;
+
+            // Update tab title with countdown
+            updateTabTitle(text);
 
             const pct = totalTimeAtStart > 0 ? (Math.max(0, timeLeftMs) / totalTimeAtStart) * 100 : 0;
             progressBar.style.width = `${pct}%`;
