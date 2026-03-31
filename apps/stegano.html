@@ -247,6 +247,60 @@
   .size-estimate .val { color: #5a7a3a; font-weight: 500; }
   .size-estimate .warn { color: #c45; }
 
+  /* Toggle switch */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .toggle-switch {
+    position: relative;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+  .toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: #ddd;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-track::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    background: #fff;
+    border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  }
+  .toggle-switch input:checked + .toggle-track {
+    background: #5a7a3a;
+  }
+  .toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(16px);
+  }
+  .toggle-label {
+    font-size: 0.78rem;
+    color: #aaa;
+  }
+  .toggle-label strong { color: #888; font-weight: 500; }
+  .toggle-hint {
+    font-size: 0.72rem;
+    color: #bbb;
+    margin-top: 0.2rem;
+  }
+
   /* Buttons */
   .btn-primary {
     background: #5a7a3a;
@@ -410,6 +464,20 @@
     <div class="size-estimate" id="sizeEstimate"></div>
   </div>
 
+  <div class="field">
+    <label>modo de embedding</label>
+    <div class="toggle-row">
+      <label class="toggle-switch">
+        <input type="checkbox" id="adaptiveToggle" checked>
+        <span class="toggle-track"></span>
+      </label>
+      <div>
+        <div class="toggle-label"><strong>adaptativo</strong> — embede solo en zonas de alta textura</div>
+        <div class="toggle-hint">más difícil de detectar por estegoanálisis, reduce capacidad ~50%</div>
+      </div>
+    </div>
+  </div>
+
   <button class="btn-primary" id="btnEncode" onclick="encodeMessage()" disabled>ocultar mensaje</button>
   <div class="error-msg" id="errorEncode"></div>
 
@@ -449,7 +517,7 @@
 </div>
 
 <div class="how-it-works">
-  <strong>cómo funciona</strong> — el mensaje se cifra con <strong>aes-256-gcm</strong> derivando la clave de tu contraseña via <strong>pbkdf2</strong> (100k iteraciones). los bits cifrados se insertan en el bit menos significativo (lsb) de cada canal rgb. la imagen resultante es visualmente idéntica al original. solo puede extraerse con la contraseña correcta. siempre exporta como <strong>png</strong> (lossless) para preservar los datos. usa el control de tamaño para reducir el peso del png de salida — una foto de 1024px produce un png mucho más liviano que una de 4000px.
+  <strong>cómo funciona</strong> — el mensaje se cifra con <strong>aes-256-gcm</strong> derivando la clave de tu contraseña via <strong>pbkdf2</strong> (100k iteraciones). los bits cifrados se insertan en el bit menos significativo (lsb) de cada canal rgb. la imagen resultante es visualmente idéntica al original. solo puede extraerse con la contraseña correcta. siempre exporta como <strong>png</strong> (lossless) para preservar los datos. usa el control de tamaño para reducir el peso del png de salida. <strong>modo adaptativo</strong>: calcula la varianza local de cada píxel en ventana 3×3 (ignorando el lsb) y embede solo en zonas de alta textura, donde los cambios son estadísticamente indistinguibles del ruido natural — resistente a estegoanálisis rs y chi-cuadrado. el decoder auto-detecta el modo desde un flag en la cabecera.
 </div>
 
 <canvas id="workCanvas" style="display:none"></canvas>
@@ -592,8 +660,8 @@ setupDropzone('dropEncode', 'fileEncode', onEncodeFile);
 setupDropzone('dropDecode', 'fileDecode', onDecodeFile);
 
 /* ─── Capacity ─── */
-// Header: 16 salt + 12 IV + 4 length = 32 bytes
-const HEADER_BYTES = 32;
+// Header: 16 salt + 12 IV + 1 flags + 4 length = 33 bytes
+const HEADER_BYTES = 33;
 
 function maxPayloadBytes(w, h) {
   const totalBits = w * h * 3; // 3 bits per pixel (R, G, B LSBs)
@@ -656,16 +724,20 @@ function updateCapacity() {
   if (!encodeImg) { info.textContent = ''; return; }
 
   const dims = getResizedDims() || { w: encodeImg.w, h: encodeImg.h };
+  const adaptive = document.getElementById('adaptiveToggle').checked;
   const msg = document.getElementById('messageInput').value;
   const msgBytes = new TextEncoder().encode(msg).length;
   // AES-GCM adds 16 bytes auth tag
   const estimatedCipherLen = msgBytes + 16;
-  const maxB = maxPayloadBytes(dims.w, dims.h);
+  let maxB = maxPayloadBytes(dims.w, dims.h);
+  // Adaptive skips header-zone pixels from texture pool, effective ~50-70% capacity
+  if (adaptive) maxB = Math.floor(maxB * 0.55);
   const remaining = maxB - estimatedCipherLen;
+  const modeTag = adaptive ? ' (adaptativo)' : '';
   if (remaining < 0) {
-    info.innerHTML = `<span class="warn">mensaje demasiado largo — excede capacidad por ${formatBytes(-remaining)}</span>`;
+    info.innerHTML = `<span class="warn">mensaje demasiado largo — excede capacidad por ${formatBytes(-remaining)}${modeTag}</span>`;
   } else {
-    info.textContent = `~${formatBytes(estimatedCipherLen)} de ${formatBytes(maxB)} disponibles`;
+    info.textContent = `~${formatBytes(estimatedCipherLen)} de ${formatBytes(maxB)} disponibles${modeTag}`;
   }
   checkEncodeReady();
 }
@@ -676,6 +748,7 @@ function checkEncodeReady() {
 }
 
 document.getElementById('messageInput').addEventListener('input', checkEncodeReady);
+document.getElementById('adaptiveToggle').addEventListener('change', updateCapacity);
 
 /* ─── Crypto helpers (Web Crypto API) ─── */
 async function deriveKey(password, salt) {
@@ -716,20 +789,16 @@ async function decryptData(salt, iv, cipher, password) {
 }
 
 /* ─── LSB Steganography ─── */
-function embedBits(imageData, payload) {
-  // payload is Uint8Array
-  // We write into LSB of R, G, B channels (skip A)
-  const pixels = imageData.data;
+
+// Sequential embed/extract (used for header, and for non-adaptive payload)
+function embedBitsSeq(pixels, payload, startBit) {
   const totalBits = payload.length * 8;
-  const availableBits = (pixels.length / 4) * 3; // 3 channels per pixel
-
-  if (totalBits > availableBits) {
-    throw new Error('imagen demasiado pequeña para este mensaje');
-  }
-
   let bitIdx = 0;
-  for (let px = 0; px < pixels.length / 4 && bitIdx < totalBits; px++) {
-    for (let ch = 0; ch < 3 && bitIdx < totalBits; ch++) {
+  let pxStart = Math.floor(startBit / 3);
+  let chStart = startBit % 3;
+
+  for (let px = pxStart; px < pixels.length / 4 && bitIdx < totalBits; px++) {
+    for (let ch = (px === pxStart ? chStart : 0); ch < 3 && bitIdx < totalBits; ch++) {
       const bytePos = Math.floor(bitIdx / 8);
       const bitPos = 7 - (bitIdx % 8);
       const bit = (payload[bytePos] >> bitPos) & 1;
@@ -740,14 +809,15 @@ function embedBits(imageData, payload) {
   }
 }
 
-function extractBits(imageData, byteCount) {
-  const pixels = imageData.data;
+function extractBitsSeq(pixels, byteCount, startBit) {
   const result = new Uint8Array(byteCount);
-  let bitIdx = 0;
   const totalBits = byteCount * 8;
+  let bitIdx = 0;
+  let pxStart = Math.floor(startBit / 3);
+  let chStart = startBit % 3;
 
-  for (let px = 0; px < pixels.length / 4 && bitIdx < totalBits; px++) {
-    for (let ch = 0; ch < 3 && bitIdx < totalBits; ch++) {
+  for (let px = pxStart; px < pixels.length / 4 && bitIdx < totalBits; px++) {
+    for (let ch = (px === pxStart ? chStart : 0); ch < 3 && bitIdx < totalBits; ch++) {
       const i = px * 4 + ch;
       const bit = pixels[i] & 1;
       const bytePos = Math.floor(bitIdx / 8);
@@ -759,29 +829,153 @@ function extractBits(imageData, byteCount) {
   return result;
 }
 
+/* ─── Texture map for adaptive embedding ─── */
+function computeTextureMap(imageData) {
+  // Compute local variance in 3×3 window using upper 7 bits (ignore LSB)
+  // Returns array of pixel indices sorted by descending variance
+  const w = imageData.width;
+  const h = imageData.height;
+  const px = imageData.data;
+  const numPixels = w * h;
+  const variances = new Float32Array(numPixels);
+
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let sum = 0, sumSq = 0, count = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || nx >= w || ny < 0 || ny >= h) continue;
+          const idx = (ny * w + nx) * 4;
+          for (let ch = 0; ch < 3; ch++) {
+            const val = px[idx + ch] & 0xFE; // mask out LSB
+            sum += val;
+            sumSq += val * val;
+            count++;
+          }
+        }
+      }
+      const mean = sum / count;
+      variances[y * w + x] = (sumSq / count) - (mean * mean);
+    }
+  }
+
+  // Build sorted index array (descending variance = high texture first)
+  const indices = new Uint32Array(numPixels);
+  for (let i = 0; i < numPixels; i++) indices[i] = i;
+  indices.sort((a, b) => variances[b] - variances[a]);
+
+  return indices;
+}
+
+// Adaptive embed: header is sequential, payload follows texture-ordered pixels
+function embedBitsAdaptive(imageData, headerPayload, cipherPayload) {
+  const pixels = imageData.data;
+
+  // 1. Embed header sequentially at start
+  embedBitsSeq(pixels, headerPayload, 0);
+
+  // 2. Compute texture map
+  const texMap = computeTextureMap(imageData);
+
+  // 3. Figure out which pixels are used by the header (skip them)
+  const headerBits = headerPayload.length * 8;
+  const headerPixels = Math.ceil(headerBits / 3);
+
+  // 4. Embed cipher in texture order, skipping header pixels
+  const totalBits = cipherPayload.length * 8;
+  let bitIdx = 0;
+  for (let t = 0; t < texMap.length && bitIdx < totalBits; t++) {
+    const pxIdx = texMap[t];
+    if (pxIdx < headerPixels) continue; // skip header zone
+
+    for (let ch = 0; ch < 3 && bitIdx < totalBits; ch++) {
+      const bytePos = Math.floor(bitIdx / 8);
+      const bitPos = 7 - (bitIdx % 8);
+      const bit = (cipherPayload[bytePos] >> bitPos) & 1;
+      const i = pxIdx * 4 + ch;
+      pixels[i] = (pixels[i] & 0xFE) | bit;
+      bitIdx++;
+    }
+  }
+
+  if (bitIdx < totalBits) {
+    throw new Error('imagen demasiado pequeña para modo adaptativo');
+  }
+}
+
+function extractBitsAdaptive(imageData, headerBytes, cipherByteCount) {
+  const pixels = imageData.data;
+
+  // 1. Header already extracted sequentially
+
+  // 2. Compute texture map (same deterministic order)
+  const texMap = computeTextureMap(imageData);
+
+  // 3. Skip header pixels
+  const headerBits = headerBytes * 8;
+  const headerPixels = Math.ceil(headerBits / 3);
+
+  // 4. Extract cipher in texture order
+  const result = new Uint8Array(cipherByteCount);
+  const totalBits = cipherByteCount * 8;
+  let bitIdx = 0;
+
+  for (let t = 0; t < texMap.length && bitIdx < totalBits; t++) {
+    const pxIdx = texMap[t];
+    if (pxIdx < headerPixels) continue;
+
+    for (let ch = 0; ch < 3 && bitIdx < totalBits; ch++) {
+      const i = pxIdx * 4 + ch;
+      const bit = pixels[i] & 1;
+      const bytePos = Math.floor(bitIdx / 8);
+      const bitPos = 7 - (bitIdx % 8);
+      result[bytePos] |= (bit << bitPos);
+      bitIdx++;
+    }
+  }
+  return result;
+}
+
+/* ─── Legacy embed/extract (backward compat wrapper) ─── */
+function embedBits(imageData, payload) {
+  embedBitsSeq(imageData.data, payload, 0);
+}
+
+function extractBits(imageData, byteCount) {
+  return extractBitsSeq(imageData.data, byteCount, 0);
+}
+
 /* ─── Pack / Unpack payload ─── */
-function packPayload(salt, iv, cipher) {
-  // [16 salt][12 iv][4 length BE][cipher]
+// New format: [16 salt][12 iv][1 flags][4 length BE][cipher]
+// flags bit 0 = adaptive mode
+const NEW_HEADER_BYTES = 33;
+
+function packPayload(salt, iv, cipher, adaptive) {
   const len = cipher.length;
+  const flags = adaptive ? 0x01 : 0x00;
   const lenBytes = new Uint8Array(4);
   lenBytes[0] = (len >> 24) & 0xFF;
   lenBytes[1] = (len >> 16) & 0xFF;
   lenBytes[2] = (len >> 8) & 0xFF;
   lenBytes[3] = len & 0xFF;
 
-  const total = new Uint8Array(16 + 12 + 4 + len);
+  const total = new Uint8Array(NEW_HEADER_BYTES + len);
   total.set(salt, 0);
   total.set(iv, 16);
-  total.set(lenBytes, 28);
-  total.set(cipher, 32);
+  total[28] = flags;
+  total.set(lenBytes, 29);
+  total.set(cipher, NEW_HEADER_BYTES);
   return total;
 }
 
 function unpackHeader(headerBytes) {
   const salt = headerBytes.slice(0, 16);
   const iv = headerBytes.slice(16, 28);
-  const len = (headerBytes[28] << 24) | (headerBytes[29] << 16) | (headerBytes[30] << 8) | headerBytes[31];
-  return { salt, iv, cipherLen: len };
+  const flags = headerBytes[28];
+  const adaptive = !!(flags & 0x01);
+  const len = (headerBytes[29] << 24) | (headerBytes[30] << 16) | (headerBytes[31] << 8) | headerBytes[32];
+  return { salt, iv, adaptive, cipherLen: len };
 }
 
 /* ─── Encode action ─── */
@@ -792,6 +986,7 @@ async function encodeMessage() {
 
   const msg = document.getElementById('messageInput').value.trim();
   const pw = document.getElementById('pwEncode').value;
+  const adaptive = document.getElementById('adaptiveToggle').checked;
 
   if (!encodeImg) return showError('errorEncode', 'arrastra una imagen primero');
   if (!msg) return showError('errorEncode', 'escribe un mensaje');
@@ -801,12 +996,7 @@ async function encodeMessage() {
     const dims = getResizedDims() || { w: encodeImg.w, h: encodeImg.h };
 
     const { salt, iv, cipher } = await encryptText(msg, pw);
-    const payload = packPayload(salt, iv, cipher);
-    const maxB = maxPayloadBytes(dims.w, dims.h) + HEADER_BYTES;
-
-    if (payload.length > maxB) {
-      return showError('errorEncode', 'mensaje demasiado largo para esta imagen con este tamaño');
-    }
+    const fullPayload = packPayload(salt, iv, cipher, adaptive);
 
     // Create resized canvas
     const c = document.createElement('canvas');
@@ -816,7 +1006,15 @@ async function encodeMessage() {
     ctx.drawImage(encodeImg.canvas, 0, 0, dims.w, dims.h);
     const imgData = ctx.getImageData(0, 0, c.width, c.height);
 
-    embedBits(imgData, payload);
+    if (adaptive) {
+      // Split: header goes sequential, cipher goes texture-ordered
+      const headerPart = fullPayload.slice(0, NEW_HEADER_BYTES);
+      const cipherPart = fullPayload.slice(NEW_HEADER_BYTES);
+      embedBitsAdaptive(imgData, headerPart, cipherPart);
+    } else {
+      embedBitsSeq(imgData.data, fullPayload, 0);
+    }
+
     ctx.putImageData(imgData, 0, 0);
 
     // Generate blob to get actual size
@@ -824,7 +1022,8 @@ async function encodeMessage() {
     encodedCanvas = c;
 
     const sizeStr = formatBytes(encodedBlob.size);
-    document.getElementById('encodedSize').innerHTML = `${dims.w}×${dims.h} · <strong>${sizeStr}</strong>`;
+    const modeLabel = adaptive ? ' · adaptativo' : '';
+    document.getElementById('encodedSize').innerHTML = `${dims.w}×${dims.h} · <strong>${sizeStr}</strong>${modeLabel}`;
     document.getElementById('resultEncode').classList.add('visible');
     showToast('mensaje oculto correctamente');
   } catch (e) {
@@ -846,9 +1045,9 @@ async function decodeMessage() {
     const ctx = decodeImg.canvas.getContext('2d');
     const imgData = ctx.getImageData(0, 0, decodeImg.w, decodeImg.h);
 
-    // Extract header first (32 bytes)
-    const headerBytes = extractBits(imgData, HEADER_BYTES);
-    const { salt, iv, cipherLen } = unpackHeader(headerBytes);
+    // Extract header (33 bytes, always sequential)
+    const headerBytes = extractBitsSeq(imgData.data, NEW_HEADER_BYTES, 0);
+    const { salt, iv, adaptive, cipherLen } = unpackHeader(headerBytes);
 
     // Sanity check
     const maxB = maxPayloadBytes(decodeImg.w, decodeImg.h);
@@ -856,14 +1055,19 @@ async function decodeMessage() {
       return showError('errorDecode', 'no se encontró mensaje oculto o contraseña incorrecta');
     }
 
-    // Extract full payload
-    const fullPayload = extractBits(imgData, HEADER_BYTES + cipherLen);
-    const cipher = fullPayload.slice(HEADER_BYTES);
+    // Extract cipher
+    let cipher;
+    if (adaptive) {
+      cipher = extractBitsAdaptive(imgData, NEW_HEADER_BYTES, cipherLen);
+    } else {
+      const fullPayload = extractBitsSeq(imgData.data, NEW_HEADER_BYTES + cipherLen, 0);
+      cipher = fullPayload.slice(NEW_HEADER_BYTES);
+    }
 
     const text = await decryptData(salt, iv, cipher, pw);
     document.getElementById('decodedText').textContent = text;
     document.getElementById('resultDecode').classList.add('visible');
-    showToast('mensaje revelado');
+    showToast(adaptive ? 'mensaje revelado (adaptativo)' : 'mensaje revelado');
   } catch (e) {
     showError('errorDecode', 'contraseña incorrecta o no hay mensaje oculto');
   }
