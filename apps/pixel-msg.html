@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>pixel-msg</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Fira Code', monospace;
+    background: #fff;
+    color: #1a1a1a;
+    padding: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  a { color: #5a7a3a; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .back-link {
+    font-size: 0.85rem;
+    display: inline-block;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+    text-transform: lowercase;
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+    color: #888;
+    margin-bottom: 2rem;
+  }
+
+  /* mode tabs */
+  .mode-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .mode-tab {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    padding: 0.5rem 1.2rem;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #999;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: lowercase;
+  }
+
+  .mode-tab:hover { color: #555; }
+
+  .mode-tab.active {
+    color: #5a7a3a;
+    border-bottom-color: #5a7a3a;
+  }
+
+  /* panels */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* inputs */
+  textarea {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    width: 100%;
+    height: 120px;
+    border: 1px solid #ddd;
+    padding: 0.8rem;
+    resize: vertical;
+    outline: none;
+    background: #fafafa;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus { border-color: #5a7a3a; }
+
+  .char-count {
+    font-size: 0.7rem;
+    color: #aaa;
+    text-align: right;
+    margin-top: 0.3rem;
+    margin-bottom: 1rem;
+  }
+
+  /* password field */
+  .key-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .key-row label {
+    font-size: 0.7rem;
+    color: #aaa;
+    text-transform: lowercase;
+    white-space: nowrap;
+  }
+
+  .key-input {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    border: 1px solid #ddd;
+    padding: 0.4rem 0.6rem;
+    outline: none;
+    background: #fafafa;
+    flex: 1;
+    max-width: 280px;
+    transition: border-color 0.2s;
+    letter-spacing: 0.15em;
+  }
+
+  .key-input:focus { border-color: #5a7a3a; }
+
+  .key-toggle {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.65rem;
+    background: none;
+    border: 1px solid #ddd;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    color: #aaa;
+    transition: all 0.2s;
+  }
+
+  .key-toggle:hover { border-color: #5a7a3a; color: #5a7a3a; }
+
+  .key-hint {
+    font-size: 0.65rem;
+    color: #ccc;
+    margin-top: -1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .lock-icon {
+    font-size: 0.75rem;
+    margin-left: 0.3rem;
+  }
+
+  .lock-icon.locked { color: #5a7a3a; }
+  .lock-icon.unlocked { color: #ccc; }
+
+  /* grid */
+  .grid-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    min-height: 60px;
+  }
+
+  .grid-container canvas {
+    image-rendering: pixelated;
+    border: 1px solid #eee;
+  }
+
+  .empty-state {
+    font-size: 0.75rem;
+    color: #ccc;
+    text-align: center;
+    padding: 3rem 0;
+  }
+
+  /* buttons */
+  .btn {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    padding: 0.5rem 1.2rem;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: lowercase;
+  }
+
+  .btn:hover {
+    border-color: #5a7a3a;
+    color: #5a7a3a;
+  }
+
+  .btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .btn-primary {
+    background: #5a7a3a;
+    color: #fff;
+    border-color: #5a7a3a;
+  }
+
+  .btn-primary:hover {
+    background: #4a6a2a;
+    color: #fff;
+  }
+
+  .actions {
+    display: flex;
+    gap: 0.8rem;
+    align-items: center;
+  }
+
+  .grid-info {
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-left: auto;
+  }
+
+  /* decode */
+  .drop-zone {
+    border: 2px dashed #ddd;
+    padding: 3rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 1.5rem;
+  }
+
+  .drop-zone:hover,
+  .drop-zone.dragover {
+    border-color: #5a7a3a;
+    background: #f8faf5;
+  }
+
+  .drop-zone p {
+    font-size: 0.8rem;
+    color: #999;
+  }
+
+  .drop-zone .hint {
+    font-size: 0.7rem;
+    color: #ccc;
+    margin-top: 0.5rem;
+  }
+
+  .decoded-output {
+    display: none;
+    margin-top: 1.5rem;
+  }
+
+  .decoded-output.visible { display: block; }
+
+  .decoded-label {
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-bottom: 0.5rem;
+    text-transform: lowercase;
+  }
+
+  .decoded-text {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    width: 100%;
+    min-height: 80px;
+    border: 1px solid #ddd;
+    padding: 0.8rem;
+    background: #fafafa;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .decoded-preview {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  .decoded-preview canvas {
+    image-rendering: pixelated;
+    border: 1px solid #eee;
+    max-width: 100%;
+  }
+
+  .copy-btn {
+    margin-top: 0.8rem;
+  }
+
+  /* scale control */
+  .scale-control {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .scale-control label {
+    font-size: 0.7rem;
+    color: #aaa;
+    text-transform: lowercase;
+  }
+
+  .scale-control input[type="range"] {
+    width: 120px;
+    accent-color: #5a7a3a;
+  }
+
+  .scale-val {
+    font-size: 0.7rem;
+    color: #888;
+    min-width: 2.5rem;
+  }
+
+  /* notification */
+  .toast {
+    position: fixed;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    padding: 0.5rem 1rem;
+    background: #1a1a1a;
+    color: #fff;
+    opacity: 0;
+    transition: all 0.3s;
+    pointer-events: none;
+  }
+
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+
+<a href="https://carloszevallostrigoso.github.io/toolbox/" class="back-link">← toolbox/</a>
+
+<h1>pixel-msg</h1>
+<p class="subtitle">encrypt text as chromatic pixel grids · decode them with the right key</p>
+
+<div class="mode-tabs">
+  <button class="mode-tab active" data-mode="encode">encode</button>
+  <button class="mode-tab" data-mode="decode">decode</button>
+</div>
+
+<!-- ENCODE PANEL -->
+<div class="panel active" id="panel-encode">
+  <textarea id="msg-input" placeholder="escribe tu mensaje secreto..." spellcheck="false"></textarea>
+  <div class="char-count"><span id="char-count">0</span> chars</div>
+
+  <div class="key-row">
+    <label>clave</label>
+    <input type="password" class="key-input" id="key-encode" placeholder="contraseña" autocomplete="off">
+    <button class="key-toggle" id="toggle-enc" title="mostrar/ocultar">ojo</button>
+    <span class="lock-icon unlocked" id="lock-enc">○</span>
+  </div>
+  <div class="key-hint">sin clave = solo encoding visual · con clave = cifrado real</div>
+
+  <div class="scale-control">
+    <label>pixel scale</label>
+    <input type="range" id="scale-slider" min="2" max="32" value="12">
+    <span class="scale-val" id="scale-val">12px</span>
+  </div>
+
+  <div class="grid-container" id="grid-container">
+    <div class="empty-state">tu mensaje aparecerá como una grilla de colores</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-primary" id="btn-export" disabled>export png</button>
+    <span class="grid-info" id="grid-info"></span>
+  </div>
+</div>
+
+<!-- DECODE PANEL -->
+<div class="panel" id="panel-decode">
+  <div class="key-row" style="margin-bottom:1.5rem">
+    <label>clave</label>
+    <input type="password" class="key-input" id="key-decode" placeholder="contraseña para descifrar" autocomplete="off">
+    <button class="key-toggle" id="toggle-dec" title="mostrar/ocultar">ojo</button>
+  </div>
+
+  <div class="drop-zone" id="drop-zone">
+    <p>arrastra una imagen pixel-msg aquí</p>
+    <p class="hint">o haz click para seleccionar archivo</p>
+    <input type="file" id="file-input" accept="image/png" style="display:none">
+  </div>
+
+  <div class="decoded-preview" id="decoded-preview"></div>
+
+  <div class="decoded-output" id="decoded-output">
+    <div class="decoded-label">mensaje decodificado</div>
+    <div class="decoded-text" id="decoded-text"></div>
+    <button class="btn copy-btn" id="btn-copy">copiar texto</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// PRNG-BASED KEYSTREAM FROM PASSWORD
+// ============================================================
+
+function hashPassword(pw) {
+  let h1 = 0x9e3779b9, h2 = 0x6a09e667, h3 = 0xbb67ae85, h4 = 0x3c6ef372;
+  for (let i = 0; i < pw.length; i++) {
+    const c = pw.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 0x85ebca6b); h1 ^= h1 >>> 13;
+    h2 = Math.imul(h2 ^ c, 0xc2b2ae35); h2 ^= h2 >>> 13;
+    h3 = Math.imul(h3 ^ c, 0x27d4eb2f); h3 ^= h3 >>> 13;
+    h4 = Math.imul(h4 ^ c, 0x165667b1); h4 ^= h4 >>> 13;
+  }
+  for (let i = 0; i < 4; i++) {
+    h1 = Math.imul(h1 ^ h2, 0x85ebca6b); h1 ^= h1 >>> 16;
+    h2 = Math.imul(h2 ^ h3, 0xc2b2ae35); h2 ^= h2 >>> 16;
+    h3 = Math.imul(h3 ^ h4, 0x27d4eb2f); h3 ^= h3 >>> 16;
+    h4 = Math.imul(h4 ^ h1, 0x165667b1); h4 ^= h4 >>> 16;
+  }
+  return [h1 >>> 0, h2 >>> 0, h3 >>> 0, h4 >>> 0];
+}
+
+function makeKeystream(password) {
+  if (!password) return null;
+  let [s0, s1, s2, s3] = hashPassword(password);
+  return function next16() {
+    let t = s3;
+    t ^= t << 11;
+    t ^= t >>> 8;
+    s3 = s2; s2 = s1; s1 = s0;
+    t ^= s0;
+    t ^= s0 >>> 19;
+    s0 = t;
+    return (t >>> 0) & 0xFFFF;
+  };
+}
+
+// ============================================================
+// COLOR MAPPING — HSL via golden angle
+// ============================================================
+
+function hslToRgb(h, s, l) {
+  s /= 100; l /= 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r, g, b;
+  if (h < 60)       { r = c; g = x; b = 0; }
+  else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; }
+  else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; }
+  else              { r = c; g = 0; b = x; }
+  return [
+    Math.round((r + m) * 255),
+    Math.round((g + m) * 255),
+    Math.round((b + m) * 255)
+  ];
+}
+
+function codeToColor(code) {
+  const h = (code * 137.508) % 360;
+  const s = 58 + (code * 7 % 27);
+  const l = 38 + (code * 13 % 25);
+  return hslToRgb(h, s, l);
+}
+
+// Build reverse lookup for full 16-bit range
+const rgbToCodeMap = new Map();
+
+(function buildLookup() {
+  for (let c = 0; c < 65536; c++) {
+    const [r, g, b] = codeToColor(c);
+    const key = (r << 16) | (g << 8) | b;
+    if (!rgbToCodeMap.has(key)) {
+      rgbToCodeMap.set(key, c);
+    }
+  }
+})();
+
+function colorToCode(r, g, b) {
+  const key = (r << 16) | (g << 8) | b;
+  if (rgbToCodeMap.has(key)) return rgbToCodeMap.get(key);
+  // Nearest neighbor fallback (binary search would be ideal, brute force ok for rare case)
+  let bestDist = Infinity, bestCode = 0;
+  for (let c = 0; c < 65536; c++) {
+    const [cr, cg, cb] = codeToColor(c);
+    const d = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2;
+    if (d < bestDist) { bestDist = d; bestCode = c; }
+    if (d === 0) break;
+  }
+  return bestCode;
+}
+
+// ============================================================
+// GRID DIMENSIONS
+// ============================================================
+
+function gridDims(len) {
+  if (len === 0) return [0, 0];
+  const cols = Math.ceil(Math.sqrt(len));
+  const rows = Math.ceil(len / cols);
+  return [cols, rows];
+}
+
+// ============================================================
+// ENCODE
+// ============================================================
+
+const msgInput = document.getElementById('msg-input');
+const charCountEl = document.getElementById('char-count');
+const gridContainer = document.getElementById('grid-container');
+const scaleSlider = document.getElementById('scale-slider');
+const scaleVal = document.getElementById('scale-val');
+const btnExport = document.getElementById('btn-export');
+const gridInfo = document.getElementById('grid-info');
+const keyEncode = document.getElementById('key-encode');
+const lockEnc = document.getElementById('lock-enc');
+
+let displayCanvas = null;
+let currentText = '';
+let pixelScale = 12;
+
+function updateLockIcon() {
+  const has = keyEncode.value.length > 0;
+  lockEnc.textContent = has ? '●' : '○';
+  lockEnc.className = 'lock-icon ' + (has ? 'locked' : 'unlocked');
+}
+
+function renderGrid() {
+  currentText = msgInput.value;
+  charCountEl.textContent = currentText.length;
+  updateLockIcon();
+
+  if (currentText.length === 0) {
+    gridContainer.innerHTML = '<div class="empty-state">tu mensaje aparecerá como una grilla de colores</div>';
+    btnExport.disabled = true;
+    gridInfo.textContent = '';
+    displayCanvas = null;
+    return;
+  }
+
+  const password = keyEncode.value;
+  const ks = makeKeystream(password);
+  const [cols, rows] = gridDims(currentText.length);
+  const encrypted = password ? ' · cifrado' : '';
+  gridInfo.textContent = `${cols}×${rows} · ${currentText.length} px${encrypted}`;
+
+  const dataCanvas = document.createElement('canvas');
+  dataCanvas.width = cols;
+  dataCanvas.height = rows;
+  const dCtx = dataCanvas.getContext('2d');
+  const imgData = dCtx.createImageData(cols, rows);
+
+  for (let i = 0; i < cols * rows; i++) {
+    let code = i < currentText.length ? currentText.charCodeAt(i) : 0;
+    if (ks) code = (code ^ ks()) & 0xFFFF;
+    const [r, g, b] = codeToColor(code);
+    const idx = i * 4;
+    imgData.data[idx] = r;
+    imgData.data[idx + 1] = g;
+    imgData.data[idx + 2] = b;
+    imgData.data[idx + 3] = 255;
+  }
+
+  dCtx.putImageData(imgData, 0, 0);
+
+  const scale = pixelScale;
+  const dispCanvas = document.createElement('canvas');
+  dispCanvas.width = cols * scale;
+  dispCanvas.height = rows * scale;
+  const ctx = dispCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(dataCanvas, 0, 0, cols * scale, rows * scale);
+
+  gridContainer.innerHTML = '';
+  gridContainer.appendChild(dispCanvas);
+  displayCanvas = dataCanvas;
+  btnExport.disabled = false;
+}
+
+msgInput.addEventListener('input', renderGrid);
+keyEncode.addEventListener('input', renderGrid);
+
+scaleSlider.addEventListener('input', () => {
+  pixelScale = parseInt(scaleSlider.value);
+  scaleVal.textContent = pixelScale + 'px';
+  renderGrid();
+});
+
+btnExport.addEventListener('click', () => {
+  if (!displayCanvas) return;
+  displayCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const [cols, rows] = gridDims(currentText.length);
+    a.download = `pixel-msg_${cols}x${rows}_${currentText.length}.png`;
+    a.href = url;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('png exportado');
+  }, 'image/png');
+});
+
+// ============================================================
+// DECODE
+// ============================================================
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+const decodedPreview = document.getElementById('decoded-preview');
+const decodedOutput = document.getElementById('decoded-output');
+const decodedText = document.getElementById('decoded-text');
+const btnCopy = document.getElementById('btn-copy');
+const keyDecode = document.getElementById('key-decode');
+
+let lastDecodedFile = null;
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) { lastDecodedFile = file; decodeFile(file); }
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files[0]) { lastDecodedFile = fileInput.files[0]; decodeFile(fileInput.files[0]); }
+});
+
+keyDecode.addEventListener('input', () => {
+  if (lastDecodedFile) decodeFile(lastDecodedFile);
+});
+
+function decodeFile(file) {
+  const img = new Image();
+  img.onload = () => {
+    const maxDim = Math.max(img.width, img.height);
+    const previewScale = Math.max(4, Math.min(20, Math.floor(400 / maxDim)));
+    const previewCanvas = document.createElement('canvas');
+    previewCanvas.width = img.width * previewScale;
+    previewCanvas.height = img.height * previewScale;
+    previewCanvas.style.imageRendering = 'pixelated';
+    const pCtx = previewCanvas.getContext('2d');
+    pCtx.imageSmoothingEnabled = false;
+    pCtx.drawImage(img, 0, 0, previewCanvas.width, previewCanvas.height);
+    decodedPreview.innerHTML = '';
+    decodedPreview.appendChild(previewCanvas);
+
+    const readCanvas = document.createElement('canvas');
+    readCanvas.width = img.width;
+    readCanvas.height = img.height;
+    const rCtx = readCanvas.getContext('2d');
+    rCtx.drawImage(img, 0, 0);
+    const data = rCtx.getImageData(0, 0, img.width, img.height).data;
+
+    let charCount = img.width * img.height;
+    const match = file.name.match(/pixel-msg_\d+x\d+_(\d+)\.png/);
+    if (match) charCount = parseInt(match[1]);
+
+    const password = keyDecode.value;
+    const ks = makeKeystream(password);
+
+    let text = '';
+    for (let i = 0; i < charCount; i++) {
+      const idx = i * 4;
+      const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+      let code = colorToCode(r, g, b);
+      if (ks) code = (code ^ ks()) & 0xFFFF;
+      text += String.fromCharCode(code);
+    }
+
+    text = text.replace(/\0+$/, '');
+
+    decodedText.textContent = text;
+    decodedOutput.classList.add('visible');
+    toast(password ? 'descifrado con clave' : 'decodificado sin clave');
+  };
+  img.src = URL.createObjectURL(file);
+}
+
+btnCopy.addEventListener('click', () => {
+  navigator.clipboard.writeText(decodedText.textContent).then(() => {
+    toast('copiado al clipboard');
+  });
+});
+
+// ============================================================
+// PASSWORD VISIBILITY TOGGLES
+// ============================================================
+
+document.getElementById('toggle-enc').addEventListener('click', () => {
+  const inp = keyEncode;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+document.getElementById('toggle-dec').addEventListener('click', () => {
+  const inp = keyDecode;
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+});
+
+// ============================================================
+// MODE TABS
+// ============================================================
+
+document.querySelectorAll('.mode-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('panel-' + tab.dataset.mode).classList.add('active');
+  });
+});
+
+// ============================================================
+// TOAST
+// ============================================================
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2000);
+}
+</script>
+
+</body>
+</html>
