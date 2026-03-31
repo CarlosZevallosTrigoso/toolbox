@@ -242,7 +242,7 @@ const dropZone = document.getElementById('drop-zone');
 const fileInput = document.getElementById('file-input');
 
 function setProgress(pct, msg) {
-  document.getElementById('status-bar').style.display = '';
+  document.getElementById('status-bar').style.display = 'block';
   document.getElementById('status-msg').textContent = msg;
   document.getElementById('progress-fill').style.width = pct + '%';
 }
@@ -250,7 +250,7 @@ function setProgress(pct, msg) {
 function showError(msg) {
   const el = document.getElementById('error-msg');
   el.textContent = msg;
-  el.style.display = '';
+  el.style.display = 'block';
   document.getElementById('status-bar').style.display = 'none';
 }
 
@@ -261,10 +261,10 @@ function showResults(text, viaOCR) {
   document.getElementById('word-count').textContent = words.toLocaleString('es-PE');
   document.getElementById('char-count').textContent = chars.toLocaleString('es-PE');
   document.getElementById('page-est').textContent = pages.toLocaleString('es-PE');
-  document.getElementById('results').style.display = '';
-  document.getElementById('reset-btn').style.display = '';
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('reset-btn').style.display = 'block';
   document.getElementById('status-bar').style.display = 'none';
-  document.getElementById('ocr-note').style.display = viaOCR ? '' : 'none';
+  document.getElementById('ocr-note').style.display = viaOCR ? 'block' : 'none';
 }
 
 function resetTool() {
@@ -284,10 +284,7 @@ function resetTool() {
 function setFileInfo(name) {
   const el = document.getElementById('file-info');
   el.innerHTML = 'archivo: <span>' + name + '</span>';
-  el.style.display = '';
-}
-
-async function handleFile(file) {
+  el.style.display = 'block';(file) {
   resetTool();
   setFileInfo(file.name);
   const ext = file.name.split('.').pop().toLowerCase();
@@ -310,8 +307,8 @@ async function handleFile(file) {
       const wordsPerPage = wordCount / pdf.numPages;
       if (wordsPerPage < 8) {
         document.getElementById('status-bar').style.display = 'none';
-        document.getElementById('ocr-prompt').style.display = '';
-        document.getElementById('reset-btn').style.display = '';
+        document.getElementById('ocr-prompt').style.display = 'block';
+        document.getElementById('reset-btn').style.display = 'block';
       } else {
         showResults(full, false);
       }
@@ -378,8 +375,7 @@ async function startOCR() {
 
   await worker.terminate();
   showResults(fullText, true);
-  document.getElementById('reset-btn').style.display = '';
-}
+  document.getElementById('reset-btn').style.display = 'block';
 
 function loadScript(src) {
   return new Promise((resolve, reject) => {
