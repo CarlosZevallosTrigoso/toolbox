@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>word counter · toolbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Fira Code', monospace;
+    background: #fff;
+    color: #111;
+    font-size: 14px;
+    line-height: 1.6;
+    padding: 2rem 2.5rem 4rem;
+    max-width: 640px;
+  }
+
+  nav {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 2.5rem;
+  }
+  nav a { color: #999; text-decoration: none; }
+  nav a:hover { color: #5a7a3a; }
+
+  h1 {
+    font-size: 18px;
+    font-weight: 500;
+    color: #111;
+    margin-bottom: 0.25rem;
+  }
+  .subtitle {
+    font-size: 12px;
+    color: #aaa;
+    margin-bottom: 2rem;
+  }
+
+  #drop-zone {
+    border: 1.5px dashed #ccc;
+    border-radius: 8px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  #drop-zone:hover, #drop-zone.drag-over {
+    border-color: #5a7a3a;
+    background: #f7fbf3;
+  }
+  #drop-zone .icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+  }
+  #drop-zone .label {
+    font-size: 14px;
+    color: #555;
+  }
+  #drop-zone .formats {
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 0.4rem;
+  }
+  #file-input { display: none; }
+
+  #file-info {
+    display: none;
+    margin-top: 1rem;
+    font-size: 12px;
+    color: #888;
+  }
+  #file-info span { color: #5a7a3a; font-weight: 500; }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 1.25rem;
+  }
+  .stat {
+    background: #f5f5f3;
+    border-radius: 6px;
+    padding: 0.9rem 1rem;
+  }
+  .stat-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 6px;
+    text-transform: lowercase;
+    letter-spacing: 0.03em;
+  }
+  .stat-value {
+    font-size: 24px;
+    font-weight: 500;
+    color: #111;
+    letter-spacing: -0.5px;
+  }
+  .stat-value.accent { color: #5a7a3a; }
+
+  #status-bar {
+    display: none;
+    margin-top: 1.25rem;
+    font-size: 12px;
+    color: #888;
+  }
+  #status-msg { margin-bottom: 6px; }
+  .progress-track {
+    width: 100%;
+    height: 3px;
+    background: #eee;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: #5a7a3a;
+    border-radius: 2px;
+    transition: width 0.2s;
+    width: 0%;
+  }
+
+  #ocr-prompt {
+    display: none;
+    margin-top: 1.25rem;
+    padding: 0.85rem 1rem;
+    background: #fffbf0;
+    border: 1px solid #f0e0aa;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #776000;
+  }
+  #ocr-prompt p { margin-bottom: 0.6rem; }
+
+  button {
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #5a7a3a;
+    border-radius: 4px;
+    background: transparent;
+    color: #5a7a3a;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    margin-right: 0.5rem;
+  }
+  button:hover { background: #5a7a3a; color: #fff; }
+  button.secondary {
+    border-color: #ccc;
+    color: #888;
+  }
+  button.secondary:hover { background: #eee; color: #444; }
+
+  #error-msg {
+    display: none;
+    margin-top: 1rem;
+    font-size: 12px;
+    color: #c0392b;
+    padding: 0.6rem 0.8rem;
+    background: #fff5f5;
+    border: 1px solid #f5c6c6;
+    border-radius: 4px;
+  }
+
+  #results { display: none; }
+
+  .reset-btn {
+    margin-top: 1.25rem;
+    display: none;
+  }
+
+  .note {
+    font-size: 11px;
+    color: #bbb;
+    margin-top: 1rem;
+  }
+</style>
+</head>
+<body>
+
+<nav><a href="../">← toolbox/</a></nav>
+
+<h1>word counter</h1>
+<p class="subtitle">cuenta palabras en libros y documentos</p>
+
+<div id="drop-zone" onclick="document.getElementById('file-input').click()">
+  <div class="icon">📄</div>
+  <div class="label">arrastra un archivo o haz clic para subir</div>
+  <div class="formats">.pdf · .docx · .txt · .md · .html</div>
+  <input type="file" id="file-input" accept=".pdf,.docx,.txt,.md,.html,.htm">
+</div>
+
+<div id="file-info"></div>
+
+<div id="status-bar">
+  <div id="status-msg">procesando...</div>
+  <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+</div>
+
+<div id="ocr-prompt">
+  <p>⚠ este PDF parece ser un escaneo (sin texto extraíble). ¿Activar OCR?</p>
+  <p style="color:#aaa; font-size:11px; margin-bottom:0.7rem;">el OCR puede tardar varios minutos en libros largos. procesa página por página en tu navegador con Tesseract.js.</p>
+  <button onclick="startOCR()">activar OCR</button>
+  <button class="secondary" onclick="resetTool()">cancelar</button>
+</div>
+
+<div id="error-msg"></div>
+
+<div id="results">
+  <div class="stat-grid">
+    <div class="stat">
+      <div class="stat-label">palabras</div>
+      <div class="stat-value accent" id="word-count">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">caracteres</div>
+      <div class="stat-value" id="char-count">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">páginas est.</div>
+      <div class="stat-value" id="page-est">—</div>
+    </div>
+  </div>
+  <div class="note" id="ocr-note" style="display:none;">* texto extraído via OCR · precisión puede variar</div>
+</div>
+
+<div class="reset-btn" id="reset-btn">
+  <button class="secondary" onclick="resetTool()">← nuevo archivo</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+let currentPdfDoc = null;
+let totalPdfPages = 0;
+
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+function setProgress(pct, msg) {
+  document.getElementById('status-bar').style.display = '';
+  document.getElementById('status-msg').textContent = msg;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-msg');
+  el.textContent = msg;
+  el.style.display = '';
+  document.getElementById('status-bar').style.display = 'none';
+}
+
+function showResults(text, viaOCR) {
+  const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+  const chars = text.replace(/\s/g, '').length;
+  const pages = Math.ceil(words / 250);
+  document.getElementById('word-count').textContent = words.toLocaleString('es-PE');
+  document.getElementById('char-count').textContent = chars.toLocaleString('es-PE');
+  document.getElementById('page-est').textContent = pages.toLocaleString('es-PE');
+  document.getElementById('results').style.display = '';
+  document.getElementById('reset-btn').style.display = '';
+  document.getElementById('status-bar').style.display = 'none';
+  document.getElementById('ocr-note').style.display = viaOCR ? '' : 'none';
+}
+
+function resetTool() {
+  currentPdfDoc = null;
+  totalPdfPages = 0;
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('status-bar').style.display = 'none';
+  document.getElementById('ocr-prompt').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
+  document.getElementById('file-info').style.display = 'none';
+  document.getElementById('file-info').innerHTML = '';
+  document.getElementById('ocr-note').style.display = 'none';
+  fileInput.value = '';
+}
+
+function setFileInfo(name) {
+  const el = document.getElementById('file-info');
+  el.innerHTML = 'archivo: <span>' + name + '</span>';
+  el.style.display = '';
+}
+
+async function handleFile(file) {
+  resetTool();
+  setFileInfo(file.name);
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  if (ext === 'pdf') {
+    setProgress(5, 'cargando PDF...');
+    try {
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      currentPdfDoc = pdf;
+      totalPdfPages = pdf.numPages;
+      let full = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        setProgress(5 + Math.round((i / pdf.numPages) * 90), `extrayendo texto · página ${i} de ${pdf.numPages}`);
+        const pg = await pdf.getPage(i);
+        const tc = await pg.getTextContent();
+        full += tc.items.map(s => s.str).join(' ') + ' ';
+      }
+      const wordCount = full.trim().split(/\s+/).filter(w => w.length > 0).length;
+      const wordsPerPage = wordCount / pdf.numPages;
+      if (wordsPerPage < 8) {
+        document.getElementById('status-bar').style.display = 'none';
+        document.getElementById('ocr-prompt').style.display = '';
+        document.getElementById('reset-btn').style.display = '';
+      } else {
+        showResults(full, false);
+      }
+    } catch(e) {
+      showError('error al leer el PDF: ' + e.message);
+    }
+
+  } else if (ext === 'docx') {
+    setProgress(20, 'extrayendo texto del .docx...');
+    try {
+      const buf = await file.arrayBuffer();
+      const result = await mammoth.extractRawText({ arrayBuffer: buf });
+      setProgress(100, 'listo');
+      showResults(result.value, false);
+    } catch(e) {
+      showError('error al leer el .docx: ' + e.message);
+    }
+
+  } else if (['txt','md','html','htm'].includes(ext)) {
+    setProgress(50, 'leyendo archivo...');
+    try {
+      const text = await file.text();
+      const clean = (ext === 'html' || ext === 'htm')
+        ? text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ')
+        : text;
+      setProgress(100, 'listo');
+      showResults(clean, false);
+    } catch(e) {
+      showError('error al leer el archivo: ' + e.message);
+    }
+  } else {
+    showError('formato no soportado. usa .pdf, .docx, .txt, .md o .html');
+  }
+}
+
+async function startOCR() {
+  if (!currentPdfDoc) return;
+  document.getElementById('ocr-prompt').style.display = 'none';
+  document.getElementById('reset-btn').style.display = 'none';
+
+  if (typeof Tesseract === 'undefined') {
+    setProgress(5, 'cargando Tesseract.js...');
+    await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js');
+  }
+
+  let fullText = '';
+  const worker = await Tesseract.createWorker('spa+eng', 1, {
+    logger: () => {}
+  });
+
+  for (let i = 1; i <= totalPdfPages; i++) {
+    const pct = Math.round((i / totalPdfPages) * 95);
+    setProgress(pct, `OCR · página ${i} de ${totalPdfPages}...`);
+    const pg = await currentPdfDoc.getPage(i);
+    const viewport = pg.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await pg.render({ canvasContext: ctx, viewport }).promise;
+    const { data: { text } } = await worker.recognize(canvas);
+    fullText += text + ' ';
+  }
+
+  await worker.terminate();
+  showResults(fullText, true);
+  document.getElementById('reset-btn').style.display = '';
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('no se pudo cargar ' + src));
+    document.head.appendChild(s);
+  });
+}
+
+fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+</script>
+</body>
+</html>
