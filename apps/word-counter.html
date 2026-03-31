@@ -296,7 +296,7 @@ async function handleFile(file) {
     setProgress(5, 'cargando PDF...');
     try {
       const buf = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: buf, standardFontDataUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/' }).promise;
+      const pdf = await pdfjsLib.getDocument({ data: buf, standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.11.174/standard_fonts/' }).promise;
       currentPdfDoc = pdf;
       totalPdfPages = pdf.numPages;
       let full = '';
