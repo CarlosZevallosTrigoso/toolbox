@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>video-joiner</title>
+<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0a0a0b; --bg2: #111113; --bg3: #19191b; --border: #2a2a2d;
+    --text: #c8c8c8; --text-dim: #666; --green: #5a7a3a; --green-hover: #6d9147;
+    --green-faint: rgba(90, 122, 58, 0.12); --red: #9a3a3a; --yellow: #8a7a3a;
+    --mono: 'Fira Code', 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Consolas, monospace;
+  }
+  body { font-family: var(--mono); background: var(--bg); color: var(--text); font-size: 13px; line-height: 1.5; min-height: 100vh; }
+  a { color: var(--green); text-decoration: none; }
+  a:hover { color: var(--green-hover); }
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 20px; }
+  .header { display: flex; align-items: baseline; gap: 12px; margin-bottom: 24px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+  .header .back { font-size: 12px; }
+  .header h1 { font-size: 14px; font-weight: 400; text-transform: lowercase; }
+  .dropzone { border: 1px dashed var(--border); border-radius: 4px; padding: 48px 24px; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; margin-bottom: 20px; }
+  .dropzone:hover, .dropzone.dragover { border-color: var(--green); background: var(--green-faint); }
+  .dropzone p { color: var(--text-dim); font-size: 12px; margin-top: 8px; }
+  .dropzone .icon { font-size: 24px; opacity: 0.4; }
+  .dropzone input { display: none; }
+  .dropzone.compact { padding: 20px 16px; margin-bottom: 16px; }
+  .dropzone.compact .icon { font-size: 16px; }
+  .clip-list-section { display: none; margin-bottom: 16px; }
+  .clip-list-header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 10px; font-size: 11px; color: var(--text-dim); text-transform: lowercase; }
+  .clip-list-header .hint { font-size: 10px; }
+  .clip-list { display: flex; flex-direction: column; gap: 6px; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 8px; }
+  .clip-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 3px; cursor: grab; user-select: none; transition: border-color 0.15s, background 0.15s, opacity 0.15s; }
+  .clip-item:hover { border-color: var(--green); }
+  .clip-item.dragging { opacity: 0.35; cursor: grabbing; }
+  .clip-item.drag-over-top { border-top: 2px solid var(--green); }
+  .clip-item.drag-over-bottom { border-bottom: 2px solid var(--green); }
+  .clip-item .drag-handle { color: var(--text-dim); font-size: 14px; flex-shrink: 0; line-height: 1; }
+  .clip-item .clip-index { color: var(--text-dim); font-size: 11px; width: 24px; text-align: right; flex-shrink: 0; }
+  .clip-item .clip-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .clip-item .clip-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clip-item .clip-meta { font-size: 10px; color: var(--text-dim); }
+  .clip-item .clip-meta span.warn { color: var(--yellow); }
+  .clip-item .clip-remove { background: none; border: 1px solid var(--border); color: var(--text-dim); font-family: var(--mono); font-size: 12px; padding: 2px 8px; border-radius: 3px; cursor: pointer; transition: border-color 0.2s, color 0.2s; flex-shrink: 0; }
+  .clip-item .clip-remove:hover { border-color: var(--red); color: var(--red); }
+  .list-totals { font-size: 11px; color: var(--text-dim); padding: 8px 4px 0; display: flex; justify-content: space-between; }
+  .list-totals span { color: var(--text); }
+  .export-section { display: none; background: var(--bg2); border: 1px solid var(--border); border-radius: 4px; padding: 16px; margin-bottom: 16px; }
+  .export-section h3 { font-size: 12px; font-weight: 400; text-transform: lowercase; margin-bottom: 12px; color: var(--text-dim); }
+  .mode-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .mode-card { border: 1px solid var(--border); border-radius: 4px; padding: 12px; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+  .mode-card:hover { border-color: var(--green); }
+  .mode-card.active { border-color: var(--green); background: var(--green-faint); }
+  .mode-card .mode-title { font-size: 12px; color: var(--text); margin-bottom: 4px; }
+  .mode-card .mode-desc { font-size: 10px; color: var(--text-dim); line-height: 1.4; }
+  .mode-card .mode-badge { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 2px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-fast { background: rgba(90, 122, 58, 0.2); color: var(--green); }
+  .badge-full { background: rgba(138, 122, 58, 0.2); color: var(--yellow); }
+  .note-box { font-size: 10px; color: var(--text-dim); padding: 8px 10px; border-left: 2px solid var(--border); margin-bottom: 14px; line-height: 1.5; }
+  .note-box.warn { border-left-color: var(--yellow); color: var(--yellow); }
+  .btn-export { background: var(--green); color: #fff; border: none; font-family: var(--mono); font-size: 13px; padding: 10px 20px; border-radius: 3px; cursor: pointer; transition: background 0.2s; width: 100%; text-transform: lowercase; }
+  .btn-export:hover { background: var(--green-hover); }
+  .btn-export:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-reset { background: none; color: var(--text-dim); border: 1px solid var(--border); font-family: var(--mono); font-size: 12px; padding: 6px 14px; border-radius: 3px; cursor: pointer; margin-top: 10px; transition: border-color 0.2s, color 0.2s; }
+  .btn-reset:hover { border-color: var(--red); color: var(--red); }
+  .progress-section { display: none; margin-bottom: 16px; }
+  .progress-bar-track { height: 6px; background: var(--bg3); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+  .progress-bar-fill { height: 100%; background: var(--green); width: 0%; transition: width 0.3s; border-radius: 3px; }
+  .progress-text { font-size: 11px; color: var(--text-dim); text-align: center; }
+  .status-bar { font-size: 11px; color: var(--text-dim); padding: 8px 0; text-align: center; min-height: 32px; }
+  .status-bar.error { color: var(--red); }
+  .status-bar.success { color: var(--green); }
+  /* loading overlay */
+  .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.4s; }
+  .loading-overlay.done { opacity: 0; pointer-events: none; }
+  .loader-box { width: 340px; max-width: 90vw; }
+  .loader-header { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .loader-spinner { width: 18px; height: 18px; border: 2px solid var(--border); border-top-color: var(--green); border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loader-title { font-size: 12px; color: var(--text); }
+  .loader-bar-track { height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+  .loader-bar-fill { height: 100%; background: var(--green); width: 0%; border-radius: 2px; transition: width 0.15s; }
+  .loader-stats { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-dim); margin-bottom: 16px; }
+  .loader-files { display: flex; flex-direction: column; gap: 6px; }
+  .loader-file { display: flex; align-items: center; gap: 8px; font-size: 10px; color: #444; transition: color 0.2s; }
+  .loader-file.active { color: var(--text-dim); }
+  .loader-file.done { color: var(--green); }
+  .loader-file.error { color: var(--red); }
+  .loader-file-icon { width: 14px; text-align: center; flex-shrink: 0; }
+  .loader-file-name { flex: 1; }
+  .loader-file-size { text-align: right; min-width: 60px; }
+</style>
+</head>
+<body>
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loader-box">
+    <div class="loader-header">
+      <div class="loader-spinner" id="loaderSpinner"></div>
+      <div class="loader-title" id="loaderTitle">cargando ffmpeg.wasm...</div>
+    </div>
+    <div class="loader-bar-track"><div class="loader-bar-fill" id="loaderBarFill"></div></div>
+    <div class="loader-stats">
+      <span id="loaderPct">0%</span>
+      <span id="loaderSpeed">—</span>
+      <span id="loaderElapsed">0.0s</span>
+    </div>
+    <div class="loader-files">
+      <div class="loader-file" id="lf-core"><span class="loader-file-icon">○</span><span class="loader-file-name">ffmpeg-core.js</span><span class="loader-file-size" id="lf-core-size">—</span></div>
+      <div class="loader-file" id="lf-wasm"><span class="loader-file-icon">○</span><span class="loader-file-name">ffmpeg-core.wasm</span><span class="loader-file-size" id="lf-wasm-size">—</span></div>
+    </div>
+  </div>
+</div>
+<div class="container">
+  <div class="header">
+    <a href="https://carloszevallostrigoso.github.io/toolbox/" class="back">← toolbox/</a>
+    <h1>video-joiner</h1>
+  </div>
+  <div class="dropzone" id="dropzone">
+    <div class="icon">⎌</div>
+    <p>arrastra uno o varios videos aquí o haz clic para seleccionar</p>
+    <p>mp4 · mkv · webm · mov · m4v — se unirán en el orden de la lista</p>
+    <input type="file" id="fileInput" accept="video/*,.mkv,.m4v" multiple>
+  </div>
+  <div class="clip-list-section" id="clipListSection">
+    <div class="clip-list-header">
+      <span>clips en orden</span>
+      <span class="hint">arrastra para reordenar · × para eliminar</span>
+    </div>
+    <div class="clip-list" id="clipList"></div>
+    <div class="list-totals" id="listTotals"></div>
+  </div>
+  <div class="export-section" id="exportSection">
+    <h3>exportar</h3>
+    <div class="mode-selector">
+      <div class="mode-card active" id="modeFast"><div class="mode-badge badge-fast">rápido</div><div class="mode-title">⎌ unión directa</div><div class="mode-desc">concatena sin re-codificar (concat demuxer + stream copy). instantáneo incluso con archivos grandes. exige que todos los clips tengan el mismo códec, resolución, framerate y formato de audio.</div></div>
+      <div class="mode-card" id="modeReencode"><div class="mode-badge badge-full">completo</div><div class="mode-title">⚙ re-codificar</div><div class="mode-desc">re-codifica a h.264/aac normalizando todos los clips a la resolución del primero. soporta clips heterogéneos. más lento y usa más memoria.</div></div>
+    </div>
+    <div class="note-box" id="noteFast">la unión directa asume que todos los clips comparten el mismo formato interno. si provienen de la misma grabación o cámara, debería funcionar. si mezclas fuentes distintas (cámara, screencast, descargas), usa el modo completo.</div>
+    <div class="note-box warn" id="noteFastWarn" style="display:none;">⚠ los clips cargados tienen resoluciones distintas. el modo rápido probablemente falle — se recomienda modo completo.</div>
+    <div class="note-box warn" id="noteReencode" style="display:none;">re-codificar en el navegador está acotado por memoria (~2gb de heap). para conjuntos grandes puede fallar o tardar mucho. asume que todos los clips tienen pista de audio.</div>
+    <button class="btn-export" id="btnExport">⎌ unir y descargar (rápido)</button>
+    <div style="text-align: center;"><button class="btn-reset" id="btnReset">✕ vaciar lista</button></div>
+  </div>
+  <div class="progress-section" id="progressSection">
+    <div class="progress-bar-track"><div class="progress-bar-fill" id="progressFill"></div></div>
+    <div class="progress-text" id="progressText"></div>
+  </div>
+  <div class="status-bar" id="status">cargando ffmpeg.wasm...</div>
+</div>
+<script>
+const { createFFmpeg, fetchFile } = FFmpeg;
+const $ = id => document.getElementById(id);
+const state = { clips: [], ffmpegReady: false, mode: 'fast', dragSrcId: null, nextId: 1 };
+
+// ── Loader helpers ──
+const loaderState = { totalBytes: 0, loadedBytes: 0, startTime: 0 };
+function fmtBytes(b) { if (b < 1024) return b + ' B'; if (b < 1048576) return (b/1024).toFixed(0) + ' KB'; return (b/1048576).toFixed(1) + ' MB'; }
+function updateLoaderUI() {
+  const pct = loaderState.totalBytes > 0 ? Math.round((loaderState.loadedBytes / loaderState.totalBytes) * 100) : 0;
+  $('loaderBarFill').style.width = pct + '%';
+  $('loaderPct').textContent = pct + '%';
+  const elapsed = (performance.now() - loaderState.startTime) / 1000;
+  $('loaderElapsed').textContent = elapsed.toFixed(1) + 's';
+  if (elapsed > 0.5 && loaderState.loadedBytes > 0) {
+    const speed = loaderState.loadedBytes / elapsed;
+    $('loaderSpeed').textContent = speed > 1048576 ? (speed/1048576).toFixed(1)+' MB/s' : (speed/1024).toFixed(0)+' KB/s';
+  }
+}
+async function fetchWithProgress(url, fileId) {
+  const row = $('lf-' + fileId), sizeEl = $('lf-' + fileId + '-size'), iconEl = row.querySelector('.loader-file-icon');
+  row.classList.add('active'); iconEl.textContent = '◔';
+  const resp = await fetch(url);
+  const contentLength = parseInt(resp.headers.get('content-length') || '0', 10);
+  loaderState.totalBytes += contentLength;
+  const reader = resp.body.getReader();
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.length;
+    loaderState.loadedBytes += value.length;
+    sizeEl.textContent = fmtBytes(received) + (contentLength ? ' / ' + fmtBytes(contentLength) : '');
+    updateLoaderUI();
+  }
+  row.classList.remove('active'); row.classList.add('done');
+  iconEl.textContent = '✓'; sizeEl.textContent = fmtBytes(received);
+}
+
+// ── FFmpeg 0.11.x with single-thread core (NO SharedArrayBuffer) ──
+const ffmpeg = createFFmpeg({
+  corePath: 'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist/ffmpeg-core.js',
+  mainName: 'main',
+  log: false,
+});
+
+async function initFFmpeg() {
+  loaderState.startTime = performance.now();
+  try {
+    const base = 'https://unpkg.com/@ffmpeg/core-st@0.11.1/dist';
+    $('loaderTitle').textContent = 'descargando ffmpeg-core.js...';
+    await fetchWithProgress(`${base}/ffmpeg-core.js`, 'core');
+    $('loaderTitle').textContent = 'descargando ffmpeg-core.wasm...';
+    await fetchWithProgress(`${base}/ffmpeg-core.wasm`, 'wasm');
+    $('loaderTitle').textContent = 'inicializando...';
+    await ffmpeg.load();
+    const elapsed = ((performance.now() - loaderState.startTime) / 1000).toFixed(1);
+    $('loaderTitle').textContent = `listo — ${fmtBytes(loaderState.loadedBytes)} en ${elapsed}s`;
+    $('loaderBarFill').style.width = '100%';
+    $('loaderPct').textContent = '100%';
+    $('loaderSpinner').style.animation = 'none';
+    $('loaderSpinner').style.borderColor = 'var(--green)';
+    state.ffmpegReady = true;
+    setTimeout(() => { $('loadingOverlay').classList.add('done'); setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500); }, 800);
+    setStatus('ffmpeg listo — arrastra videos para comenzar', '');
+  } catch (e) {
+    console.error(e);
+    $('loaderTitle').textContent = 'error: ' + e.message;
+    $('loaderSpinner').style.animation = 'none';
+    $('loaderSpinner').style.borderColor = 'var(--red)';
+    setTimeout(() => { $('loadingOverlay').classList.add('done'); setTimeout(() => { $('loadingOverlay').style.display = 'none'; }, 500); }, 3000);
+    setStatus('error cargando ffmpeg: ' + e.message, 'error');
+  }
+}
+
+// ── Helpers ──
+function setStatus(msg, cls) { $('status').textContent = msg; $('status').className = 'status-bar' + (cls ? ' '+cls : ''); }
+function fmt(s) { const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.floor(s%60),ms=Math.round((s%1)*1000); return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(3,'0')}`; }
+function fmtSize(b) { if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; if(b<1073741824) return (b/1048576).toFixed(1)+' MB'; return (b/1073741824).toFixed(2)+' GB'; }
+function getExt(n) { return n.split('.').pop().toLowerCase(); }
+
+// ── Clip list management ──
+function probeClip(file) {
+  return new Promise((resolve, reject) => {
+    const v = document.createElement('video');
+    v.preload = 'metadata';
+    v.muted = true;
+    const url = URL.createObjectURL(file);
+    v.src = url;
+    v.onloadedmetadata = () => {
+      const meta = { duration: v.duration, width: v.videoWidth, height: v.videoHeight };
+      URL.revokeObjectURL(url);
+      resolve(meta);
+    };
+    v.onerror = () => { URL.revokeObjectURL(url); reject(new Error('no se pudo leer metadatos')); };
+  });
+}
+
+async function addFiles(files) {
+  const accepted = ['mp4','mkv','webm','mov','m4v','avi','ogg'];
+  for (const file of files) {
+    const ext = getExt(file.name);
+    if (!accepted.includes(ext)) { setStatus('formato no soportado: .'+ext, 'error'); continue; }
+    try {
+      const meta = await probeClip(file);
+      state.clips.push({ id: state.nextId++, file, name: file.name, size: file.size, duration: meta.duration, width: meta.width, height: meta.height });
+    } catch (e) {
+      setStatus(`no se pudo leer ${file.name}: el navegador no reconoce el formato`, 'error');
+    }
+  }
+  renderList();
+  if (state.clips.length > 0) {
+    $('dropzone').classList.add('compact');
+    $('dropzone').querySelector('p').textContent = 'añadir más videos...';
+    $('clipListSection').style.display = 'block';
+    $('exportSection').style.display = 'block';
+    if (state.clips.length === 1) setStatus('añade al menos un clip más para unir', '');
+    else setStatus(`${state.clips.length} clips listos — revisa el orden y exporta`, '');
+  }
+}
+
+function renderList() {
+  const list = $('clipList');
+  list.innerHTML = '';
+  const firstRes = state.clips[0] ? `${state.clips[0].width}×${state.clips[0].height}` : '';
+  state.clips.forEach((clip, idx) => {
+    const row = document.createElement('div');
+    row.className = 'clip-item';
+    row.draggable = true;
+    row.dataset.id = clip.id;
+    const res = `${clip.width}×${clip.height}`;
+    const resMismatch = res !== firstRes;
+    row.innerHTML = `
+      <span class="drag-handle">⋮⋮</span>
+      <span class="clip-index">${String(idx+1).padStart(2,'0')}</span>
+      <div class="clip-info">
+        <div class="clip-name" title="${clip.name.replace(/"/g,'&quot;')}">${clip.name}</div>
+        <div class="clip-meta">${fmt(clip.duration)} · ${fmtSize(clip.size)} · <span class="${resMismatch?'warn':''}">${res}</span></div>
+      </div>
+      <button class="clip-remove" data-id="${clip.id}" title="eliminar">×</button>
+    `;
+    attachDragHandlers(row);
+    list.appendChild(row);
+  });
+  list.querySelectorAll('.clip-remove').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const id = parseInt(e.target.dataset.id, 10);
+      state.clips = state.clips.filter(c => c.id !== id);
+      renderList();
+      if (state.clips.length === 0) resetAll();
+      else setStatus(`${state.clips.length} clip(s) en la lista`, '');
+    });
+  });
+  updateTotals();
+  updateCompatibilityHint();
+}
+
+function updateTotals() {
+  if (state.clips.length === 0) { $('listTotals').innerHTML = ''; return; }
+  const totalDur = state.clips.reduce((a,c)=>a+c.duration, 0);
+  const totalSize = state.clips.reduce((a,c)=>a+c.size, 0);
+  $('listTotals').innerHTML = `total: <span>${state.clips.length}</span> clip(s) · <span>${fmt(totalDur)}</span> · <span>${fmtSize(totalSize)}</span>`;
+}
+
+function updateCompatibilityHint() {
+  if (state.clips.length < 2) { $('noteFastWarn').style.display = 'none'; return; }
+  const first = state.clips[0];
+  const mismatch = state.clips.some(c => c.width !== first.width || c.height !== first.height);
+  $('noteFastWarn').style.display = (mismatch && state.mode === 'fast') ? '' : 'none';
+}
+
+// ── Drag and drop reordering ──
+function attachDragHandlers(row) {
+  row.addEventListener('dragstart', e => {
+    state.dragSrcId = parseInt(row.dataset.id, 10);
+    row.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    try { e.dataTransfer.setData('text/plain', String(state.dragSrcId)); } catch(_) {}
+  });
+  row.addEventListener('dragend', () => {
+    row.classList.remove('dragging');
+    document.querySelectorAll('.clip-item').forEach(r => { r.classList.remove('drag-over-top','drag-over-bottom'); });
+    state.dragSrcId = null;
+  });
+  row.addEventListener('dragover', e => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const rect = row.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height / 2;
+    row.classList.toggle('drag-over-top', before);
+    row.classList.toggle('drag-over-bottom', !before);
+  });
+  row.addEventListener('dragleave', () => {
+    row.classList.remove('drag-over-top','drag-over-bottom');
+  });
+  row.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const targetId = parseInt(row.dataset.id, 10);
+    const srcId = state.dragSrcId;
+    if (srcId == null || srcId === targetId) return;
+    const rect = row.getBoundingClientRect();
+    const before = (e.clientY - rect.top) < rect.height / 2;
+    const srcIdx = state.clips.findIndex(c => c.id === srcId);
+    if (srcIdx === -1) return;
+    const [moved] = state.clips.splice(srcIdx, 1);
+    let targetIdx = state.clips.findIndex(c => c.id === targetId);
+    if (!before) targetIdx += 1;
+    state.clips.splice(targetIdx, 0, moved);
+    renderList();
+  });
+}
+
+// ── Dropzone and file input ──
+$('dropzone').addEventListener('click', () => $('fileInput').click());
+$('fileInput').addEventListener('change', e => { if (e.target.files.length) addFiles(Array.from(e.target.files)); e.target.value = ''; });
+$('dropzone').addEventListener('dragover', e => { e.preventDefault(); $('dropzone').classList.add('dragover'); });
+$('dropzone').addEventListener('dragleave', () => $('dropzone').classList.remove('dragover'));
+$('dropzone').addEventListener('drop', e => {
+  e.preventDefault(); $('dropzone').classList.remove('dragover');
+  if (e.dataTransfer.files.length) addFiles(Array.from(e.dataTransfer.files));
+});
+
+// ── Mode selector ──
+function setMode(mode) {
+  state.mode = mode;
+  $('modeFast').classList.toggle('active', mode === 'fast');
+  $('modeReencode').classList.toggle('active', mode === 'reencode');
+  $('noteFast').style.display = mode === 'fast' ? '' : 'none';
+  $('noteReencode').style.display = mode === 'reencode' ? '' : 'none';
+  $('btnExport').textContent = mode === 'fast' ? '⎌ unir y descargar (rápido)' : '⚙ re-codificar y descargar .mp4';
+  updateCompatibilityHint();
+}
+$('modeFast').addEventListener('click', () => setMode('fast'));
+$('modeReencode').addEventListener('click', () => setMode('reencode'));
+
+// ── Reset ──
+function resetAll() {
+  state.clips = [];
+  $('clipList').innerHTML = '';
+  $('listTotals').innerHTML = '';
+  $('clipListSection').style.display = 'none';
+  $('exportSection').style.display = 'none';
+  $('progressSection').style.display = 'none';
+  $('dropzone').classList.remove('compact');
+  $('dropzone').querySelector('p').textContent = 'arrastra uno o varios videos aquí o haz clic para seleccionar';
+  setStatus('arrastra videos para comenzar', '');
+}
+$('btnReset').addEventListener('click', resetAll);
+
+// ── Export ──
+function normalizeForConcatDemuxer(name, idx) {
+  // concat demuxer needs matching containers; we unify the virtual FS filename extension
+  const ext = getExt(name);
+  return `clip${idx}.${ext}`;
+}
+
+async function cleanupFS(names) {
+  for (const n of names) { try { ffmpeg.FS('unlink', n); } catch(_){} }
+}
+
+$('btnExport').addEventListener('click', async () => {
+  if (!state.ffmpegReady) { setStatus('ffmpeg aún no está listo', 'error'); return; }
+  if (state.clips.length < 2) { setStatus('necesitas al menos 2 clips para unir', 'error'); return; }
+
+  $('btnExport').disabled = true;
+  $('progressSection').style.display = 'block';
+  $('progressFill').style.width = '0%';
+  setStatus('procesando...', '');
+  const writtenFiles = [];
+  const outName = 'output.mp4';
+
+  try {
+    // Write all clips to the virtual FS
+    for (let i = 0; i < state.clips.length; i++) {
+      const clip = state.clips[i];
+      const virtualName = `clip${i}.${getExt(clip.name)}`;
+      $('progressText').textContent = `cargando ${i+1}/${state.clips.length}: ${clip.name}`;
+      $('progressFill').style.width = `${((i+1) / (state.clips.length + 1)) * 40}%`;
+      ffmpeg.FS('writeFile', virtualName, await fetchFile(clip.file));
+      writtenFiles.push(virtualName);
+    }
+
+    if (state.mode === 'fast') {
+      // Concat demuxer with stream copy
+      $('progressText').textContent = 'generando lista de concat...';
+      const listContent = writtenFiles.map(n => `file '${n}'`).join('\n') + '\n';
+      ffmpeg.FS('writeFile', 'concat.txt', new TextEncoder().encode(listContent));
+      writtenFiles.push('concat.txt');
+      $('progressText').textContent = 'uniendo (stream copy)...';
+      $('progressFill').style.width = '60%';
+      await ffmpeg.run('-f', 'concat', '-safe', '0', '-i', 'concat.txt', '-c', 'copy', '-movflags', '+faststart', '-y', outName);
+    } else {
+      // Concat filter with re-encode, normalizing to first clip's dimensions
+      $('progressText').textContent = 're-codificando y normalizando...';
+      $('progressFill').style.width = '60%';
+      const W = state.clips[0].width;
+      const H = state.clips[0].height;
+      const n = state.clips.length;
+      const args = [];
+      for (const f of writtenFiles) { args.push('-i', f); }
+      // Build filter: scale+pad each video to WxH, then concat
+      let filter = '';
+      for (let i = 0; i < n; i++) {
+        filter += `[${i}:v]scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30[v${i}];`;
+      }
+      for (let i = 0; i < n; i++) { filter += `[v${i}][${i}:a]`; }
+      filter += `concat=n=${n}:v=1:a=1[v][a]`;
+      args.push('-filter_complex', filter);
+      args.push('-map', '[v]', '-map', '[a]');
+      args.push('-c:v', 'libx264', '-crf', '23', '-preset', 'medium');
+      args.push('-c:a', 'aac', '-b:a', '128k');
+      args.push('-movflags', '+faststart', '-y', outName);
+      await ffmpeg.run(...args);
+    }
+
+    $('progressFill').style.width = '90%';
+    $('progressText').textContent = 'leyendo salida...';
+    const data = ffmpeg.FS('readFile', outName);
+    const blob = new Blob([data.buffer], { type: 'video/mp4' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `joined_${state.clips.length}clips.mp4`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    await cleanupFS([...writtenFiles, outName]);
+    $('progressFill').style.width = '100%';
+    $('progressText').textContent = '¡listo!';
+    setStatus(`exportación completada — ${state.clips.length} clips unidos (${fmtSize(blob.size)})`, 'success');
+  } catch (e) {
+    console.error(e);
+    await cleanupFS([...writtenFiles, outName]);
+    const msg = (e && e.message) ? e.message : String(e);
+    let hint = '';
+    if (state.mode === 'fast') hint = ' — prueba con el modo completo si los clips tienen formatos distintos';
+    setStatus('error: ' + msg + hint, 'error');
+    $('progressText').textContent = 'error';
+  } finally {
+    $('btnExport').disabled = false;
+  }
+});
+
+initFFmpeg();
+</script>
+</body>
+</html>
