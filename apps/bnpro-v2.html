@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BN·PRO v2</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #070707; --panel: #0d0d0d; --panel2: #111111;
+  --border: #1e1e1e; --border2: #181818;
+  --text: #b8b8b0; --text2: #555550; --text3: #2e2e2c;
+  --accent: #c8a254; --accentd: rgba(200,162,84,0.1);
+  --r: #c07060; --o: #c08048; --y: #b0a040;
+  --g: #62a462; --c: #40a8a8; --b: #5882c8; --p: #8870c0; --m: #b85888;
+}
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; font-size: 11px; }
+.app { display: grid; grid-template-columns: 304px 1fr; grid-template-rows: 38px 1fr; height: 100vh; }
+
+/* TOPBAR */
+.topbar { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--panel); }
+.logo { font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: .2em; color: var(--accent); }
+.logo-sub { font-size: 8px; color: var(--text3); letter-spacing: .08em; }
+.logo-v { font-size: 8px; color: var(--text3); margin-left: 4px; }
+.topbar-file { margin-left: auto; font-size: 8px; color: var(--text2); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* SIDEBAR */
+.sidebar { border-right: 1px solid var(--border); background: var(--panel); overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; }
+.sidebar::-webkit-scrollbar { width: 2px; } .sidebar::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* SECTIONS */
+.section { border-bottom: 1px solid var(--border2); flex-shrink: 0; }
+.sec-hdr { display: flex; align-items: center; justify-content: space-between; padding: 7px 11px 6px; font-size: 8px; letter-spacing: .13em; text-transform: uppercase; color: var(--text2); cursor: pointer; user-select: none; transition: color .12s; }
+.sec-hdr:hover { color: var(--text); }
+.sec-hdr .arr { font-size: 9px; opacity: .4; transition: transform .2s; }
+.sec-hdr.closed .arr { transform: rotate(-90deg); }
+.sec-body { padding: 9px 11px 11px; }
+.sec-body.hidden { display: none; }
+
+/* UPLOAD */
+.upload-row { display: flex; align-items: center; gap: 10px; padding: 10px 11px; cursor: pointer; transition: background .12s; }
+.upload-row:hover { background: var(--accentd); }
+.up-icon { font-size: 18px; color: var(--accent); }
+.up-main { font-size: 9px; color: var(--text); } .up-sub { font-size: 7.5px; color: var(--text3); margin-top: 1px; }
+input[type=file] { display: none; }
+
+/* PRESETS */
+.pset-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+.pset-btn { background: none; border: 1px solid var(--border); color: var(--text2); font-family: 'DM Mono',monospace; font-size: 8px; letter-spacing: .08em; padding: 5px; cursor: pointer; border-radius: 2px; text-align: center; transition: all .12s; }
+.pset-btn:hover { border-color: var(--accent); color: var(--text); }
+.pset-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accentd); }
+
+/* FILM */
+.film-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+.film-btn { background: none; border: 1px solid var(--border); color: var(--text2); font-family: 'DM Mono',monospace; font-size: 7.5px; letter-spacing: .06em; padding: 5px 3px; cursor: pointer; border-radius: 2px; text-align: center; transition: all .12s; }
+.film-btn:hover { border-color: var(--accent); color: var(--text); }
+.film-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accentd); }
+.film-note { font-size: 7px; color: var(--text3); margin-top: 5px; letter-spacing: .04em; line-height: 1.5; }
+
+/* SLIDERS */
+.ctrl { display: grid; grid-template-columns: 68px 1fr 32px; align-items: center; gap: 7px; margin-bottom: 7px; }
+.ctrl:last-child { margin-bottom: 0; }
+.clbl { font-size: 8px; letter-spacing: .07em; text-transform: uppercase; color: var(--text2); white-space: nowrap; }
+.clbl.r{color:var(--r)} .clbl.o{color:var(--o)} .clbl.y{color:var(--y)} .clbl.g{color:var(--g)} .clbl.c{color:var(--c)} .clbl.b{color:var(--b)} .clbl.p{color:var(--p)} .clbl.m{color:var(--m)}
+.cval { font-size: 8px; text-align: right; color: var(--accent); font-variant-numeric: tabular-nums; }
+.cval.r{color:var(--r)} .cval.o{color:var(--o)} .cval.y{color:var(--y)} .cval.g{color:var(--g)} .cval.c{color:var(--c)} .cval.b{color:var(--b)} .cval.p{color:var(--p)} .cval.m{color:var(--m)}
+input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 2px; background: var(--border); outline: none; border-radius: 1px; cursor: pointer; }
+input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); border: 1.5px solid #6a5020; cursor: pointer; }
+.sr::-webkit-slider-thumb{background:var(--r);border-color:#7a3020}
+.so::-webkit-slider-thumb{background:var(--o);border-color:#7a5020}
+.sy::-webkit-slider-thumb{background:var(--y);border-color:#6a6010}
+.sg::-webkit-slider-thumb{background:var(--g);border-color:#2a6a2a}
+.sc::-webkit-slider-thumb{background:var(--c);border-color:#106868}
+.sb::-webkit-slider-thumb{background:var(--b);border-color:#1a4888}
+.sp::-webkit-slider-thumb{background:var(--p);border-color:#4a3888}
+.sm::-webkit-slider-thumb{background:var(--m);border-color:#882848}
+
+/* TOGGLE SWITCH */
+.tog-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.tog-lbl { font-size: 8px; letter-spacing: .08em; text-transform: uppercase; color: var(--text2); }
+.tog { position: relative; width: 28px; height: 14px; flex-shrink: 0; }
+.tog input { opacity: 0; width: 0; height: 0; }
+.tog-slider { position: absolute; inset: 0; background: var(--border); border-radius: 7px; cursor: pointer; transition: background .2s; }
+.tog-slider::before { content:''; position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; background: var(--text3); border-radius: 50%; transition: all .2s; }
+.tog input:checked ~ .tog-slider { background: var(--accent); }
+.tog input:checked ~ .tog-slider::before { transform: translateX(14px); background: #080808; }
+
+/* ZONE CANVAS */
+#zone-canvas { display: block; width: 100%; height: 162px; background: #060606; border-radius: 2px; cursor: crosshair; border: 1px solid var(--border2); }
+.zone-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+.zone-hint { font-size: 7px; color: var(--text3); letter-spacing: .05em; }
+.zone-info { font-size: 7.5px; color: var(--accent); letter-spacing: .05em; }
+.mini-btn { font-size: 7.5px; letter-spacing: .08em; background: none; border: 1px solid var(--border); color: var(--text2); padding: 2px 7px; cursor: pointer; border-radius: 2px; font-family: 'DM Mono',monospace; transition: all .12s; }
+.mini-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* LUM MASK VIZ */
+.lum-viz { width: 100%; height: 18px; border-radius: 2px; background: var(--border2); margin-bottom: 7px; overflow: hidden; position: relative; }
+#lum-viz-canvas { display: block; width: 100%; height: 100%; }
+
+/* EXPORT */
+.exp-row { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+.exp-lbl { font-size: 8px; letter-spacing: .07em; text-transform: uppercase; color: var(--text2); white-space: nowrap; }
+select { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: 'DM Mono',monospace; font-size: 8px; padding: 3px 5px; border-radius: 2px; outline: none; }
+.exp-btn { width: 100%; background: var(--accent); color: #070707; border: none; font-family: 'DM Mono',monospace; font-size: 9px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; padding: 9px; cursor: pointer; border-radius: 2px; transition: background .12s; }
+.exp-btn:hover { background: #d4b860; } .exp-btn:disabled { background: var(--border); color: var(--text3); cursor: not-allowed; }
+
+/* MAIN */
+.main { display: grid; grid-template-rows: 1fr 144px; overflow: hidden; }
+.preview-area { position: relative; overflow: hidden; background: #030303; display: flex; align-items: center; justify-content: center; }
+.drop-zone { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; cursor: pointer; }
+.drop-icon { width: 50px; height: 50px; border: 1px solid var(--border); border-radius: 3px; display: flex; align-items: center; justify-content: center; color: var(--text3); font-size: 20px; }
+.drop-txt { font-size: 9px; color: var(--text2); letter-spacing: .1em; text-align: center; line-height: 1.8; }
+#preview-canvas { max-width: 100%; max-height: 100%; display: none; position: absolute; }
+#overlay-canvas { max-width: 100%; max-height: 100%; display: none; position: absolute; pointer-events: none; }
+
+/* PREVIEW TOOLBAR */
+.preview-toolbar { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; z-index: 10; }
+.tool-btn { background: rgba(10,10,10,.85); border: 1px solid var(--border); color: var(--text2); font-family: 'DM Mono',monospace; font-size: 8px; letter-spacing: .08em; padding: 4px 8px; cursor: pointer; border-radius: 2px; transition: all .12s; backdrop-filter: blur(4px); }
+.tool-btn:hover { border-color: var(--accent); color: var(--text); }
+.tool-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(200,162,84,.1); }
+
+/* ZONE BADGE */
+.zone-badge { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(10,10,10,.9); border: 1px solid var(--accent); color: var(--accent); font-size: 9px; letter-spacing: .12em; padding: 4px 12px; border-radius: 2px; display: none; backdrop-filter: blur(4px); pointer-events: none; }
+
+.proc-badge { position: absolute; bottom: 8px; right: 8px; font-size: 7.5px; letter-spacing: .12em; color: var(--accent); opacity: 0; transition: opacity .2s; pointer-events: none; }
+.proc-badge.on { opacity: 1; }
+
+/* HISTOGRAMS */
+.hist-panel { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border); }
+.hist-col { padding: 6px 9px; } .hist-col:first-child { border-right: 1px solid var(--border); }
+.hist-title { font-size: 7.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 3px; }
+#hist-orig, #hist-bw { display: block; width: 100%; height: 106px; }
+</style>
+</head>
+<body>
+<div class="app">
+
+<div class="topbar">
+  <span class="logo">BN·PRO</span><span class="logo-v">v2</span>
+  <span class="logo-sub">Luz lineal · Zonas · Mezcla HSL · Guided Filter · Grano espectral · Máscara lum.</span>
+  <span class="topbar-file" id="topbar-file"></span>
+</div>
+
+<div class="sidebar">
+
+  <!-- UPLOAD -->
+  <div class="section">
+    <label class="upload-row" for="file-input">
+      <span class="up-icon">⊕</span>
+      <div><div class="up-main">Cargar imagen</div><div class="up-sub">JPG · PNG · GIF · WEBP — arrastra o haz clic</div></div>
+    </label>
+    <input type="file" id="file-input" accept="image/*">
+  </div>
+
+  <!-- FILM EMULSIONS -->
+  <div class="section">
+    <div class="sec-hdr closed" data-t="film-body">Emulsión de película (curvas H&D) <span class="arr">▾</span></div>
+    <div class="sec-body hidden" id="film-body">
+      <div class="film-grid">
+        <button class="film-btn" data-film="hp5">HP5+</button>
+        <button class="film-btn" data-film="trix">Tri-X</button>
+        <button class="film-btn" data-film="tmax">T-Max</button>
+        <button class="film-btn" data-film="fp4">FP4+</button>
+        <button class="film-btn" data-film="ortho">Ortho</button>
+        <button class="film-btn" data-film="delta">Delta 100</button>
+      </div>
+      <div class="film-note">Los presets aplican curvas H&D características de cada emulsión sobre el Sistema de Zonas. Ortho también ajusta la mezcla de canales.</div>
+    </div>
+  </div>
+
+  <!-- COLOR FILTER PRESETS -->
+  <div class="section">
+    <div class="sec-hdr closed" data-t="pset-body">Filtro de color simulado <span class="arr">▾</span></div>
+    <div class="sec-body hidden" id="pset-body">
+      <div class="pset-grid">
+        <button class="pset-btn active" data-preset="neutral">Neutro</button>
+        <button class="pset-btn" data-preset="yellow">Amarillo</button>
+        <button class="pset-btn" data-preset="orange">Naranja</button>
+        <button class="pset-btn" data-preset="red">Rojo</button>
+        <button class="pset-btn" data-preset="green">Verde</button>
+        <button class="pset-btn" data-preset="blue">Azul</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHANNEL MIXER RGB -->
+  <div class="section">
+    <div class="sec-hdr" data-t="rgb-body">Mezcla de canales RGB <span class="arr">▾</span></div>
+    <div class="sec-body" id="rgb-body">
+      <div class="ctrl"><span class="clbl r">Rojo</span><input type="range" class="sr" id="ch-r" min="-200" max="200" value="21"><span class="cval r" id="ch-r-v">+21</span></div>
+      <div class="ctrl"><span class="clbl" style="color:var(--g)">Verde</span><input type="range" class="sg" id="ch-g" min="-200" max="200" value="72"><span class="cval" style="color:var(--g)" id="ch-g-v">+72</span></div>
+      <div class="ctrl"><span class="clbl b">Azul</span><input type="range" class="sb" id="ch-b" min="-200" max="200" value="7"><span class="cval b" id="ch-b-v">+7</span></div>
+    </div>
+  </div>
+
+  <!-- HSL MIXER -->
+  <div class="section">
+    <div class="sec-hdr closed" data-t="hsl-body">Mezcla de canales HSL <span class="arr">▾</span></div>
+    <div class="sec-body hidden" id="hsl-body">
+      <div class="ctrl"><span class="clbl r">Rojo</span><input type="range" class="sr" id="hsl-r" min="-100" max="100" value="0"><span class="cval r" id="hsl-r-v">0</span></div>
+      <div class="ctrl"><span class="clbl o">Naranja</span><input type="range" class="so" id="hsl-o" min="-100" max="100" value="0"><span class="cval o" id="hsl-o-v">0</span></div>
+      <div class="ctrl"><span class="clbl y">Amarillo</span><input type="range" class="sy" id="hsl-y" min="-100" max="100" value="0"><span class="cval y" id="hsl-y-v">0</span></div>
+      <div class="ctrl"><span class="clbl g">Verde</span><input type="range" class="sg" id="hsl-g" min="-100" max="100" value="0"><span class="cval g" id="hsl-g-v">0</span></div>
+      <div class="ctrl"><span class="clbl c">Cian</span><input type="range" class="sc" id="hsl-c" min="-100" max="100" value="0"><span class="cval c" id="hsl-c-v">0</span></div>
+      <div class="ctrl"><span class="clbl b">Azul</span><input type="range" class="sb" id="hsl-b" min="-100" max="100" value="0"><span class="cval b" id="hsl-b-v">0</span></div>
+      <div class="ctrl"><span class="clbl p">Púrpura</span><input type="range" class="sp" id="hsl-p" min="-100" max="100" value="0"><span class="cval p" id="hsl-p-v">0</span></div>
+      <div class="ctrl"><span class="clbl m">Magenta</span><input type="range" class="sm" id="hsl-m" min="-100" max="100" value="0"><span class="cval m" id="hsl-m-v">0</span></div>
+    </div>
+  </div>
+
+  <!-- ZONE SYSTEM -->
+  <div class="section">
+    <div class="sec-hdr" data-t="zone-body">Sistema de Zonas Adams (I–XI) <span class="arr">▾</span></div>
+    <div class="sec-body" id="zone-body">
+      <canvas id="zone-canvas" width="280" height="162"></canvas>
+      <div class="zone-foot">
+        <span class="zone-hint">Arrastra puntos · Entrada → Salida</span>
+        <span class="zone-info" id="zone-info"></span>
+        <button class="mini-btn" id="zone-reset">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LUMINOSITY MASK -->
+  <div class="section">
+    <div class="sec-hdr closed" data-t="lum-body">Máscara de luminosidad <span class="arr">▾</span></div>
+    <div class="sec-body hidden" id="lum-body">
+      <div class="tog-row">
+        <label class="tog"><input type="checkbox" id="lum-enabled"><span class="tog-slider"></span></label>
+        <span class="tog-lbl">Activar máscara (afecta claridad, grano, nitidez)</span>
+      </div>
+      <canvas id="lum-viz-canvas" width="280" height="18" style="display:block;width:100%;height:18px;border-radius:2px;background:var(--border2);margin-bottom:7px;"></canvas>
+      <div class="ctrl"><span class="clbl">Mínimo</span><input type="range" id="lum-min" min="0" max="255" value="0"><span class="cval" id="lum-min-v">0</span></div>
+      <div class="ctrl"><span class="clbl">Máximo</span><input type="range" id="lum-max" min="0" max="255" value="255"><span class="cval" id="lum-max-v">255</span></div>
+      <div class="ctrl"><span class="clbl">Suavizado</span><input type="range" id="lum-feather" min="0" max="80" value="30"><span class="cval" id="lum-feather-v">30</span></div>
+    </div>
+  </div>
+
+  <!-- CLARITY -->
+  <div class="section">
+    <div class="sec-hdr closed" data-t="cla-body">Contraste local (Claridad) <span class="arr">▾</span></div>
+    <div class="sec-body hidden" id="cla-body">
+      <div class="tog-row">
+        <label class="tog"><input type="checkbox" id="cla-guided"><span class="tog-slider"></span></label>
+        <span class="tog-lbl">Guided Filter (edge-aware, más lento)</span>
+      </div>
+      <div class="ctrl"><span class="clbl">Cantidad</span><input type="range" id="cla-amount" min="-100" max="100" value="0"><span class="cval" id="cla-amount-v">0</span></div>
+      <div class="ctrl"><span class="clbl">Radio</span><input type="range" id="cla-radius" min="5" max="80" value="30"><span class="cval" id="cla-radius-v">30px</span></div>
+      <div class="ctrl" id="eps-ctrl"><span class="clbl">Sensib.</span><input type="range" id="cla-eps" min="1" max="50" value="10"><span class="cval" id="cla-eps-v">10</span></div>
+    </div>
+  </div>
+
+  <!-- GRAIN -->
+  <div class="section">
+    <div class="sec-hdr closed" data-t="grn-body">Grano de película <span class="arr">▾</span></div>
+    <div class="sec-body hidden" id="grn-body">
+      <div class="tog-row">
+        <label class="tog"><input type="checkbox" id="grn-freqsep"><span class="tog-slider"></span></label>
+        <span class="tog-lbl">Separación de frecuencias (3 capas)</span>
+      </div>
+      <div class="ctrl"><span class="clbl">Cantidad</span><input type="range" id="grn-amount" min="0" max="100" value="0"><span class="cval" id="grn-amount-v">0</span></div>
+      <div class="ctrl"><span class="clbl">Textura</span><input type="range" id="grn-size" min="1" max="5" step=".5" value="1"><span class="cval" id="grn-size-v">1.0</span></div>
+    </div>
+  </div>
+
+  <!-- SHARPEN -->
+  <div class="section">
+    <div class="sec-hdr closed" data-t="shp-body">Nitidez de salida <span class="arr">▾</span></div>
+    <div class="sec-body hidden" id="shp-body">
+      <div class="ctrl"><span class="clbl">Cantidad</span><input type="range" id="shp-amount" min="0" max="150" value="0"><span class="cval" id="shp-amount-v">0</span></div>
+      <div class="ctrl"><span class="clbl">Radio</span><input type="range" id="shp-radius" min="1" max="5" value="1"><span class="cval" id="shp-radius-v">1px</span></div>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="section">
+    <div class="sec-hdr" data-t="exp-body">Exportar <span class="arr">▾</span></div>
+    <div class="sec-body" id="exp-body">
+      <div class="exp-row">
+        <span class="exp-lbl">Formato</span>
+        <select id="exp-fmt"><option value="image/png">PNG</option><option value="image/jpeg" selected>JPEG</option><option value="image/webp">WebP</option></select>
+        <span class="exp-lbl">Cal.</span>
+        <input type="range" id="exp-qual" min="70" max="100" value="95" style="flex:1">
+        <span class="cval" id="exp-qual-v">95</span>
+      </div>
+      <button class="exp-btn" id="exp-btn" disabled>Exportar imagen B&N</button>
+    </div>
+  </div>
+
+</div><!-- /sidebar -->
+
+<div class="main">
+  <div class="preview-area" id="drop-area">
+    <div class="drop-zone" id="drop-zone">
+      <div class="drop-icon">⊕</div>
+      <div class="drop-txt">Arrastra una imagen aquí<br><span style="color:var(--text3)">JPG · PNG · GIF · WEBP</span></div>
+    </div>
+    <canvas id="preview-canvas"></canvas>
+    <canvas id="overlay-canvas"></canvas>
+    <div class="preview-toolbar">
+      <button class="tool-btn" id="btn-clip" title="Recorte de luces/sombras (J)">⬛ Recorte</button>
+      <button class="tool-btn" id="btn-picker" title="Selector de zona (Z)">⊙ Zona</button>
+    </div>
+    <div class="zone-badge" id="zone-badge"></div>
+    <div class="proc-badge" id="proc-badge">PROCESANDO ···</div>
+  </div>
+  <div class="hist-panel">
+    <div class="hist-col"><div class="hist-title">Original — canales RGB</div><canvas id="hist-orig"></canvas></div>
+    <div class="hist-col"><div class="hist-title">Resultado B&N — luminosidad + zonas</div><canvas id="hist-bw"></canvas></div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<script>
+// ============================================================
+// BN·PRO v2 — Pipeline completo de conversión B&N profesional
+// ============================================================
+
+// — LUTs de color science sRGB ↔ lineal —
+const LIN = new Float32Array(256);
+const GAM = new Uint8Array(4096);
+for (let i = 0; i < 256; i++) {
+  const s = i / 255;
+  LIN[i] = s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+for (let i = 0; i < 4096; i++) {
+  const l = i / 4095;
+  const s = l <= 0.0031308 ? l * 12.92 : 1.055 * Math.pow(l, 1 / 2.4) - 0.055;
+  GAM[i] = Math.min(255, Math.max(0, Math.round(s * 255)));
+}
+
+// — HSL mixer: 8 centros de matiz en [0,1] —
+const HUE_CENTERS = [0, 1/12, 1/6, 1/3, 1/2, 11/18, 3/4, 7/8];
+const HUE_SIGMA = 0.08;
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  const l = (mx + mn) / 2;
+  if (mx === mn) return { h: 0, s: 0, l };
+  const d = mx - mn;
+  const s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+  let h;
+  if (mx === r)      h = (g - b) / d + (g < b ? 6 : 0);
+  else if (mx === g) h = (b - r) / d + 2;
+  else               h = (r - g) / d + 4;
+  return { h: h / 6, s, l };
+}
+
+function getHueAdj(h, s, sliders) {
+  // Weighted Gaussian blend of 8 hue-band adjustments, modulated by saturation
+  let totalW = 1e-9, totalAdj = 0;
+  for (let i = 0; i < 8; i++) {
+    let d = Math.abs(h - HUE_CENTERS[i]);
+    d = Math.min(d, 1 - d); // circular distance
+    const w = Math.exp(-0.5 * (d / HUE_SIGMA) ** 2);
+    totalW += w; totalAdj += w * sliders[i];
+  }
+  return (totalAdj / totalW) * s; // saturation modulation: near-gray → no adjustment
+}
+
+// — Estado global —
+let origImg = null, origData = null, procData = null;
+const prevCvs = document.getElementById('preview-canvas');
+const prevCtx = prevCvs.getContext('2d', { willReadFrequently: true });
+const overCvs = document.getElementById('overlay-canvas');
+const overCtx = overCvs.getContext('2d');
+
+const ST = {
+  chR: 21, chG: 72, chB: 7,
+  hslR: 0, hslO: 0, hslY: 0, hslG: 0, hslC: 0, hslB: 0, hslP: 0, hslM: 0,
+  claAmount: 0, claRadius: 30, claGuided: false, claEps: 10,
+  grnAmount: 0, grnSize: 1, grnFreqSep: false,
+  shpAmount: 0, shpRadius: 1,
+  lumEnabled: false, lumMin: 0, lumMax: 255, lumFeather: 30,
+  clipping: false, pickerMode: false,
+  expQuality: 0.95,
+};
+
+// ============================================================
+// EMULSIONES H&D — curvas características de película
+// (valores de zona I–XI aproximados desde curvas publicadas)
+// ============================================================
+const FILMS = {
+  hp5:   { zones: [0, 16, 44, 78, 114, 148, 178, 204, 223, 238, 250], ch: null },
+  trix:  { zones: [0, 10, 34, 70, 112, 152, 186, 211, 230, 244, 254], ch: null },
+  tmax:  { zones: [0,  6, 24, 62, 108, 150, 192, 220, 238, 249, 255], ch: null },
+  fp4:   { zones: [2, 20, 48, 82, 116, 150, 180, 206, 225, 240, 251], ch: null },
+  ortho: { zones: [0,  8, 28, 62, 104, 148, 186, 216, 236, 248, 255], ch: { r: -60, g: 70, b: 90 } },
+  delta: { zones: [3, 18, 42, 76, 112, 146, 178, 207, 228, 243, 253], ch: null },
+};
+
+const PRESETS_RGB = {
+  neutral: { r: 21, g: 72, b: 7 },
+  yellow:  { r: 42, g: 58, b: -10 },
+  orange:  { r: 80, g: 40, b: -30 },
+  red:     { r: 130, g: -20, b: -50 },
+  green:   { r: -10, g: 90, b: -20 },
+  blue:    { r: -30, g: -20, b: 100 },
+};
+
+// ============================================================
+// SISTEMA DE ZONAS
+// ============================================================
+const NZ = 11;
+const zI = Array.from({ length: NZ }, (_, i) => Math.round(i * 255 / (NZ - 1)));
+let   zO = [...zI];
+const zoneCvs = document.getElementById('zone-canvas');
+const zoneCtx = zoneCvs.getContext('2d');
+let dragZ = -1, highlightZ = -1;
+
+function steffenSpline(xs, ys) {
+  const n = xs.length, h = [], d = [], m = [];
+  for (let i = 0; i < n-1; i++) { h[i] = xs[i+1]-xs[i]; d[i] = (ys[i+1]-ys[i])/h[i]; }
+  m[0] = d[0]; m[n-1] = d[n-2];
+  for (let i = 1; i < n-1; i++) {
+    m[i] = d[i-1]*d[i] <= 0 ? 0 : (2*h[i]+h[i-1]) / ((2*h[i]+h[i-1])/d[i-1] + (h[i]+2*h[i-1])/d[i]);
+  }
+  return x => {
+    let i = 0; for (; i < n-2; i++) if (xs[i+1] >= x) break;
+    const t = (x-xs[i])/h[i], t2=t*t, t3=t2*t;
+    return (2*t3-3*t2+1)*ys[i] + (t3-2*t2+t)*h[i]*m[i] + (-2*t3+3*t2)*ys[i+1] + (t3-t2)*h[i]*m[i+1];
+  };
+}
+
+function buildZoneLUT() {
+  const sp = steffenSpline(zI, zO), lut = new Uint8Array(256);
+  for (let x = 0; x < 256; x++) lut[x] = Math.min(255, Math.max(0, Math.round(sp(x))));
+  return lut;
+}
+
+function drawZoneCvs() {
+  const W = zoneCvs.width, H = zoneCvs.height, P = 15, IW = W-P*2, IH = H-P*2;
+  const NUMS = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+  zoneCtx.clearRect(0,0,W,H);
+  zoneCtx.fillStyle='#060606'; zoneCtx.fillRect(0,0,W,H);
+  // Zone bands
+  for (let z=0;z<NZ;z++) {
+    const x1=P+(z/NZ)*IW, bw=IW/NZ, g=z/(NZ-1);
+    zoneCtx.fillStyle=`rgba(${Math.round(g*160)},${Math.round(g*155)},${Math.round(g*148)},${highlightZ===z?0.3:0.11})`;
+    zoneCtx.fillRect(x1,P,bw,IH);
+    zoneCtx.font='6px DM Mono'; zoneCtx.textAlign='center'; zoneCtx.fillStyle=highlightZ===z?'rgba(200,162,84,.9)':'rgba(80,80,74,.7)';
+    zoneCtx.fillText(NUMS[z], x1+bw/2, P+IH+10);
+  }
+  // Grid
+  zoneCtx.strokeStyle='rgba(255,255,255,.03)'; zoneCtx.lineWidth=1;
+  for (let i=1;i<4;i++){const y=P+(i/4)*IH;zoneCtx.beginPath();zoneCtx.moveTo(P,y);zoneCtx.lineTo(P+IW,y);zoneCtx.stroke();}
+  // Diagonal ref
+  zoneCtx.setLineDash([2,4]); zoneCtx.strokeStyle='rgba(255,255,255,.05)';
+  zoneCtx.beginPath();zoneCtx.moveTo(P,P+IH);zoneCtx.lineTo(P+IW,P);zoneCtx.stroke();
+  zoneCtx.setLineDash([]);
+  // Curve
+  const lut = buildZoneLUT();
+  zoneCtx.strokeStyle='#c8a254'; zoneCtx.lineWidth=1.5;
+  zoneCtx.shadowColor='rgba(200,162,84,.3)'; zoneCtx.shadowBlur=5;
+  zoneCtx.beginPath();
+  for(let x=0;x<256;x++){const px=P+(x/255)*IW,py=P+(1-lut[x]/255)*IH;x===0?zoneCtx.moveTo(px,py):zoneCtx.lineTo(px,py);}
+  zoneCtx.stroke(); zoneCtx.shadowBlur=0;
+  // Control points
+  for(let i=0;i<NZ;i++){
+    const px=P+(zI[i]/255)*IW, py=P+(1-zO[i]/255)*IH;
+    const isDrag=dragZ===i, isHL=highlightZ===i;
+    zoneCtx.beginPath(); zoneCtx.arc(px,py,isDrag?5.5:isHL?5:3.5,0,Math.PI*2);
+    zoneCtx.fillStyle=isHL?'#e8c86a':isDrag?'#d4b860':'#c8a254';
+    zoneCtx.strokeStyle='#060606'; zoneCtx.lineWidth=1.5;
+    zoneCtx.fill(); zoneCtx.stroke();
+  }
+}
+
+function zoneCoords(e) {
+  const r=zoneCvs.getBoundingClientRect();
+  return {x:(e.clientX-r.left)*(zoneCvs.width/r.width),y:(e.clientY-r.top)*(zoneCvs.height/r.height)};
+}
+zoneCvs.addEventListener('mousedown',e=>{
+  const{x,y}=zoneCoords(e),P=15,IW=zoneCvs.width-P*2,IH=zoneCvs.height-P*2;
+  for(let i=0;i<NZ;i++){const px=P+(zI[i]/255)*IW,py=P+(1-zO[i]/255)*IH;if(Math.hypot(x-px,y-py)<10){dragZ=i;break;}}
+});
+zoneCvs.addEventListener('mousemove',e=>{
+  if(dragZ<0)return;
+  const{y}=zoneCoords(e),P=15,IH=zoneCvs.height-P*2;
+  let v=Math.round((1-Math.max(0,Math.min(1,(y-P)/IH)))*255);
+  if(dragZ===0)v=Math.min(v,32); if(dragZ===NZ-1)v=Math.max(v,222);
+  zO[dragZ]=v; drawZoneCvs(); schedProc();
+});
+const endDrag=()=>{dragZ=-1;drawZoneCvs();};
+zoneCvs.addEventListener('mouseup',endDrag); zoneCvs.addEventListener('mouseleave',endDrag);
+document.getElementById('zone-reset').addEventListener('click',()=>{zO=[...zI];drawZoneCvs();schedProc();});
+// Touch
+function tc2m(type,e){e.preventDefault();const t=e.touches[0]||e.changedTouches[0];zoneCvs.dispatchEvent(new MouseEvent(type,{clientX:t.clientX,clientY:t.clientY}));}
+zoneCvs.addEventListener('touchstart',e=>tc2m('mousedown',e),{passive:false});
+zoneCvs.addEventListener('touchmove',e=>tc2m('mousemove',e),{passive:false});
+zoneCvs.addEventListener('touchend',e=>tc2m('mouseup',e),{passive:false});
+
+// ============================================================
+// CARGA DE IMAGEN
+// ============================================================
+function loadImg(file) {
+  if(!file||!file.type.startsWith('image/'))return;
+  const rd=new FileReader();
+  rd.onload=ev=>{
+    const img=new Image();
+    img.onload=()=>{
+      origImg=img;
+      const maxS=1400, sc=Math.min(1,maxS/Math.max(img.width,img.height));
+      const pw=Math.round(img.width*sc), ph=Math.round(img.height*sc);
+      const sc2=document.createElement('canvas'); sc2.width=pw; sc2.height=ph;
+      sc2.getContext('2d').drawImage(img,0,0,pw,ph);
+      origData=sc2.getContext('2d').getImageData(0,0,pw,ph);
+      prevCvs.width=overCvs.width=pw; prevCvs.height=overCvs.height=ph;
+      prevCvs.style.display=overCvs.style.display='block';
+      document.getElementById('drop-zone').style.display='none';
+      document.getElementById('exp-btn').disabled=false;
+      document.getElementById('topbar-file').textContent=`${file.name}  ·  ${img.width}×${img.height}px`;
+      processImage();
+    };
+    img.src=ev.target.result;
+  };
+  rd.readAsDataURL(file);
+}
+document.getElementById('file-input').addEventListener('change',e=>loadImg(e.target.files[0]));
+const dropArea=document.getElementById('drop-area'),dropZone=document.getElementById('drop-zone');
+dropArea.addEventListener('dragover',e=>{e.preventDefault();dropZone.style.outline='1px solid var(--accent)';});
+dropArea.addEventListener('dragleave',()=>{dropZone.style.outline='';});
+dropArea.addEventListener('drop',e=>{e.preventDefault();dropZone.style.outline='';loadImg(e.dataTransfer.files[0]);});
+
+// ============================================================
+// PIPELINE PRINCIPAL
+// ============================================================
+let procTimer=null;
+function schedProc(){clearTimeout(procTimer);procTimer=setTimeout(processImage,80);}
+
+async function processImage() {
+  if(!origData)return;
+  document.getElementById('proc-badge').classList.add('on');
+  await new Promise(r=>setTimeout(r,10));
+  procData=runPipeline(origData, ST);
+  prevCtx.putImageData(procData,0,0);
+  if(ST.clipping) drawClippingOverlay(procData);
+  else overCtx.clearRect(0,0,overCvs.width,overCvs.height);
+  drawHistograms(origData,procData);
+  document.getElementById('proc-badge').classList.remove('on');
+}
+
+function runPipeline(src, st) {
+  const d=src.data, W=src.width, H=src.height;
+  const out=new Uint8ClampedArray(d.length);
+  const rW=st.chR/100, gW=st.chG/100, bW=st.chB/100;
+  const hslSliders=[st.hslR,st.hslO,st.hslY,st.hslG,st.hslC,st.hslB,st.hslP,st.hslM];
+  const hasHSL=hslSliders.some(v=>v!==0);
+  const zoneLUT=buildZoneLUT();
+
+  // ETAPA 1: Channel mix en luz lineal + ajuste HSL + curva zonal
+  for(let i=0;i<d.length;i+=4){
+    const rL=LIN[d[i]], gL=LIN[d[i+1]], bL=LIN[d[i+2]];
+    let lum=Math.max(0,Math.min(1, rL*rW + gL*gW + bL*bW));
+    const lumSRGB=GAM[Math.min(4095,Math.round(lum*4095))];
+    let gray=lumSRGB;
+    // HSL adjustment (post channel-mix, pre zone curve)
+    if(hasHSL){
+      const{h,s}=rgbToHsl(d[i],d[i+1],d[i+2]);
+      const adj=getHueAdj(h,s,hslSliders);
+      gray=Math.min(255,Math.max(0,Math.round(gray+adj)));
+    }
+    out[i]=out[i+1]=out[i+2]=zoneLUT[gray];
+    out[i+3]=d[i+3];
+  }
+
+  let result=new ImageData(out,W,H);
+
+  // Calcular máscara de luminosidad (si activa)
+  let lumMask=null;
+  if(st.lumEnabled) lumMask=buildLumMask(W,H,result,st.lumMin,st.lumMax,st.lumFeather);
+
+  // ETAPA 2: Claridad
+  if(st.claAmount!==0){
+    const eff=st.claGuided
+      ? applyGuidedFilter(result,st.claAmount/100,Math.max(3,st.claRadius),st.claEps/1000)
+      : applyUnsharp(result,st.claAmount/100,st.claRadius);
+    result=applyWithMask(result,eff,lumMask);
+  }
+
+  // ETAPA 3: Grano
+  if(st.grnAmount>0){
+    const grained=st.grnFreqSep
+      ? applyFreqGrain(result,st.grnAmount,st.grnSize)
+      : applyGrain(result,st.grnAmount,st.grnSize);
+    result=applyWithMask(result,grained,lumMask);
+  }
+
+  // ETAPA 4: Nitidez
+  if(st.shpAmount>0){
+    const sharpened=applyUnsharp(result,st.shpAmount/100,st.shpRadius);
+    result=applyWithMask(result,sharpened,lumMask);
+  }
+
+  return result;
+}
+
+// — Mezcla con máscara de luminosidad —
+function applyWithMask(base, effect, mask) {
+  if(!mask)return effect;
+  const bd=base.data, ed=effect.data;
+  const out=new Uint8ClampedArray(bd.length);
+  const W=base.width;
+  for(let i=0;i<bd.length;i+=4){
+    const idx=i/4, m=mask[idx];
+    out[i]=out[i+1]=out[i+2]=Math.round(bd[i]*(1-m)+ed[i]*m);
+    out[i+3]=bd[i+3];
+  }
+  return new ImageData(out,base.width,base.height);
+}
+
+function buildLumMask(W,H,imgData,mn,mx,feather) {
+  const d=imgData.data, mask=new Float32Array(W*H);
+  for(let i=0;i<W*H;i++){
+    const lum=d[i*4];
+    let w;
+    if(lum>=mn&&lum<=mx){w=1;}
+    else if(lum<mn){
+      const t=feather>0?(lum-(mn-feather))/feather:0;
+      w=t<=0?0:t*t*(3-2*t);
+    } else {
+      const t=feather>0?((mx+feather)-lum)/feather:0;
+      w=t<=0?0:t*t*(3-2*t);
+    }
+    mask[i]=Math.max(0,Math.min(1,w));
+  }
+  return mask;
+}
+
+// — O(n) Box blur sobre Float32Array —
+function boxBlurF32(src, W, H, r) {
+  if(r<1)return new Float32Array(src);
+  const tmp=new Float32Array(W*H), out=new Float32Array(W*H);
+  const hs=2*r+1;
+  // Horizontal
+  for(let y=0;y<H;y++){
+    const base=y*W;
+    let sum=src[base]*(r+1);
+    for(let k=1;k<=r;k++)sum+=src[base+Math.min(k,W-1)];
+    tmp[base]=sum/hs;
+    for(let x=1;x<W;x++){
+      sum+=src[base+Math.min(x+r,W-1)];
+      sum-=src[base+Math.max(x-r-1,0)];
+      tmp[base+x]=sum/hs;
+    }
+  }
+  // Vertical
+  for(let x=0;x<W;x++){
+    let sum=tmp[x]*(r+1);
+    for(let k=1;k<=r;k++)sum+=tmp[Math.min(k,H-1)*W+x];
+    out[x]=sum/hs;
+    for(let y=1;y<H;y++){
+      sum+=tmp[Math.min(y+r,H-1)*W+x];
+      sum-=tmp[Math.max(y-r-1,0)*W+x];
+      out[y*W+x]=sum/hs;
+    }
+  }
+  return out;
+}
+
+// — Guided Filter (He et al. 2013) — self-guided, O(n) —
+function applyGuidedFilter(imageData, factor, radius, epsilon) {
+  const W=imageData.width, H=imageData.height, N=W*H;
+  const src=imageData.data;
+  const I=new Float32Array(N);
+  for(let i=0;i<N;i++)I[i]=src[i*4]/255;
+
+  const meanI=boxBlurF32(I,W,H,radius);
+  const II=new Float32Array(N); for(let i=0;i<N;i++)II[i]=I[i]*I[i];
+  const meanII=boxBlurF32(II,W,H,radius);
+  const varI=new Float32Array(N); for(let i=0;i<N;i++)varI[i]=meanII[i]-meanI[i]*meanI[i];
+  const a=new Float32Array(N); for(let i=0;i<N;i++)a[i]=varI[i]/(varI[i]+epsilon);
+  const b=new Float32Array(N); for(let i=0;i<N;i++)b[i]=meanI[i]*(1-a[i]);
+  const meanA=boxBlurF32(a,W,H,radius);
+  const meanB=boxBlurF32(b,W,H,radius);
+
+  // Output: guided smooth = meanA*I + meanB
+  const smoothed=new Float32Array(N);
+  for(let i=0;i<N;i++)smoothed[i]=Math.max(0,Math.min(1,meanA[i]*I[i]+meanB[i]));
+
+  // Unsharp mask using guided smooth as base
+  const out=new Uint8ClampedArray(src.length);
+  for(let i=0;i<N;i++){
+    const v=Math.min(1,Math.max(0,I[i]+factor*(I[i]-smoothed[i])));
+    const val=Math.round(v*255);
+    out[i*4]=out[i*4+1]=out[i*4+2]=val;
+    out[i*4+3]=src[i*4+3];
+  }
+  return new ImageData(out,W,H);
+}
+
+// — Unsharp mask via canvas blur —
+function canvasBlur(imageData, radius) {
+  const t=document.createElement('canvas'); t.width=imageData.width; t.height=imageData.height;
+  t.getContext('2d').putImageData(imageData,0,0);
+  const b=document.createElement('canvas'); b.width=imageData.width; b.height=imageData.height;
+  const bc=b.getContext('2d'); bc.filter=`blur(${Math.max(.5,radius)}px)`; bc.drawImage(t,0,0);
+  return bc.getImageData(0,0,imageData.width,imageData.height);
+}
+
+function applyUnsharp(imageData, factor, radius) {
+  const blr=canvasBlur(imageData,radius), sd=imageData.data, bd=blr.data;
+  const out=new Uint8ClampedArray(sd.length);
+  for(let i=0;i<sd.length;i+=4){
+    const v=Math.min(255,Math.max(0,Math.round(sd[i]+factor*(sd[i]-bd[i]))));
+    out[i]=out[i+1]=out[i+2]=v; out[i+3]=sd[i+3];
+  }
+  return new ImageData(out,imageData.width,imageData.height);
+}
+
+// — Ruido Gaussiano (Box-Muller) —
+function gaussRand(){
+  let u=0,v=0;
+  while(!u)u=Math.random(); while(!v)v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+// — Grano simple (modulado por luminosidad) —
+function applyGrain(imageData, amount, size) {
+  const W=imageData.width, H=imageData.height, d=imageData.data;
+  const out=new Uint8ClampedArray(d.length), sc=amount*0.45;
+  const gW=Math.ceil(W/size), gH=Math.ceil(H/size);
+  const buf=new Float32Array(gW*gH);
+  for(let i=0;i<buf.length;i++)buf[i]=gaussRand();
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const idx=(y*W+x)*4, lum=d[idx]/255;
+    const weight=Math.sin(Math.PI*lum)*sc;
+    const gx=Math.min(Math.floor(x/size),gW-1), gy=Math.min(Math.floor(y/size),gH-1);
+    const noise=buf[gy*gW+gx]*weight;
+    const v=Math.min(255,Math.max(0,Math.round(d[idx]+noise*80)));
+    out[idx]=out[idx+1]=out[idx+2]=v; out[idx+3]=d[idx+3];
+  }
+  return new ImageData(out,W,H);
+}
+
+// — Grano por separación de frecuencias (3 capas espectrales) —
+function applyFreqGrain(imageData, amount, texture) {
+  const W=imageData.width, H=imageData.height, d=imageData.data;
+  const out=new Uint8ClampedArray(d.length);
+  const sc=amount/100, tex=Math.max(1,texture);
+  // 3 capas de grano a escala 1:1, 1:3, 1:tex (coarsen)
+  const scales=[1,3,Math.round(tex*1.5)];
+  const wts=[0.35,0.55,0.25*(tex-1)/4]; // más peso a capa media
+  // Pre-generar buffers de grano
+  const bufs=scales.map(s=>{
+    const gW=Math.ceil(W/s), gH=Math.ceil(H/s);
+    const buf=new Float32Array(gW*gH);
+    for(let i=0;i<buf.length;i++)buf[i]=gaussRand();
+    return{buf,gW,gH,s};
+  });
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    const idx=(y*W+x)*4, lum=d[idx]/255;
+    const lumW=Math.sin(Math.PI*lum); // midtones
+    let noise=0;
+    for(let i=0;i<bufs.length;i++){
+      const{buf,gW,gH,s}=bufs[i];
+      const gx=Math.min(Math.floor(x/s),gW-1), gy=Math.min(Math.floor(y/s),gH-1);
+      noise+=buf[gy*gW+gx]*wts[i];
+    }
+    const v=Math.min(255,Math.max(0,Math.round(d[idx]+noise*sc*lumW*90)));
+    out[idx]=out[idx+1]=out[idx+2]=v; out[idx+3]=d[idx+3];
+  }
+  return new ImageData(out,W,H);
+}
+
+// ============================================================
+// CLIPPING OVERLAY — tecla J
+// ============================================================
+function drawClippingOverlay(pd) {
+  const d=pd.data, W=overCvs.width, H=overCvs.height;
+  overCtx.clearRect(0,0,W,H);
+  const od=overCtx.createImageData(W,H);
+  for(let i=0;i<d.length;i+=4){
+    if(d[i]>=253){od.data[i]=255;od.data[i+1]=0;od.data[i+2]=0;od.data[i+3]=210;}
+    else if(d[i]<=2){od.data[i]=0;od.data[i+1]=60;od.data[i+2]=255;od.data[i+3]=210;}
+  }
+  overCtx.putImageData(od,0,0);
+}
+
+// ============================================================
+// ZONE PICKER — tecla Z
+// ============================================================
+function handleZonePick(e) {
+  if(!procData||!ST.pickerMode)return;
+  const rect=prevCvs.getBoundingClientRect();
+  const x=Math.min(prevCvs.width-1,Math.max(0,Math.round((e.clientX-rect.left)*(prevCvs.width/rect.width))));
+  const y=Math.min(prevCvs.height-1,Math.max(0,Math.round((e.clientY-rect.top)*(prevCvs.height/rect.height))));
+  const lum=procData.data[(y*prevCvs.width+x)*4];
+  const zone=Math.min(10,Math.round(lum/255*10));
+  const NUMS=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI'];
+  const badge=document.getElementById('zone-badge');
+  badge.textContent=`Zona ${NUMS[zone]}  ·  lum ${lum}`;
+  badge.style.display='block';
+  setTimeout(()=>badge.style.display='none',2200);
+  highlightZ=zone; drawZoneCvs();
+  setTimeout(()=>{highlightZ=-1;drawZoneCvs();},2200);
+  document.getElementById('zone-info').textContent=`Z-${NUMS[zone]} · ${lum}`;
+  setTimeout(()=>document.getElementById('zone-info').textContent='',2200);
+}
+prevCvs.addEventListener('click',handleZonePick);
+
+// ============================================================
+// HISTOGRAMAS
+// ============================================================
+const hOrig=document.getElementById('hist-orig'), hBW=document.getElementById('hist-bw');
+
+function resizeHists() {
+  document.querySelectorAll('.hist-col').forEach((col,i)=>{
+    const cvs=i===0?hOrig:hBW; cvs.width=col.clientWidth-18; cvs.height=106;
+  });
+}
+
+function drawHistograms(orig,bw) { drawOrigHist(orig); drawBWHist(bw); }
+
+function drawOrigHist(id) {
+  const d=id.data, rC=new Uint32Array(256), gC=new Uint32Array(256), bC=new Uint32Array(256);
+  for(let i=0;i<d.length;i+=4){rC[d[i]]++;gC[d[i+1]]++;bC[d[i+2]]++;}
+  const mx=Math.max(Math.max(...rC),Math.max(...gC),Math.max(...bC))||1;
+  const ctx=hOrig.getContext('2d'), W=hOrig.width, H=hOrig.height;
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#050505'; ctx.fillRect(0,0,W,H);
+  const bw=W/256;
+  [[rC,'rgba(192,112,96,.6)'],[gC,'rgba(98,164,98,.6)'],[bC,'rgba(88,130,200,.6)']].forEach(([c,cl])=>{
+    ctx.fillStyle=cl;
+    for(let i=0;i<256;i++){const h=(c[i]/mx)*H;ctx.fillRect(i*bw,H-h,bw+.5,h);}
+  });
+  ctx.strokeStyle='rgba(192,112,96,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(.5,0);ctx.lineTo(.5,H);ctx.stroke();
+  ctx.strokeStyle='rgba(200,162,84,.5)';ctx.beginPath();ctx.moveTo(W-.5,0);ctx.lineTo(W-.5,H);ctx.stroke();
+}
+
+function drawBWHist(id) {
+  const d=id.data, counts=new Uint32Array(256);
+  for(let i=0;i<d.length;i+=4)counts[d[i]]++;
+  const mx=Math.max(...counts)||1;
+  const ctx=hBW.getContext('2d'), W=hBW.width, H=hBW.height;
+  ctx.clearRect(0,0,W,H); ctx.fillStyle='#050505'; ctx.fillRect(0,0,W,H);
+  const bw=W/256;
+  const gr=ctx.createLinearGradient(0,0,W,0);
+  gr.addColorStop(0,'rgba(18,18,16,.95)'); gr.addColorStop(.5,'rgba(108,108,100,.85)'); gr.addColorStop(1,'rgba(208,208,198,.95)');
+  ctx.fillStyle=gr;
+  for(let i=0;i<256;i++){const h=(counts[i]/mx)*H;ctx.fillRect(i*bw,H-h,bw+.5,h);}
+  // Zone lines
+  for(let z=0;z<NZ;z++){
+    const x=(zI[z]/255)*W; ctx.strokeStyle='rgba(200,162,84,.15)'; ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();
+  }
+  ctx.strokeStyle='rgba(192,112,96,.5)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(.5,0);ctx.lineTo(.5,H);ctx.stroke();
+  ctx.strokeStyle='rgba(200,162,84,.5)';ctx.beginPath();ctx.moveTo(W-.5,0);ctx.lineTo(W-.5,H);ctx.stroke();
+}
+
+// — Luminosity mask visualizer —
+function drawLumViz() {
+  const cvs=document.getElementById('lum-viz-canvas'), ctx=cvs.getContext('2d');
+  const W=cvs.width, H=cvs.height;
+  ctx.clearRect(0,0,W,H);
+  // Gradient bar
+  const gr=ctx.createLinearGradient(0,0,W,0);
+  gr.addColorStop(0,'#111'); gr.addColorStop(1,'#ccc');
+  ctx.fillStyle=gr; ctx.fillRect(0,0,W,H);
+  if(!ST.lumEnabled){ctx.fillStyle='rgba(7,7,7,.6)';ctx.fillRect(0,0,W,H);return;}
+  // Mask overlay
+  const mn=ST.lumMin/255*W, mx=ST.lumMax/255*W, fe=ST.lumFeather/255*W;
+  ctx.fillStyle='rgba(200,162,84,.35)'; ctx.fillRect(mn,0,mx-mn,H);
+  // Feather gradients
+  if(fe>0){
+    const g1=ctx.createLinearGradient(mn-fe,0,mn,0);
+    g1.addColorStop(0,'rgba(200,162,84,0)'); g1.addColorStop(1,'rgba(200,162,84,.35)');
+    ctx.fillStyle=g1; ctx.fillRect(Math.max(0,mn-fe),0,fe,H);
+    const g2=ctx.createLinearGradient(mx,0,mx+fe,0);
+    g2.addColorStop(0,'rgba(200,162,84,.35)'); g2.addColorStop(1,'rgba(200,162,84,0)');
+    ctx.fillStyle=g2; ctx.fillRect(mx,0,fe,H);
+  }
+  // Borders
+  ctx.strokeStyle='rgba(200,162,84,.8)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(mn,.5);ctx.lineTo(mn,H-.5);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(mx,.5);ctx.lineTo(mx,H-.5);ctx.stroke();
+}
+
+// ============================================================
+// CONTROLES
+// ============================================================
+function bindS(id, vid, key, fmt) {
+  const el=document.getElementById(id), vEl=document.getElementById(vid);
+  el.addEventListener('input',()=>{ST[key]=parseFloat(el.value);vEl.textContent=fmt(el.value);schedProc();});
+}
+const sign=v=>(v>0?'+':'')+v;
+
+bindS('ch-r','ch-r-v','chR',sign); bindS('ch-g','ch-g-v','chG',sign); bindS('ch-b','ch-b-v','chB',sign);
+bindS('hsl-r','hsl-r-v','hslR',sign); bindS('hsl-o','hsl-o-v','hslO',sign);
+bindS('hsl-y','hsl-y-v','hslY',sign); bindS('hsl-g','hsl-g-v','hslG',sign);
+bindS('hsl-c','hsl-c-v','hslC',sign); bindS('hsl-b','hsl-b-v','hslB',sign);
+bindS('hsl-p','hsl-p-v','hslP',sign); bindS('hsl-m','hsl-m-v','hslM',sign);
+bindS('cla-amount','cla-amount-v','claAmount',sign);
+bindS('cla-radius','cla-radius-v','claRadius',v=>v+'px');
+bindS('cla-eps','cla-eps-v','claEps',v=>v);
+bindS('grn-amount','grn-amount-v','grnAmount',v=>v);
+bindS('grn-size','grn-size-v','grnSize',v=>parseFloat(v).toFixed(1));
+bindS('shp-amount','shp-amount-v','shpAmount',v=>v);
+bindS('shp-radius','shp-radius-v','shpRadius',v=>v+'px');
+bindS('lum-min','lum-min-v','lumMin',v=>{
+  if(ST.lumMax<+v){ST.lumMax=+v;document.getElementById('lum-max').value=v;document.getElementById('lum-max-v').textContent=v;}
+  drawLumViz(); return v;
+});
+bindS('lum-max','lum-max-v','lumMax',v=>{
+  if(ST.lumMin>+v){ST.lumMin=+v;document.getElementById('lum-min').value=v;document.getElementById('lum-min-v').textContent=v;}
+  drawLumViz(); return v;
+});
+bindS('lum-feather','lum-feather-v','lumFeather',v=>{drawLumViz();return v;});
+document.getElementById('exp-qual').addEventListener('input',function(){
+  ST.expQuality=this.value/100;document.getElementById('exp-qual-v').textContent=this.value;
+});
+
+// Toggle controls
+document.getElementById('cla-guided').addEventListener('change',function(){ST.claGuided=this.checked;schedProc();});
+document.getElementById('grn-freqsep').addEventListener('change',function(){ST.grnFreqSep=this.checked;schedProc();});
+document.getElementById('lum-enabled').addEventListener('change',function(){ST.lumEnabled=this.checked;drawLumViz();schedProc();});
+
+// Desactivar preset al mover canales manualmente
+['ch-r','ch-g','ch-b'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>document.querySelectorAll('.pset-btn').forEach(b=>b.classList.remove('active')));
+});
+
+// RGB presets
+document.querySelectorAll('.pset-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const p=PRESETS_RGB[btn.dataset.preset];
+    document.querySelectorAll('.pset-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    ['r','g','b'].forEach(ch=>{
+      const v=p[ch];
+      document.getElementById(`ch-${ch}`).value=v;
+      document.getElementById(`ch-${ch}-v`).textContent=sign(v);
+      ST[`ch${ch.toUpperCase()}`]=v;
+    });
+    schedProc();
+  });
+});
+
+// Film emulsion presets
+document.querySelectorAll('.film-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const f=FILMS[btn.dataset.film];
+    document.querySelectorAll('.film-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    zO=[...f.zones]; drawZoneCvs();
+    if(f.ch){
+      ['r','g','b'].forEach(ch=>{
+        const v=f.ch[ch];
+        document.getElementById(`ch-${ch}`).value=v;
+        document.getElementById(`ch-${ch}-v`).textContent=sign(v);
+        ST[`ch${ch.toUpperCase()}`]=v;
+      });
+      document.querySelectorAll('.pset-btn').forEach(b=>b.classList.remove('active'));
+    }
+    schedProc();
+  });
+});
+
+// Preview toolbar buttons
+document.getElementById('btn-clip').addEventListener('click',function(){
+  ST.clipping=!ST.clipping; this.classList.toggle('active',ST.clipping);
+  if(!ST.clipping)overCtx.clearRect(0,0,overCvs.width,overCvs.height);
+  else if(procData)drawClippingOverlay(procData);
+});
+document.getElementById('btn-picker').addEventListener('click',function(){
+  ST.pickerMode=!ST.pickerMode; this.classList.toggle('active',ST.pickerMode);
+  prevCvs.style.cursor=ST.pickerMode?'crosshair':'default';
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT')return;
+  if(e.key==='j'||e.key==='J'){document.getElementById('btn-clip').click();}
+  if(e.key==='z'||e.key==='Z'){document.getElementById('btn-picker').click();}
+});
+
+// Section collapse
+document.querySelectorAll('.sec-hdr[data-t]').forEach(hdr=>{
+  hdr.addEventListener('click',()=>{
+    const body=document.getElementById(hdr.dataset.t);
+    const hidden=body.classList.toggle('hidden'); hdr.classList.toggle('closed',hidden);
+  });
+});
+
+// ============================================================
+// EXPORTAR — resolución completa
+// ============================================================
+document.getElementById('exp-btn').addEventListener('click',async()=>{
+  if(!origImg)return;
+  const btn=document.getElementById('exp-btn');
+  btn.textContent='Procesando ···'; btn.disabled=true;
+  await new Promise(r=>setTimeout(r,20));
+  const fc=document.createElement('canvas'); fc.width=origImg.width; fc.height=origImg.height;
+  const fCtx=fc.getContext('2d',{willReadFrequently:true}); fCtx.drawImage(origImg,0,0);
+  const fd=fCtx.getImageData(0,0,origImg.width,origImg.height);
+  const result=runPipeline(fd,ST);
+  fCtx.putImageData(result,0,0);
+  const fmt=document.getElementById('exp-fmt').value;
+  const ext=fmt==='image/png'?'png':fmt==='image/webp'?'webp':'jpg';
+  const base=(document.getElementById('topbar-file').textContent.split('·')[0]||'imagen').trim();
+  const name=(base.replace(/\.[^.]+$/,'')||'bnpro');
+  fc.toBlob(blob=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob); a.download=`${name}_bn.${ext}`; a.click();
+    URL.revokeObjectURL(a.href);
+    btn.textContent='Exportar imagen B&N'; btn.disabled=false;
+  },fmt,ST.expQuality);
+});
+
+// ============================================================
+// INIT
+// ============================================================
+drawZoneCvs(); drawLumViz();
+window.addEventListener('resize',()=>{resizeHists();drawLumViz();});
+setTimeout(()=>{resizeHists();},100);
+</script>
+</body>
+</html>
