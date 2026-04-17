@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<title>análisis de sesiones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #eaf0f7;
+  --surface: #ffffff;
+  --text: #1a1a1a;
+  --muted: #888888;
+  --faint: #bcbcbc;
+  --border: #dcdcdc;
+  --border-strong: #9a9a9a;
+  --accent: #3a5a7a;
+  --done: #3a7a42;
+  --notDone: #a04040;
+  --warn: #b58b1e;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--bg); }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: 'Fira Code', ui-monospace, 'SF Mono', 'Menlo', 'Courier New', monospace;
+  font-size: 13px; line-height: 1.5;
+  min-height: 100vh; padding: 32px 24px 80px;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 1080px; margin: 0 auto; }
+
+h1 { font-size: 11px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; }
+h2 {
+  font-size: 11px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 14px;
+}
+.subtitle { font-size: 11px; color: var(--muted); }
+
+header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 28px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+.title-block { display: flex; flex-direction: column; gap: 4px; }
+.header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+button {
+  font-family: inherit; font-size: 12px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text); padding: 5px 10px; cursor: pointer;
+  transition: background 0.08s, border-color 0.08s;
+}
+button:hover:not(:disabled) { background: var(--surface); border-color: var(--border-strong); }
+button.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+button:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.nav-link {
+  font-family: inherit; font-size: 12px;
+  color: var(--muted); text-decoration: none;
+  padding: 5px 10px; border: 1px dashed var(--border);
+  transition: color 0.08s, border-color 0.08s;
+  display: inline-flex; align-items: center;
+}
+.nav-link:hover { color: var(--text); border-color: var(--border-strong); }
+
+section {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 20px; margin-bottom: 20px;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--muted);
+  background: transparent;
+  transition: background 0.1s, border-color 0.1s;
+}
+.dropzone.drag-over {
+  background: #fff;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.dropzone-label { font-size: 12px; margin-bottom: 8px; }
+.dropzone-hint { font-size: 10px; color: var(--faint); }
+
+.files-list { display: flex; flex-direction: column; gap: 4px; }
+.file-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto 22px;
+  gap: 12px; align-items: center;
+  font-size: 11px; padding: 6px 10px;
+  border: 1px solid var(--border); background: var(--bg);
+}
+.file-row .fname { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file-row .fdate { color: var(--muted); }
+.file-row .ftasks { color: var(--muted); }
+.file-row .frm { cursor: pointer; color: var(--faint); text-align: center; }
+.file-row .frm:hover { color: var(--notDone); }
+
+.stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}
+.stat { display: flex; flex-direction: column; gap: 3px; }
+.stat-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.stat-value { font-size: 18px; font-variant-numeric: tabular-nums; }
+
+.tags-bars { display: flex; flex-direction: column; gap: 4px; }
+.tag-bar-row {
+  display: grid; grid-template-columns: 140px 1fr 90px;
+  gap: 10px; align-items: center; font-size: 11px;
+}
+.tag-bar-name { color: var(--accent); font-variant-numeric: tabular-nums; }
+.tag-bar-track { height: 20px; background: var(--bg); border: 1px solid var(--border); position: relative; }
+.tag-bar-fill { height: 100%; background: var(--accent); opacity: 0.7; }
+.tag-bar-value { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+.data-table {
+  width: 100%; border-collapse: collapse; font-size: 11px;
+}
+.data-table th, .data-table td {
+  text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--border);
+}
+.data-table th {
+  font-weight: 500; color: var(--muted); letter-spacing: 0.05em;
+  text-transform: uppercase; font-size: 10px;
+}
+.data-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.data-table tbody tr:hover { background: var(--bg); }
+
+.heatmap {
+  display: grid;
+  grid-template-columns: 40px repeat(24, 1fr);
+  gap: 2px;
+  font-size: 9px;
+}
+.heatmap .hcell {
+  height: 22px; background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text);
+}
+.heatmap .hlabel-row { color: var(--muted); justify-content: flex-end; padding-right: 6px; }
+.heatmap .hlabel-col { color: var(--muted); background: transparent; height: 16px; }
+
+.estimation-legend { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+.estimation-item {
+  display: grid; grid-template-columns: 1fr 80px 80px 80px;
+  gap: 8px; font-size: 11px; padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.estimation-item.over { color: var(--notDone); }
+.estimation-item.under { color: var(--done); }
+.estimation-item.ontime { color: var(--text); }
+.estimation-item .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+.completion-row {
+  display: grid; grid-template-columns: 140px 1fr 80px;
+  gap: 10px; align-items: center; font-size: 11px; margin-bottom: 4px;
+}
+.completion-bar {
+  height: 20px; background: var(--bg); border: 1px solid var(--border);
+  position: relative; display: flex; overflow: hidden;
+}
+.completion-seg { height: 100%; }
+.completion-seg.done { background: var(--done); }
+.completion-seg.advanced { background: var(--accent); }
+.completion-seg.notDone { background: var(--notDone); }
+.completion-seg.other { background: var(--faint); }
+.completion-legend {
+  display: flex; gap: 16px; margin-top: 12px; font-size: 10px; color: var(--muted);
+}
+.completion-legend-swatch { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: middle; }
+
+.switching-chart {
+  display: flex; align-items: flex-end; height: 120px; gap: 2px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+.switching-bar {
+  min-width: 16px; background: var(--accent); opacity: 0.7;
+  position: relative; transition: opacity 0.1s;
+}
+.switching-bar:hover { opacity: 1; }
+
+.streak-row {
+  display: grid; grid-template-columns: 140px 1fr 80px 80px;
+  gap: 10px; align-items: center; font-size: 11px; padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+.streak-name { color: var(--accent); }
+.streak-bar-track {
+  height: 16px; background: var(--bg); border: 1px solid var(--border); position: relative;
+}
+.streak-bar-fill { height: 100%; background: var(--warn); opacity: 0.7; }
+
+.hidden { display: none !important; }
+.file-input { display: none; }
+
+.note {
+  font-size: 10px; color: var(--muted); margin-top: 10px; font-style: italic;
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="title-block">
+    <h1>análisis de sesiones</h1>
+    <div class="subtitle" id="subtitle">carga uno o más JSON exportados desde la app de sesión</div>
+  </div>
+  <div class="header-actions">
+    <a href="sesion.html" class="nav-link">← sesión</a>
+    <button id="btn-load">cargar JSONs</button>
+    <button id="btn-export-csv" disabled>CSV</button>
+    <button id="btn-clear" disabled>limpiar</button>
+    <input type="file" id="file-input" class="file-input" accept=".json,application/json" multiple>
+  </div>
+</header>
+
+<section class="dropzone" id="dropzone">
+  <div class="dropzone-label">arrastra archivos JSON aquí</div>
+  <div class="dropzone-hint">o haz click en "cargar JSONs"</div>
+</section>
+
+<section class="hidden" id="files-section">
+  <h2>sesiones cargadas</h2>
+  <div class="files-list" id="files-list"></div>
+</section>
+
+<div id="analysis-content" class="hidden">
+
+  <section>
+    <h2>resumen</h2>
+    <div class="stats-grid" id="summary-stats"></div>
+  </section>
+
+  <section>
+    <h2>tiempo por etiqueta</h2>
+    <div class="tags-bars" id="tags-bars"></div>
+    <div class="note" id="tags-note"></div>
+  </section>
+
+  <section>
+    <h2>tareas recurrentes</h2>
+    <table class="data-table" id="recurring-table">
+      <thead>
+        <tr>
+          <th>nombre normalizado</th>
+          <th class="num">sesiones</th>
+          <th class="num">tiempo total</th>
+          <th class="num">completadas</th>
+          <th class="num">% done</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+    <div class="note">nombres normalizados (minúsculas, sin etiquetas ni puntuación) con ≥2 apariciones.</div>
+  </section>
+
+  <section>
+    <h2>distribución temporal</h2>
+    <div id="heatmap-wrap"></div>
+    <div class="note">horas con más trabajo registrado; todas las sesiones agregadas. los intervalos se dividen por hora.</div>
+  </section>
+
+  <section>
+    <h2>precisión de estimación</h2>
+    <div class="estimation-legend">delta = real − estimado. positivo: subestimaste. negativo: sobreestimaste.</div>
+    <div id="estimation-tags"></div>
+    <div class="note" id="estimation-note"></div>
+  </section>
+
+  <section>
+    <h2>completación por etiqueta</h2>
+    <div id="completion-content"></div>
+    <div class="completion-legend">
+      <span><span class="completion-legend-swatch" style="background:var(--done)"></span>terminada</span>
+      <span><span class="completion-legend-swatch" style="background:var(--accent)"></span>avanzada</span>
+      <span><span class="completion-legend-swatch" style="background:var(--notDone)"></span>no hecha</span>
+      <span><span class="completion-legend-swatch" style="background:var(--faint)"></span>otras</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>task switching</h2>
+    <div id="switching-stats" class="stats-grid" style="margin-bottom:16px;"></div>
+    <div class="switching-chart" id="switching-chart"></div>
+    <div class="note">cada barra es una sesión (ordenadas cronológicamente). altura = número de inicios de tarea. cambiar de tarea cuenta como un inicio nuevo.</div>
+  </section>
+
+  <section>
+    <h2>rachas por etiqueta</h2>
+    <div id="streaks-content"></div>
+    <div class="note">racha = días consecutivos con al menos una tarea que incluye la etiqueta.</div>
+  </section>
+
+</div>
+
+</div>
+
+<script>
+const TAG_RE = /#([\p{L}\p{N}_-]+)/gu;
+let sessions = []; // loaded session objects
+
+/* ================= HELPERS ================= */
+function fmtTime(ms) {
+  if (ms < 0 || !isFinite(ms)) ms = 0;
+  const s = Math.floor(ms/1000);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`;
+}
+function fmtShort(ms) {
+  if (ms < 60000) return Math.round(ms/1000)+'s';
+  const m = Math.floor(ms/60000);
+  if (m < 60) return m+'m';
+  const h = Math.floor(m/60), mm = m%60;
+  return mm ? `${h}h${mm}m` : `${h}h`;
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try { return new Date(iso).toLocaleDateString('es-PE', {day:'2-digit',month:'short',year:'numeric'}); }
+  catch { return iso; }
+}
+function parseTags(name) {
+  const tags = []; let m;
+  const re = new RegExp(TAG_RE.source, 'gu');
+  while ((m = re.exec(name || '')) !== null) tags.push(m[1].toLowerCase());
+  return [...new Set(tags)];
+}
+function stripTags(name) {
+  return (name || '').replace(new RegExp(TAG_RE.source,'gu'),'').replace(/\s+/g,' ').trim();
+}
+function normalizeName(name) {
+  return (name || '').toLowerCase()
+    .replace(new RegExp(TAG_RE.source,'gu'),'')
+    .replace(/[^\p{L}\p{N}\s]/gu,'')
+    .replace(/\s+/g,' ').trim();
+}
+function computeTaskMs(task) {
+  return (task.intervals || []).reduce((a, iv) => {
+    if (!iv.end) return a;
+    return a + Math.max(0, new Date(iv.end).getTime() - new Date(iv.start).getTime());
+  }, 0);
+}
+function sessionDate(s) {
+  return new Date(s.createdAt || s.sessionTimer?.startedAt || s.lastModified);
+}
+
+/* ================= FILE LOADING ================= */
+function handleFiles(files) {
+  const readers = [...files].map(f => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = ev => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        if (!parsed.tasks || !parsed.sessionId) {
+          resolve({error: f.name + ': no es un JSON de sesión válido'});
+          return;
+        }
+        resolve({data: parsed, filename: f.name});
+      } catch (e) { resolve({error: f.name + ': ' + e.message}); }
+    };
+    r.onerror = () => resolve({error: f.name + ': error de lectura'});
+    r.readAsText(f);
+  }));
+  Promise.all(readers).then(results => {
+    const errors = results.filter(r => r.error).map(r => r.error);
+    if (errors.length) alert('algunos archivos no se cargaron:\n' + errors.join('\n'));
+    results.filter(r => r.data).forEach(r => {
+      // Dedupe by sessionId
+      if (!sessions.find(s => s.sessionId === r.data.sessionId)) {
+        sessions.push({...r.data, _filename: r.filename});
+      }
+    });
+    sessions.sort((a,b) => sessionDate(a) - sessionDate(b));
+    renderFilesList();
+    runAnalysis();
+  });
+}
+
+function removeSession(id) {
+  sessions = sessions.filter(s => s.sessionId !== id);
+  renderFilesList();
+  runAnalysis();
+}
+
+function clearAll() {
+  sessions = [];
+  renderFilesList();
+  document.getElementById('analysis-content').classList.add('hidden');
+  document.getElementById('files-section').classList.add('hidden');
+  document.getElementById('btn-export-csv').disabled = true;
+  document.getElementById('btn-clear').disabled = true;
+  document.getElementById('subtitle').textContent = 'carga uno o más JSON exportados desde la app de sesión';
+}
+
+function renderFilesList() {
+  const wrap = document.getElementById('files-section');
+  const list = document.getElementById('files-list');
+  list.innerHTML = '';
+  if (!sessions.length) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  sessions.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'file-row';
+    const fname = document.createElement('div'); fname.className = 'fname';
+    fname.textContent = s._filename || 'sesión';
+    const fdate = document.createElement('div'); fdate.className = 'fdate';
+    fdate.textContent = fmtDate(sessionDate(s));
+    const ftasks = document.createElement('div'); ftasks.className = 'ftasks';
+    ftasks.textContent = `${s.tasks.length} tareas · ${fmtShort(s.sessionTimer?.accumulatedMs || 0)}`;
+    const rm = document.createElement('div'); rm.className = 'frm'; rm.textContent = '×';
+    rm.title = 'quitar';
+    rm.addEventListener('click', () => removeSession(s.sessionId));
+    row.appendChild(fname); row.appendChild(fdate); row.appendChild(ftasks); row.appendChild(rm);
+    list.appendChild(row);
+  });
+  document.getElementById('subtitle').textContent = `${sessions.length} sesiones cargadas`;
+  document.getElementById('btn-export-csv').disabled = false;
+  document.getElementById('btn-clear').disabled = false;
+}
+
+/* ================= ANALYSIS ================= */
+function computeSummary() {
+  const totalMs = sessions.reduce((a,s) => a + (s.sessionTimer?.accumulatedMs || 0), 0);
+  const workedMs = sessions.reduce((a,s) =>
+    a + s.tasks.reduce((b,t) => b + computeTaskMs(t), 0), 0);
+  const totalTasks = sessions.reduce((a,s) => a + s.tasks.length, 0);
+  const uniqueNames = new Set();
+  sessions.forEach(s => s.tasks.forEach(t => {
+    const n = normalizeName(t.name);
+    if (n) uniqueNames.add(n);
+  }));
+  const dates = sessions.map(sessionDate).sort((a,b) => a-b);
+  const uniqueTags = new Set();
+  sessions.forEach(s => s.tasks.forEach(t => parseTags(t.name).forEach(x => uniqueTags.add(x))));
+  return {
+    count: sessions.length,
+    totalMs, workedMs,
+    totalTasks, uniqueNames: uniqueNames.size,
+    firstDate: dates[0], lastDate: dates[dates.length-1],
+    uniqueTags: uniqueTags.size
+  };
+}
+
+function computeTagTotals() {
+  const tagMs = {}, tagTasks = {};
+  sessions.forEach(s => s.tasks.forEach(t => {
+    const tags = parseTags(t.name);
+    const ms = computeTaskMs(t);
+    tags.forEach(tag => {
+      tagMs[tag] = (tagMs[tag] || 0) + ms;
+      tagTasks[tag] = (tagTasks[tag] || 0) + 1;
+    });
+  }));
+  return Object.entries(tagMs).map(([tag, ms]) => ({tag, ms, tasks: tagTasks[tag]}))
+    .sort((a,b) => b.ms - a.ms);
+}
+
+function computeRecurring() {
+  const groups = new Map();
+  sessions.forEach(s => s.tasks.forEach(t => {
+    const key = normalizeName(t.name);
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, {name: key, sessions: new Set(), totalMs: 0, done: 0, total: 0});
+    const g = groups.get(key);
+    g.sessions.add(s.sessionId);
+    g.totalMs += computeTaskMs(t);
+    g.total++;
+    if (t.status === 'done') g.done++;
+  }));
+  return [...groups.values()]
+    .filter(g => g.sessions.size >= 2)
+    .map(g => ({...g, sessionCount: g.sessions.size, donePct: g.total ? g.done/g.total : 0}))
+    .sort((a,b) => b.totalMs - a.totalMs);
+}
+
+function computeHeatmap() {
+  const grid = Array.from({length: 7}, () => new Array(24).fill(0));
+  sessions.forEach(s => s.tasks.forEach(t => {
+    (t.intervals || []).forEach(iv => {
+      if (!iv.end) return;
+      let cursor = new Date(iv.start).getTime();
+      const endMs = new Date(iv.end).getTime();
+      while (cursor < endMs) {
+        const d = new Date(cursor);
+        const nh = new Date(cursor);
+        nh.setMinutes(0, 0, 0); nh.setHours(nh.getHours() + 1);
+        const chunk = Math.min(nh.getTime(), endMs) - cursor;
+        grid[d.getDay()][d.getHours()] += chunk;
+        cursor = nh.getTime();
+      }
+    });
+  }));
+  return grid;
+}
+
+function computeEstimation() {
+  const items = [];
+  sessions.forEach(s => s.tasks.forEach(t => {
+    if (!t.estimateMin) return;
+    const actualMin = computeTaskMs(t) / 60000;
+    if (actualMin < 0.5) return;
+    items.push({
+      name: stripTags(t.name), tags: parseTags(t.name),
+      estimateMin: t.estimateMin, actualMin,
+      deltaMin: actualMin - t.estimateMin,
+      sessionDate: sessionDate(s)
+    });
+  }));
+  const byTag = {};
+  items.forEach(i => i.tags.forEach(tag => {
+    if (!byTag[tag]) byTag[tag] = [];
+    byTag[tag].push(i.deltaMin);
+  }));
+  const tagAverages = Object.entries(byTag)
+    .map(([tag, deltas]) => ({
+      tag, n: deltas.length,
+      avgDelta: deltas.reduce((a,b)=>a+b,0) / deltas.length,
+      medianDelta: [...deltas].sort((a,b)=>a-b)[Math.floor(deltas.length/2)]
+    }))
+    .filter(x => x.n >= 2)
+    .sort((a,b) => b.avgDelta - a.avgDelta);
+  const overallAvg = items.length
+    ? items.reduce((a,i) => a + i.deltaMin, 0) / items.length : 0;
+  return { items, tagAverages, overallAvg, count: items.length };
+}
+
+function computeCompletionByTag() {
+  const byTag = {};
+  sessions.forEach(s => s.tasks.forEach(t => {
+    parseTags(t.name).forEach(tag => {
+      if (!byTag[tag]) byTag[tag] = { done:0, advanced:0, notDone:0, other:0, total:0 };
+      byTag[tag].total++;
+      if (t.status === 'done') byTag[tag].done++;
+      else if (t.status === 'advanced') byTag[tag].advanced++;
+      else if (t.status === 'notDone') byTag[tag].notDone++;
+      else byTag[tag].other++;
+    });
+  }));
+  return Object.entries(byTag)
+    .map(([tag, d]) => ({tag, ...d, donePct: d.total ? d.done/d.total : 0}))
+    .filter(x => x.total >= 2)
+    .sort((a,b) => b.total - a.total);
+}
+
+function computeSwitching() {
+  return sessions.map(s => {
+    const starts = s.tasks.reduce((a,t) => a + ((t.intervals||[]).length), 0);
+    const tasksWorked = s.tasks.filter(t => (t.intervals||[]).length > 0).length;
+    return {
+      date: sessionDate(s),
+      starts, tasksWorked,
+      perTask: tasksWorked ? starts / tasksWorked : 0,
+      totalMs: s.sessionTimer?.accumulatedMs || 0
+    };
+  }).sort((a,b) => a.date - b.date);
+}
+
+function computeStreaks() {
+  const tagDays = {};
+  sessions.forEach(s => {
+    const day = sessionDate(s).toISOString().slice(0,10);
+    s.tasks.forEach(t => {
+      parseTags(t.name).forEach(tag => {
+        if (!tagDays[tag]) tagDays[tag] = new Set();
+        tagDays[tag].add(day);
+      });
+    });
+  });
+  const today = new Date().toISOString().slice(0,10);
+  return Object.entries(tagDays).map(([tag, daySet]) => {
+    const days = [...daySet].sort();
+    let longest = 0, current = 0, prev = null;
+    days.forEach(d => {
+      if (prev) {
+        const diff = (new Date(d) - new Date(prev)) / (24*60*60*1000);
+        current = diff === 1 ? current + 1 : 1;
+      } else current = 1;
+      if (current > longest) longest = current;
+      prev = d;
+    });
+    // current streak from today
+    let cs = 0;
+    const check = new Date();
+    while (daySet.has(check.toISOString().slice(0,10))) {
+      cs++; check.setDate(check.getDate() - 1);
+    }
+    return { tag, longest, currentStreak: cs, totalDays: days.length };
+  }).sort((a,b) => b.longest - a.longest);
+}
+
+/* ================= RENDER ================= */
+function runAnalysis() {
+  const wrap = document.getElementById('analysis-content');
+  if (!sessions.length) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  renderSummary();
+  renderTags();
+  renderRecurring();
+  renderHeatmap();
+  renderEstimation();
+  renderCompletion();
+  renderSwitching();
+  renderStreaks();
+}
+
+function renderSummary() {
+  const s = computeSummary();
+  const grid = document.getElementById('summary-stats');
+  grid.innerHTML = '';
+  const range = s.firstDate && s.lastDate
+    ? `${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}` : '—';
+  const items = [
+    ['sesiones', s.count],
+    ['tiempo total', fmtTime(s.totalMs)],
+    ['tiempo trabajado', fmtTime(s.workedMs)],
+    ['tareas totales', s.totalTasks],
+    ['tareas únicas', s.uniqueNames],
+    ['etiquetas únicas', s.uniqueTags],
+    ['rango', range]
+  ];
+  items.forEach(([l,v]) => {
+    const d = document.createElement('div'); d.className = 'stat';
+    const lb = document.createElement('div'); lb.className = 'stat-label'; lb.textContent = l;
+    const vl = document.createElement('div'); vl.className = 'stat-value';
+    vl.textContent = v; vl.style.fontSize = (typeof v === 'string' && v.length > 20) ? '12px' : '18px';
+    d.appendChild(lb); d.appendChild(vl); grid.appendChild(d);
+  });
+}
+
+function renderTags() {
+  const totals = computeTagTotals();
+  const bars = document.getElementById('tags-bars');
+  bars.innerHTML = '';
+  if (!totals.length) {
+    document.getElementById('tags-note').textContent = 'no hay etiquetas en las sesiones cargadas.';
+    return;
+  }
+  document.getElementById('tags-note').textContent = `${totals.length} etiquetas distintas.`;
+  const max = totals[0].ms;
+  totals.forEach(({tag, ms, tasks}) => {
+    const row = document.createElement('div'); row.className = 'tag-bar-row';
+    const name = document.createElement('div'); name.className = 'tag-bar-name'; name.textContent = tag;
+    const track = document.createElement('div'); track.className = 'tag-bar-track';
+    const fill = document.createElement('div'); fill.className = 'tag-bar-fill';
+    fill.style.width = (ms/max*100)+'%';
+    track.appendChild(fill);
+    const val = document.createElement('div'); val.className = 'tag-bar-value';
+    val.textContent = `${fmtShort(ms)} · ${tasks}t`;
+    row.appendChild(name); row.appendChild(track); row.appendChild(val);
+    bars.appendChild(row);
+  });
+}
+
+function renderRecurring() {
+  const rows = computeRecurring();
+  const tbody = document.querySelector('#recurring-table tbody');
+  tbody.innerHTML = '';
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:#888;text-align:center;padding:16px;">no hay tareas repetidas entre sesiones</td></tr>';
+    return;
+  }
+  rows.slice(0, 40).forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${r.name}</td>
+      <td class="num">${r.sessionCount}</td>
+      <td class="num">${fmtShort(r.totalMs)}</td>
+      <td class="num">${r.done}/${r.total}</td>
+      <td class="num">${(r.donePct*100).toFixed(0)}%</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderHeatmap() {
+  const wrap = document.getElementById('heatmap-wrap');
+  wrap.innerHTML = '';
+  const grid = computeHeatmap();
+  const flat = grid.flat();
+  const max = Math.max(...flat, 1);
+  const days = ['dom','lun','mar','mié','jue','vie','sáb'];
+  const hm = document.createElement('div');
+  hm.className = 'heatmap';
+  // header row (hours)
+  const empty = document.createElement('div'); empty.className = 'hcell hlabel-col';
+  hm.appendChild(empty);
+  for (let h = 0; h < 24; h++) {
+    const c = document.createElement('div'); c.className = 'hcell hlabel-col';
+    c.textContent = h % 3 === 0 ? h : '';
+    hm.appendChild(c);
+  }
+  // data rows
+  for (let d = 0; d < 7; d++) {
+    const lbl = document.createElement('div');
+    lbl.className = 'hcell hlabel-row'; lbl.textContent = days[d];
+    hm.appendChild(lbl);
+    for (let h = 0; h < 24; h++) {
+      const v = grid[d][h];
+      const c = document.createElement('div'); c.className = 'hcell';
+      const intensity = v / max;
+      if (intensity > 0) {
+        c.style.background = `rgba(58, 90, 122, ${0.15 + intensity*0.75})`;
+        c.style.color = intensity > 0.5 ? '#fff' : 'var(--text)';
+        c.textContent = fmtShort(v).replace(/[hm]/g,'').slice(0,3);
+      }
+      c.title = `${days[d]} ${h}:00 · ${fmtShort(v)}`;
+      hm.appendChild(c);
+    }
+  }
+  wrap.appendChild(hm);
+}
+
+function renderEstimation() {
+  const e = computeEstimation();
+  const wrap = document.getElementById('estimation-tags');
+  wrap.innerHTML = '';
+  const note = document.getElementById('estimation-note');
+  if (!e.count) {
+    note.textContent = 'ninguna tarea tenía estimación. puedes agregar estimaciones en la app de sesión.';
+    return;
+  }
+  const sign = e.overallAvg >= 0 ? '+' : '';
+  note.textContent = `${e.count} tareas estimadas. delta promedio global: ${sign}${e.overallAvg.toFixed(1)} min.`;
+  if (!e.tagAverages.length) {
+    wrap.innerHTML = '<div class="note">no hay suficientes tareas estimadas por etiqueta (min 2).</div>';
+    return;
+  }
+  const header = document.createElement('div');
+  header.className = 'estimation-item';
+  header.style.cssText = 'font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border-strong);';
+  header.innerHTML = '<div>etiqueta</div><div class="num">n</div><div class="num">Δ promedio</div><div class="num">Δ mediana</div>';
+  wrap.appendChild(header);
+  e.tagAverages.forEach(ta => {
+    const row = document.createElement('div');
+    row.className = 'estimation-item ' + (Math.abs(ta.avgDelta) < 5 ? 'ontime' : (ta.avgDelta > 0 ? 'over' : 'under'));
+    const sgnA = ta.avgDelta >= 0 ? '+' : '';
+    const sgnM = ta.medianDelta >= 0 ? '+' : '';
+    row.innerHTML = `<div>${ta.tag}</div>
+      <div class="num">${ta.n}</div>
+      <div class="num">${sgnA}${ta.avgDelta.toFixed(1)} min</div>
+      <div class="num">${sgnM}${ta.medianDelta.toFixed(1)} min</div>`;
+    wrap.appendChild(row);
+  });
+}
+
+function renderCompletion() {
+  const wrap = document.getElementById('completion-content');
+  wrap.innerHTML = '';
+  const rows = computeCompletionByTag();
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="note">no hay etiquetas con ≥2 tareas.</div>';
+    return;
+  }
+  rows.forEach(r => {
+    const row = document.createElement('div'); row.className = 'completion-row';
+    const name = document.createElement('div'); name.textContent = r.tag;
+    name.style.color = 'var(--accent)';
+    const bar = document.createElement('div'); bar.className = 'completion-bar';
+    const segs = [
+      ['done', r.done], ['advanced', r.advanced],
+      ['notDone', r.notDone], ['other', r.other]
+    ];
+    segs.forEach(([cls, n]) => {
+      if (n === 0) return;
+      const seg = document.createElement('div');
+      seg.className = 'completion-seg ' + cls;
+      seg.style.width = (n/r.total*100)+'%';
+      seg.title = `${cls}: ${n}`;
+      bar.appendChild(seg);
+    });
+    const val = document.createElement('div');
+    val.textContent = `${(r.donePct*100).toFixed(0)}% · ${r.total}t`;
+    val.style.textAlign = 'right'; val.style.color = 'var(--muted)';
+    val.style.fontVariantNumeric = 'tabular-nums';
+    row.appendChild(name); row.appendChild(bar); row.appendChild(val);
+    wrap.appendChild(row);
+  });
+}
+
+function renderSwitching() {
+  const data = computeSwitching();
+  const statsGrid = document.getElementById('switching-stats');
+  const chart = document.getElementById('switching-chart');
+  statsGrid.innerHTML = ''; chart.innerHTML = '';
+  if (!data.length) return;
+  const avgStarts = data.reduce((a,d)=>a+d.starts,0) / data.length;
+  const avgPerTask = data.reduce((a,d)=>a+d.perTask,0) / data.length;
+  const maxStarts = Math.max(...data.map(d=>d.starts));
+  const items = [
+    ['inicios promedio por sesión', avgStarts.toFixed(1)],
+    ['inicios por tarea promedio', avgPerTask.toFixed(2)],
+    ['máximo en una sesión', maxStarts]
+  ];
+  items.forEach(([l,v]) => {
+    const d = document.createElement('div'); d.className = 'stat';
+    const lb = document.createElement('div'); lb.className = 'stat-label'; lb.textContent = l;
+    const vl = document.createElement('div'); vl.className = 'stat-value'; vl.textContent = v;
+    d.appendChild(lb); d.appendChild(vl); statsGrid.appendChild(d);
+  });
+  const max = Math.max(...data.map(d => d.starts), 1);
+  data.forEach(d => {
+    const bar = document.createElement('div');
+    bar.className = 'switching-bar';
+    bar.style.height = (d.starts/max*100)+'%';
+    bar.title = `${fmtDate(d.date)} · ${d.starts} inicios · ${d.tasksWorked} tareas trabajadas`;
+    chart.appendChild(bar);
+  });
+}
+
+function renderStreaks() {
+  const wrap = document.getElementById('streaks-content');
+  wrap.innerHTML = '';
+  const rows = computeStreaks();
+  if (!rows.length) {
+    wrap.innerHTML = '<div class="note">no hay etiquetas.</div>';
+    return;
+  }
+  const header = document.createElement('div');
+  header.className = 'streak-row';
+  header.style.cssText = 'font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--border-strong);';
+  header.innerHTML = '<div>etiqueta</div><div>racha más larga</div><div class="num">actual</div><div class="num">días totales</div>';
+  wrap.appendChild(header);
+  const max = Math.max(...rows.map(r => r.longest), 1);
+  rows.forEach(r => {
+    const row = document.createElement('div'); row.className = 'streak-row';
+    const name = document.createElement('div'); name.className = 'streak-name'; name.textContent = r.tag;
+    const track = document.createElement('div'); track.className = 'streak-bar-track';
+    const fill = document.createElement('div'); fill.className = 'streak-bar-fill';
+    fill.style.width = (r.longest/max*100)+'%';
+    track.appendChild(fill);
+    const cur = document.createElement('div'); cur.className = 'num';
+    cur.textContent = r.currentStreak + (r.currentStreak ? ' días' : '');
+    cur.style.color = r.currentStreak > 0 ? 'var(--done)' : 'var(--muted)';
+    const tot = document.createElement('div'); tot.className = 'num';
+    tot.textContent = r.totalDays;
+    tot.style.color = 'var(--muted)';
+    // Replace the track+longest display with: longest days + track
+    const wrap2 = document.createElement('div');
+    wrap2.style.cssText = 'display:flex;gap:8px;align-items:center;font-variant-numeric:tabular-nums;';
+    const longestLabel = document.createElement('span');
+    longestLabel.style.cssText = 'min-width:40px;color:var(--warn);';
+    longestLabel.textContent = r.longest + 'd';
+    wrap2.appendChild(longestLabel);
+    wrap2.appendChild(track);
+    row.appendChild(name); row.appendChild(wrap2); row.appendChild(cur); row.appendChild(tot);
+    wrap.appendChild(row);
+  });
+}
+
+/* ================= CSV EXPORT ================= */
+function exportCSV() {
+  if (!sessions.length) return;
+  const rows = [['session_date','session_id','task_name','tags','parent','time_min','estimate_min','delta_min','status','intervals']];
+  sessions.forEach(s => {
+    const sDate = sessionDate(s).toISOString().slice(0,10);
+    const taskMap = new Map(s.tasks.map(t => [t.id, t]));
+    s.tasks.forEach(t => {
+      const parent = t.parentId ? taskMap.get(t.parentId) : null;
+      const parentName = parent ? stripTags(parent.name) : '';
+      const actualMin = computeTaskMs(t) / 60000;
+      const delta = t.estimateMin ? (actualMin - t.estimateMin) : '';
+      rows.push([
+        sDate, s.sessionId, stripTags(t.name),
+        parseTags(t.name).join('|'),
+        parentName,
+        actualMin.toFixed(2),
+        t.estimateMin || '',
+        delta === '' ? '' : delta.toFixed(2),
+        t.status,
+        (t.intervals||[]).length
+      ]);
+    });
+  });
+  const csv = rows.map(r => r.map(c => {
+    const s = String(c);
+    return /[,"\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0,10);
+  a.href = url; a.download = `sesiones-analisis-${stamp}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/* ================= WIRING ================= */
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('dropzone');
+  const fi = document.getElementById('file-input');
+  document.getElementById('btn-load').addEventListener('click', () => fi.click());
+  fi.addEventListener('change', e => {
+    if (e.target.files.length) handleFiles(e.target.files);
+    e.target.value = '';
+  });
+  dz.addEventListener('dragover', e => {
+    e.preventDefault(); dz.classList.add('drag-over');
+  });
+  dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const files = [...e.dataTransfer.files].filter(f => f.name.toLowerCase().endsWith('.json'));
+    if (files.length) handleFiles(files);
+  });
+  document.getElementById('btn-clear').addEventListener('click', clearAll);
+  document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+});
+</script>
+</body>
+</html>

@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* === TOKENS === */
 :root {
   --bg: #eaf0f7;
   --surface: #ffffff;
@@ -39,18 +38,12 @@ body {
 }
 .container { max-width: 1080px; margin: 0 auto; }
 
-/* === TYPOGRAPHY === */
-h1 {
-  font-size: 11px; font-weight: 500;
-  letter-spacing: 0.2em; text-transform: uppercase;
-}
+h1 { font-size: 11px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; }
 h2 {
-  font-size: 11px; font-weight: 500;
-  letter-spacing: 0.15em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 12px;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.15em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 12px;
 }
 
-/* === HEADER === */
 header {
   display: flex; justify-content: space-between; align-items: flex-start;
   margin-bottom: 28px; padding-bottom: 12px;
@@ -60,88 +53,62 @@ header {
 .header-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .session-date { font-size: 11px; color: var(--muted); }
 
-/* === BUTTONS === */
 button {
   font-family: inherit; font-size: 12px;
   background: transparent; border: 1px solid var(--border);
   color: var(--text); padding: 5px 10px;
-  cursor: pointer;
-  transition: background 0.08s, border-color 0.08s;
+  cursor: pointer; transition: background 0.08s, border-color 0.08s;
 }
 button:hover { background: var(--surface); border-color: var(--border-strong); }
-button.primary {
-  background: var(--text); color: var(--bg); border-color: var(--text);
-}
+button.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
 button.primary:hover { background: #333; border-color: #333; }
 button:disabled { opacity: 0.3; cursor: not-allowed; }
-button.ghost { border: none; padding: 4px 6px; color: var(--muted); }
-button.ghost:hover { color: var(--text); background: transparent; }
 
-/* === SECTIONS === */
+.nav-link {
+  font-family: inherit; font-size: 12px;
+  color: var(--muted); text-decoration: none;
+  padding: 5px 10px; border: 1px dashed var(--border);
+  transition: color 0.08s, border-color 0.08s;
+  display: inline-flex; align-items: center;
+}
+.nav-link:hover { color: var(--text); border-color: var(--border-strong); }
+
 section {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 16px;
-  margin-bottom: 20px;
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 16px; margin-bottom: 20px;
 }
 
-/* === TIMERS === */
-.timers-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-.timer-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 16px;
-}
+.timers-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.timer-card { background: var(--surface); border: 1px solid var(--border); padding: 16px; }
 .timer-label {
   font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
   color: var(--muted); margin-bottom: 6px;
 }
-.timer-value {
-  font-size: 26px; font-weight: 400;
-  letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
-}
+.timer-value { font-size: 26px; font-weight: 400; letter-spacing: 0.03em; font-variant-numeric: tabular-nums; }
 .timer-meta { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .timer-card.running .timer-value { color: var(--active); }
 .timer-card.paused .timer-value { color: var(--muted); }
 .timer-card.break .timer-value { color: var(--advanced); }
 
-/* === RHYTHM SELECTOR === */
-.rhythm-select {
-  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
-}
+.rhythm-select { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .rhythm-select select, .rhythm-select input[type="number"] {
   font-family: inherit; font-size: 12px;
   background: var(--bg); border: 1px solid var(--border);
   color: var(--text); padding: 5px 8px;
 }
 .rhythm-custom {
-  display: none; gap: 12px; margin-top: 10px;
-  flex-wrap: wrap; align-items: center;
+  display: none; gap: 12px; margin-top: 10px; flex-wrap: wrap; align-items: center;
   padding-top: 10px; border-top: 1px solid var(--border);
 }
 .rhythm-custom.show { display: flex; }
-.rhythm-custom label {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; color: var(--muted);
-}
-.rhythm-custom input[type="number"] {
-  width: 52px; text-align: center;
-}
-.log-cycles-label {
-  font-size: 11px; color: var(--muted); margin-left: 8px;
-  display: flex; align-items: center; gap: 4px;
-}
+.rhythm-custom label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.rhythm-custom input[type="number"] { width: 52px; text-align: center; }
+.log-cycles-label { font-size: 11px; color: var(--muted); margin-left: 8px; display: flex; align-items: center; gap: 4px; }
 
-/* === TASK LIST === */
 .task-list { display: flex; flex-direction: column; gap: 3px; margin-bottom: 12px; }
 .task-row {
   display: grid;
-  grid-template-columns: 20px 30px 1fr 80px 120px 80px 90px 28px;
+  grid-template-columns: 20px 38px 1fr 80px 120px 100px 90px 28px;
   gap: 8px;
   align-items: center;
   padding: 10px 8px;
@@ -149,20 +116,23 @@ section {
   background: var(--surface);
   transition: background 0.08s, border-color 0.08s;
 }
-.task-row.active {
-  border-color: var(--active);
-  background: #fff6f3;
-}
+.task-row.active { border-color: var(--active); background: #fff6f3; }
 .task-row.done { opacity: 0.6; }
 .task-row.dragging { opacity: 0.35; }
 .task-row.exceeded .task-timer { color: var(--not-done); }
-.drag-handle {
-  cursor: grab; color: var(--faint);
-  text-align: center; user-select: none;
-  font-size: 14px; line-height: 1;
+.task-row.is-child {
+  margin-left: 32px;
+  background: #f5f9fd;
+  border-left: 2px solid var(--advanced);
 }
+.task-row.has-children .task-name { font-weight: 500; }
+.task-row.drop-before { box-shadow: inset 0 3px 0 var(--active); }
+.task-row.drop-after  { box-shadow: inset 0 -3px 0 var(--active); }
+.task-row.drop-nest   { background: #e8f5e9; border-color: var(--done); }
+
+.drag-handle { cursor: grab; color: var(--faint); text-align: center; user-select: none; font-size: 14px; line-height: 1; }
 .drag-handle:hover { color: var(--muted); }
-.task-order { font-size: 11px; color: var(--muted); text-align: center; }
+.task-order { font-size: 11px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
 .task-name {
   background: transparent; border: none;
   font-family: inherit; font-size: 13px; color: var(--text);
@@ -182,20 +152,32 @@ section {
   border-left-width: 3px;
 }
 .task-timer {
-  font-size: 11px; color: var(--muted); text-align: right;
-  font-variant-numeric: tabular-nums;
+  font-size: 11px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums;
+  display: flex; flex-direction: column; gap: 1px;
 }
+.task-timer .agg { font-size: 9px; color: var(--advanced); }
 .task-row.active .task-timer { color: var(--active); }
 .task-start-btn { font-size: 11px; padding: 4px 8px; }
-.task-start-btn.running {
-  background: var(--active); color: white; border-color: var(--active);
-}
+.task-start-btn.running { background: var(--active); color: white; border-color: var(--active); }
 .task-note-toggle {
   font-size: 18px; color: var(--faint);
   cursor: pointer; text-align: center; user-select: none; line-height: 1;
 }
 .task-note-toggle:hover { color: var(--muted); }
 .task-note-toggle.has-note { color: var(--in-progress); }
+
+.task-chips {
+  grid-column: 3 / -1;
+  display: flex; flex-wrap: wrap; gap: 4px;
+  margin-top: 6px;
+}
+.tag-chip {
+  font-size: 10px; padding: 1px 7px;
+  background: var(--bg); color: var(--advanced);
+  border: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+
 .task-note { grid-column: 1 / -1; margin-top: 6px; display: none; }
 .task-note.show { display: block; }
 .task-note textarea {
@@ -205,79 +187,67 @@ section {
   color: var(--text); padding: 8px; resize: vertical; outline: none;
 }
 .task-note textarea:focus { border-color: var(--border-strong); }
-.task-note .delete-row {
-  display: flex; justify-content: flex-end; margin-top: 6px;
+.task-note-meta {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: 6px; gap: 10px; flex-wrap: wrap;
 }
-.task-note .delete-row button {
-  color: var(--not-done); font-size: 11px; border-color: var(--border);
+.parent-select-wrap {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted);
 }
+.parent-select {
+  font-family: inherit; font-size: 11px;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); padding: 4px 8px;
+}
+.parent-select:disabled { opacity: 0.5; }
+.task-note .delete-btn { color: var(--not-done); font-size: 11px; border-color: var(--border); }
 
-.add-task-row {
-  display: flex; gap: 8px; align-items: center;
-  padding: 10px; border: 1px dashed var(--border);
-}
+.add-task-row { display: flex; gap: 8px; align-items: center; padding: 10px; border: 1px dashed var(--border); }
 .add-task-row input {
-  flex: 1;
-  font-family: inherit; font-size: 13px;
+  flex: 1; font-family: inherit; font-size: 13px;
   background: transparent; border: none; color: var(--text);
   padding: 4px; outline: none;
 }
 .add-task-row input::placeholder { color: var(--faint); }
+.add-task-hint { font-size: 10px; color: var(--muted); padding: 0 10px 8px; }
 
-/* === SESSION CONTROL === */
-.session-control {
-  display: flex; justify-content: center; gap: 10px;
-  padding: 20px 0;
-}
-.session-control button {
-  font-size: 12px; padding: 10px 28px;
-  letter-spacing: 0.15em; text-transform: uppercase;
-}
+.session-control { display: flex; justify-content: center; gap: 10px; padding: 20px 0; }
+.session-control button { font-size: 12px; padding: 10px 28px; letter-spacing: 0.15em; text-transform: uppercase; }
 
-/* === VISUALIZATION === */
 .viz-section { padding: 20px; }
 .gantt-container { overflow-x: auto; padding: 12px 0; }
 .gantt-svg { display: block; min-width: 100%; }
-.distribution-bar {
-  display: flex; height: 32px;
-  border: 1px solid var(--border);
-  margin-top: 20px; overflow: hidden;
-}
+.distribution-bar { display: flex; height: 32px; border: 1px solid var(--border); margin-top: 20px; overflow: hidden; }
 .dist-segment {
   display: flex; align-items: center; justify-content: center;
-  font-size: 10px; color: white; overflow: hidden;
-  white-space: nowrap; padding: 0 4px;
+  font-size: 10px; color: white; overflow: hidden; white-space: nowrap; padding: 0 4px;
 }
-.dist-legend {
-  display: flex; flex-wrap: wrap; gap: 12px;
-  margin-top: 10px; font-size: 11px;
-}
-.dist-legend-item {
-  display: flex; align-items: center; gap: 6px; color: var(--muted);
-}
+.dist-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; font-size: 11px; }
+.dist-legend-item { display: flex; align-items: center; gap: 6px; color: var(--muted); }
 .dist-legend-swatch { width: 10px; height: 10px; display: inline-block; }
 
-/* === STATS === */
+.tags-summary { margin-top: 24px; }
+.tags-bars { display: flex; flex-direction: column; gap: 4px; }
+.tag-bar-row {
+  display: grid; grid-template-columns: 100px 1fr 60px;
+  gap: 10px; align-items: center; font-size: 11px;
+}
+.tag-bar-name { color: var(--advanced); }
+.tag-bar-track { height: 18px; background: var(--bg); border: 1px solid var(--border); position: relative; }
+.tag-bar-fill { height: 100%; background: var(--advanced); opacity: 0.7; }
+.tag-bar-value { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
 .stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 16px;
-  padding-top: 16px; border-top: 1px solid var(--border);
-  margin-top: 20px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 16px; padding-top: 16px; border-top: 1px solid var(--border); margin-top: 20px;
 }
 .stat { display: flex; flex-direction: column; gap: 2px; }
-.stat-label {
-  font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--muted);
-}
+.stat-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .stat-value { font-size: 16px; font-variant-numeric: tabular-nums; }
 
-/* === MODALS === */
 .modal-backdrop {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.3);
-  display: none; align-items: center; justify-content: center;
-  z-index: 100;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.3);
+  display: none; align-items: center; justify-content: center; z-index: 100;
 }
 .modal-backdrop.show { display: flex; }
 .modal {
@@ -287,29 +257,19 @@ section {
 }
 .modal h2 { margin-bottom: 16px; color: var(--text); }
 .modal p { color: var(--muted); margin-bottom: 16px; }
-.modal-actions {
-  display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px;
-}
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
 .states-editor { display: flex; flex-direction: column; gap: 10px; }
-.state-edit-row {
-  display: grid; grid-template-columns: 110px 1fr;
-  gap: 10px; align-items: center;
-}
-.state-edit-row label {
-  font-size: 11px; color: var(--muted); letter-spacing: 0.05em;
-}
+.state-edit-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+.state-edit-row label { font-size: 11px; color: var(--muted); letter-spacing: 0.05em; }
 .state-edit-row input {
   font-family: inherit; font-size: 13px;
   background: var(--bg); border: 1px solid var(--border);
   color: var(--text); padding: 6px 8px;
 }
 
-/* === CYCLE OVERLAY === */
 .cycle-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.5);
-  display: none; align-items: center; justify-content: center;
-  z-index: 200;
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center; z-index: 200;
 }
 .cycle-overlay.show { display: flex; }
 .cycle-modal {
@@ -317,14 +277,9 @@ section {
   border: 1px solid var(--border-strong);
   text-align: center; max-width: 380px;
 }
-.cycle-modal h2 {
-  font-size: 14px; color: var(--text); margin-bottom: 8px;
-  letter-spacing: 0.1em;
-}
+.cycle-modal h2 { font-size: 14px; color: var(--text); margin-bottom: 8px; letter-spacing: 0.1em; }
 .cycle-modal p { color: var(--muted); margin-bottom: 20px; }
-.cycle-modal .cycle-actions {
-  display: flex; gap: 8px; justify-content: center;
-}
+.cycle-modal .cycle-actions { display: flex; gap: 8px; justify-content: center; }
 
 .hidden { display: none !important; }
 .file-input { display: none; }
@@ -339,16 +294,16 @@ section {
     <div class="session-date" id="session-date">sin iniciar</div>
   </div>
   <div class="header-actions">
-    <button id="btn-import" title="cargar JSON">importar</button>
+    <a href="analisis.html" class="nav-link">análisis →</a>
+    <button id="btn-import">importar</button>
     <button id="btn-export-json">JSON</button>
     <button id="btn-export-txt">TXT</button>
-    <button id="btn-settings" title="renombrar estados">estados</button>
-    <button id="btn-reset" title="reiniciar sesión">reset</button>
+    <button id="btn-settings">estados</button>
+    <button id="btn-reset">reset</button>
     <input type="file" id="file-input" class="file-input" accept=".json,application/json">
   </div>
 </header>
 
-<!-- TIMERS -->
 <div class="timers-row hidden" id="timers-row">
   <div class="timer-card" id="session-timer-card">
     <div class="timer-label">sesión</div>
@@ -367,7 +322,6 @@ section {
   </div>
 </div>
 
-<!-- RHYTHM -->
 <section id="rhythm-section">
   <h2>modo de ritmo</h2>
   <div class="rhythm-select">
@@ -390,16 +344,15 @@ section {
   </div>
 </section>
 
-<!-- TASKS -->
 <section>
   <h2>tareas</h2>
   <div class="task-list" id="task-list"></div>
   <div class="add-task-row">
-    <input type="text" id="new-task-input" placeholder="+ agregar tarea y presionar enter">
+    <input type="text" id="new-task-input" placeholder="+ agregar tarea (usa #etiqueta para taggear, p.ej. 'escribir intro #tesis #libro')">
   </div>
+  <div class="add-task-hint">arrastra una tarea al centro de otra para anidarla como subtarea · arriba/abajo para reordenar</div>
 </section>
 
-<!-- SESSION CONTROL -->
 <div class="session-control">
   <button id="btn-start-session" class="primary">iniciar sesión</button>
   <button id="btn-pause-session" class="hidden">pausar sesión</button>
@@ -407,7 +360,6 @@ section {
   <button id="btn-end-session" class="hidden">terminar sesión</button>
 </div>
 
-<!-- VIZ -->
 <section class="viz-section hidden" id="viz-section">
   <h2>línea de tiempo</h2>
   <div class="gantt-container">
@@ -416,12 +368,15 @@ section {
   <h2 style="margin-top: 24px;">distribución</h2>
   <div class="distribution-bar" id="distribution-bar"></div>
   <div class="dist-legend" id="dist-legend"></div>
+  <div class="tags-summary hidden" id="tags-summary">
+    <h2 style="margin-top: 24px;">tiempo por etiqueta</h2>
+    <div class="tags-bars" id="tags-bars"></div>
+  </div>
   <div class="stats-grid" id="stats-grid"></div>
 </section>
 
 </div>
 
-<!-- SETTINGS MODAL -->
 <div class="modal-backdrop" id="settings-modal">
   <div class="modal">
     <h2>renombrar estados</h2>
@@ -433,7 +388,6 @@ section {
   </div>
 </div>
 
-<!-- CYCLE OVERLAY -->
 <div class="cycle-overlay" id="cycle-overlay">
   <div class="cycle-modal">
     <h2 id="cycle-title">ciclo completado</h2>
@@ -445,7 +399,6 @@ section {
   </div>
 </div>
 
-<!-- IMPORT MODAL -->
 <div class="modal-backdrop" id="import-modal">
   <div class="modal">
     <h2>sesión importada</h2>
@@ -459,97 +412,81 @@ section {
 </div>
 
 <script>
-/* ==========================================================================
-   STATE
-   ========================================================================== */
 const STORAGE_KEY = 'czt-session-tracker-v1';
-
 const DEFAULT_STATE_LABELS = {
-  pending:    'pendiente',
-  inProgress: 'en curso',
-  done:       'terminada',
-  advanced:   'avanzada',
-  notDone:    'no hecha'
+  pending:'pendiente', inProgress:'en curso', done:'terminada',
+  advanced:'avanzada', notDone:'no hecha'
 };
-
 const STATE_COLORS = {
-  pending:    '#999999',
-  inProgress: '#b58b1e',
-  done:       '#3a7a42',
-  advanced:   '#3a5a7a',
-  notDone:    '#a04040'
+  pending:'#999999', inProgress:'#b58b1e', done:'#3a7a42',
+  advanced:'#3a5a7a', notDone:'#a04040'
 };
-
 const RHYTHM_PRESETS = {
-  free:      { work: 0,  short: 0,  long: 0,  cycles: 0 },
-  pomodoro:  { work: 25, short: 5,  long: 15, cycles: 4 },
-  '52-17':   { work: 52, short: 17, long: 17, cycles: 4 },
-  '90-20':   { work: 90, short: 20, long: 30, cycles: 3 },
-  custom:    { work: 25, short: 5,  long: 15, cycles: 4 }
+  free:{work:0,short:0,long:0,cycles:0},
+  pomodoro:{work:25,short:5,long:15,cycles:4},
+  '52-17':{work:52,short:17,long:17,cycles:4},
+  '90-20':{work:90,short:20,long:30,cycles:3},
+  custom:{work:25,short:5,long:15,cycles:4}
 };
+const TAG_RE = /#([\p{L}\p{N}_-]+)/gu;
 
 function freshState() {
   return {
-    version: '1.0',
+    version: '1.1',
     sessionId: crypto.randomUUID(),
     createdAt: null,
     lastModified: new Date().toISOString(),
-    sessionTimer: {
-      started: false, ended: false,
-      startedAt: null, accumulatedMs: 0,
-      isPaused: false, pausedAt: null
-    },
+    sessionTimer: { started:false, ended:false, startedAt:null, accumulatedMs:0, isPaused:false, pausedAt:null },
     rhythm: {
-      type: 'free',
-      work: 25, short: 5, long: 15, cycles: 4,
-      logCycles: false,
-      currentCycle: 0, currentPhase: 'work',
-      phaseStartedAt: null,
-      cycleLog: []
+      type:'free', work:25, short:5, long:15, cycles:4,
+      logCycles:false, currentCycle:0, currentPhase:'work',
+      phaseStartedAt:null, cycleLog:[]
     },
-    stateLabels: { ...DEFAULT_STATE_LABELS },
+    stateLabels: {...DEFAULT_STATE_LABELS},
     tasks: [],
     activeTaskId: null
   };
 }
 
 let state = freshState();
-let tickInterval = null;
-let tickCount = 0;
-let cycleOverlayOpen = false;
-let pendingImport = null;
+let tickInterval = null, tickCount = 0, cycleOverlayOpen = false, pendingImport = null;
 
-/* ==========================================================================
-   HELPERS
-   ========================================================================== */
+/* ================= HELPERS ================= */
 function fmtTime(ms) {
   if (ms < 0 || !isFinite(ms)) ms = 0;
-  const s = Math.floor(ms / 1000);
-  const hh = String(Math.floor(s / 3600)).padStart(2, '0');
-  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
-  const ss = String(s % 60).padStart(2, '0');
-  return `${hh}:${mm}:${ss}`;
+  const s = Math.floor(ms/1000);
+  return `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor((s%3600)/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
 }
 function fmtShort(ms) {
   if (ms < 1000) return '0s';
-  if (ms < 60000) return Math.round(ms / 1000) + 's';
-  const m = Math.floor(ms / 60000);
-  const s = Math.floor((ms % 60000) / 1000);
+  if (ms < 60000) return Math.round(ms/1000)+'s';
+  const m = Math.floor(ms/60000), s = Math.floor((ms%60000)/1000);
   if (m < 60) return s ? `${m}m${s}s` : `${m}m`;
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
+  const h = Math.floor(m/60), mm = m%60;
   return mm ? `${h}h${mm}m` : `${h}h`;
 }
 function fmtDate(iso) {
   if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' });
-  } catch { return iso; }
+  try { return new Date(iso).toLocaleString('es-PE',{dateStyle:'medium',timeStyle:'short'}); }
+  catch { return iso; }
+}
+function fmtSessionTitle(iso) {
+  const d = iso ? new Date(iso) : new Date();
+  const weekday = d.toLocaleDateString('es-PE',{weekday:'long'});
+  return `${weekday} ${d.getDate()} de ${d.toLocaleDateString('es-PE',{month:'long'})}`;
 }
 function now() { return Date.now(); }
 function escapeXml(s) {
-  return String(s).replace(/[<>&'"]/g,
-    c => ({ '<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;' }[c]));
+  return String(s).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
+}
+function parseTags(name) {
+  const tags = []; let m;
+  const re = new RegExp(TAG_RE.source, 'gu');
+  while ((m = re.exec(name)) !== null) tags.push(m[1].toLowerCase());
+  return [...new Set(tags)];
+}
+function stripTags(name) {
+  return name.replace(new RegExp(TAG_RE.source,'gu'),'').replace(/\s+/g,' ').trim();
 }
 
 function computeSessionMs() {
@@ -558,43 +495,57 @@ function computeSessionMs() {
   if (t.ended || t.isPaused) return t.accumulatedMs;
   return t.accumulatedMs + (now() - new Date(t.startedAt).getTime());
 }
-
 function computeTaskMs(task) {
-  return task.intervals.reduce((acc, iv) => {
-    const end = iv.end ? new Date(iv.end).getTime() : now();
-    return acc + Math.max(0, end - new Date(iv.start).getTime());
+  return task.intervals.reduce((a, iv) => {
+    const e = iv.end ? new Date(iv.end).getTime() : now();
+    return a + Math.max(0, e - new Date(iv.start).getTime());
   }, 0);
 }
+function getTaskChildren(id) {
+  return state.tasks.filter(t => t.parentId === id).sort((a,b) => a.order - b.order);
+}
+function computeTaskMsAgg(task) {
+  return computeTaskMs(task) + getTaskChildren(task.id).reduce((a,c) => a + computeTaskMs(c), 0);
+}
+function flattenTasks() {
+  const roots = state.tasks.filter(t => !t.parentId).sort((a,b)=>a.order-b.order);
+  const result = [];
+  roots.forEach(r => {
+    const children = getTaskChildren(r.id);
+    result.push({task:r, depth:0, hasChildren:children.length>0});
+    children.forEach(c => result.push({task:c, depth:1, hasChildren:false}));
+  });
+  // orphans safety
+  state.tasks.filter(t => t.parentId && !state.tasks.some(p => p.id === t.parentId))
+    .forEach(o => result.push({task:o, depth:0, hasChildren:false}));
+  return result;
+}
+function reorderSiblings(parentId) {
+  const sibs = state.tasks.filter(t => (t.parentId||null) === (parentId||null))
+    .sort((a,b) => a.order - b.order);
+  sibs.forEach((t,i) => t.order = i);
+}
 
-/* ==========================================================================
-   PERSISTENCE
-   ========================================================================== */
+/* ================= PERSISTENCE ================= */
 function saveState() {
   state.lastModified = new Date().toISOString();
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
   catch (e) { console.warn('no pude guardar', e); }
 }
-
 function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
     const p = JSON.parse(raw);
-    state = { ...freshState(), ...p };
-    state.sessionTimer = { ...freshState().sessionTimer, ...(p.sessionTimer || {}) };
-    state.rhythm = { ...freshState().rhythm, ...(p.rhythm || {}) };
-    state.stateLabels = { ...DEFAULT_STATE_LABELS, ...(p.stateLabels || {}) };
-
-    // Recovery: if session was running when tab closed, handle the gap
+    state = migrateState(p);
     if (state.sessionTimer.started && !state.sessionTimer.ended && !state.sessionTimer.isPaused) {
       const lastMod = new Date(state.lastModified).getTime();
       const gap = now() - lastMod;
-      if (gap > 60 * 1000) {
-        // long gap: close intervals at lastModified, pause session
+      if (gap > 60*1000) {
         if (state.activeTaskId) {
           const t = state.tasks.find(x => x.id === state.activeTaskId);
           if (t && t.intervals.length) {
-            const last = t.intervals[t.intervals.length - 1];
+            const last = t.intervals[t.intervals.length-1];
             if (!last.end) last.end = state.lastModified;
           }
         }
@@ -606,54 +557,58 @@ function loadState() {
     }
   } catch (e) { console.warn('no pude cargar', e); }
 }
+function migrateState(p) {
+  const s = { ...freshState(), ...p };
+  s.sessionTimer = { ...freshState().sessionTimer, ...(p.sessionTimer||{}) };
+  s.rhythm = { ...freshState().rhythm, ...(p.rhythm||{}) };
+  s.stateLabels = { ...DEFAULT_STATE_LABELS, ...(p.stateLabels||{}) };
+  s.tasks = (p.tasks||[]).map(t => ({
+    id: t.id || crypto.randomUUID(),
+    name: t.name || '',
+    order: t.order ?? 0,
+    status: t.status || 'pending',
+    estimateMin: t.estimateMin ?? null,
+    note: t.note || '',
+    accumulatedMs: t.accumulatedMs || 0,
+    intervals: t.intervals || [],
+    parentId: t.parentId ?? null
+  }));
+  return s;
+}
 
-/* ==========================================================================
-   TASK MANAGEMENT
-   ========================================================================== */
+/* ================= TASKS ================= */
 function addTask(name) {
   if (!name || !name.trim()) return;
+  const siblings = state.tasks.filter(t => !t.parentId);
   state.tasks.push({
     id: crypto.randomUUID(),
-    name: name.trim(),
-    order: state.tasks.length,
-    status: 'pending',
-    estimateMin: null,
-    note: '',
-    accumulatedMs: 0,
-    intervals: []
+    name: name.trim(), order: siblings.length,
+    status: 'pending', estimateMin: null, note: '',
+    accumulatedMs: 0, intervals: [], parentId: null
   });
-  reorderTasks();
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function deleteTask(id) {
   if (state.activeTaskId === id) stopActiveTask();
+  // Promote children to top-level
+  getTaskChildren(id).forEach(c => { c.parentId = null; });
   state.tasks = state.tasks.filter(t => t.id !== id);
-  reorderTasks();
-  saveState();
-  render();
+  reorderSiblings(null);
+  saveState(); render();
 }
-
-function reorderTasks() { state.tasks.forEach((t, i) => { t.order = i; }); }
-
 function updateTask(id, patch) {
   const t = state.tasks.find(x => x.id === id);
   if (!t) return;
   Object.assign(t, patch);
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function setTaskStatus(id, status) {
   const t = state.tasks.find(x => x.id === id);
   if (!t) return;
   if (state.activeTaskId === id && status !== 'inProgress') stopActiveTask();
   t.status = status;
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function startTask(id) {
   if (!state.sessionTimer.started || state.sessionTimer.isPaused || state.sessionTimer.ended) return;
   if (state.activeTaskId === id) { stopActiveTask(); return; }
@@ -663,33 +618,42 @@ function startTask(id) {
   t.intervals.push({ start: new Date().toISOString(), end: null });
   t.status = 'inProgress';
   state.activeTaskId = id;
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function stopActiveTask() {
   if (!state.activeTaskId) return;
   const t = state.tasks.find(x => x.id === state.activeTaskId);
   if (t && t.intervals.length) {
-    const last = t.intervals[t.intervals.length - 1];
-    if (!last.end) {
-      last.end = new Date().toISOString();
-      t.accumulatedMs = computeTaskMs(t);
-    }
+    const last = t.intervals[t.intervals.length-1];
+    if (!last.end) { last.end = new Date().toISOString(); t.accumulatedMs = computeTaskMs(t); }
   }
   state.activeTaskId = null;
-  saveState();
-  render();
+  saveState(); render();
+}
+function changeParent(taskId, newParentId) {
+  const task = state.tasks.find(t => t.id === taskId);
+  if (!task) return;
+  if (newParentId) {
+    const newParent = state.tasks.find(t => t.id === newParentId);
+    if (!newParent) return;
+    if (newParent.parentId) { alert('solo se permite un nivel de anidamiento'); return; }
+    if (getTaskChildren(task.id).length > 0) {
+      if (!confirm('esta tarea tiene subtareas. al anidarla, sus subtareas pasarán a ser principales. ¿continuar?')) return;
+      getTaskChildren(task.id).forEach(c => c.parentId = null);
+    }
+    if (task.id === newParentId) return;
+  }
+  const oldParent = task.parentId;
+  task.parentId = newParentId || null;
+  task.order = 9999;
+  reorderSiblings(oldParent);
+  reorderSiblings(task.parentId);
+  saveState(); render();
 }
 
-/* ==========================================================================
-   SESSION CONTROL
-   ========================================================================== */
+/* ================= SESSION ================= */
 function startSession() {
-  if (state.tasks.length === 0) {
-    alert('agrega al menos una tarea antes de iniciar');
-    return;
-  }
+  if (state.tasks.length === 0) { alert('agrega al menos una tarea antes de iniciar'); return; }
   applyRhythmFromUI();
   state.sessionTimer.started = true;
   state.sessionTimer.startedAt = new Date().toISOString();
@@ -702,31 +666,23 @@ function startSession() {
     state.rhythm.currentCycle = 1;
     state.rhythm.phaseStartedAt = state.sessionTimer.startedAt;
   }
-  startTick();
-  saveState();
-  render();
+  startTick(); saveState(); render();
 }
-
 function pauseSession() {
   if (!state.sessionTimer.started || state.sessionTimer.isPaused) return;
   if (state.activeTaskId) {
     const t = state.tasks.find(x => x.id === state.activeTaskId);
     if (t && t.intervals.length) {
-      const last = t.intervals[t.intervals.length - 1];
-      if (!last.end) {
-        last.end = new Date().toISOString();
-        t.accumulatedMs = computeTaskMs(t);
-      }
+      const last = t.intervals[t.intervals.length-1];
+      if (!last.end) { last.end = new Date().toISOString(); t.accumulatedMs = computeTaskMs(t); }
     }
   }
   const elapsed = now() - new Date(state.sessionTimer.startedAt).getTime();
   state.sessionTimer.accumulatedMs += Math.max(0, elapsed);
   state.sessionTimer.isPaused = true;
   state.sessionTimer.pausedAt = new Date().toISOString();
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function resumeSession() {
   if (!state.sessionTimer.isPaused) return;
   state.sessionTimer.startedAt = new Date().toISOString();
@@ -735,92 +691,70 @@ function resumeSession() {
     const t = state.tasks.find(x => x.id === state.activeTaskId);
     if (t) t.intervals.push({ start: new Date().toISOString(), end: null });
   }
-  saveState();
-  render();
+  saveState(); render();
 }
-
 function endSession() {
-  if (!confirm('¿terminar la sesión? podrás seguir exportando el log después.')) return;
+  if (!confirm('¿terminar la sesión?')) return;
   if (state.activeTaskId) stopActiveTask();
   if (!state.sessionTimer.isPaused && state.sessionTimer.started) {
     const elapsed = now() - new Date(state.sessionTimer.startedAt).getTime();
     state.sessionTimer.accumulatedMs += Math.max(0, elapsed);
   }
   state.sessionTimer.ended = true;
-  stopTick();
-  saveState();
-  render();
+  stopTick(); saveState(); render();
 }
-
 function resetSession() {
-  if (!confirm('¿reiniciar? se perderá toda la sesión actual (no se exporta automáticamente).')) return;
-  state = freshState();
-  stopTick();
-  saveState();
-  render();
+  if (!confirm('¿reiniciar? se perderá toda la sesión actual.')) return;
+  state = freshState(); stopTick(); saveState(); render();
 }
 
-/* ==========================================================================
-   RHYTHM / POMODORO
-   ========================================================================== */
+/* ================= RHYTHM ================= */
 function applyRhythmFromUI() {
   const mode = document.getElementById('rhythm-mode').value;
   const preset = RHYTHM_PRESETS[mode];
   state.rhythm.type = mode;
   if (mode === 'custom') {
-    state.rhythm.work   = parseInt(document.getElementById('custom-work').value, 10) || 25;
-    state.rhythm.short  = parseInt(document.getElementById('custom-short').value, 10) || 5;
-    state.rhythm.long   = parseInt(document.getElementById('custom-long').value, 10) || 15;
-    state.rhythm.cycles = parseInt(document.getElementById('custom-cycles').value, 10) || 4;
+    state.rhythm.work = parseInt(document.getElementById('custom-work').value,10)||25;
+    state.rhythm.short = parseInt(document.getElementById('custom-short').value,10)||5;
+    state.rhythm.long = parseInt(document.getElementById('custom-long').value,10)||15;
+    state.rhythm.cycles = parseInt(document.getElementById('custom-cycles').value,10)||4;
   } else {
-    state.rhythm.work   = preset.work;
-    state.rhythm.short  = preset.short;
-    state.rhythm.long   = preset.long;
-    state.rhythm.cycles = preset.cycles;
+    state.rhythm.work = preset.work; state.rhythm.short = preset.short;
+    state.rhythm.long = preset.long; state.rhythm.cycles = preset.cycles;
   }
   state.rhythm.logCycles = document.getElementById('log-cycles').checked;
 }
-
 function computeRhythmRemaining() {
   if (state.rhythm.type === 'free') return null;
   if (!state.sessionTimer.started || state.sessionTimer.isPaused || state.sessionTimer.ended) return null;
   if (!state.rhythm.phaseStartedAt) return null;
-  const mins = state.rhythm.currentPhase === 'work'  ? state.rhythm.work
-             : state.rhythm.currentPhase === 'short' ? state.rhythm.short
-             : state.rhythm.long;
-  const phaseMs = mins * 60 * 1000;
-  const elapsed = now() - new Date(state.rhythm.phaseStartedAt).getTime();
-  return phaseMs - elapsed;
+  const mins = state.rhythm.currentPhase === 'work' ? state.rhythm.work
+             : state.rhythm.currentPhase === 'short' ? state.rhythm.short : state.rhythm.long;
+  return mins*60*1000 - (now() - new Date(state.rhythm.phaseStartedAt).getTime());
 }
-
 function checkRhythmTransition() {
   const rem = computeRhythmRemaining();
   if (rem === null) return;
   if (rem <= 0 && !cycleOverlayOpen) triggerCycleTransition();
 }
-
 function triggerCycleTransition() {
   cycleOverlayOpen = true;
   const overlay = document.getElementById('cycle-overlay');
   const title = document.getElementById('cycle-title');
   const msg = document.getElementById('cycle-message');
   const accept = document.getElementById('cycle-accept');
-
   if (state.rhythm.logCycles) {
     state.rhythm.cycleLog.push({
-      phase: state.rhythm.currentPhase,
-      cycle: state.rhythm.currentCycle,
-      startedAt: state.rhythm.phaseStartedAt,
-      endedAt: new Date().toISOString()
+      phase: state.rhythm.currentPhase, cycle: state.rhythm.currentCycle,
+      startedAt: state.rhythm.phaseStartedAt, endedAt: new Date().toISOString()
     });
   }
-
   if (state.rhythm.currentPhase === 'work') {
     const isLong = state.rhythm.currentCycle % state.rhythm.cycles === 0;
     const nextPhase = isLong ? 'long' : 'short';
     const nextMin = isLong ? state.rhythm.long : state.rhythm.short;
     title.textContent = isLong ? 'pausa larga' : 'pausa corta';
-    msg.textContent = `bloque de trabajo completado. sugiere ${nextMin} min de pausa. la tarea activa se pausará.`;
+    msg.textContent = `bloque completado. sugiere ${nextMin} min de pausa. la tarea activa se pausará.`;
     accept.textContent = `aceptar pausa (${nextMin}m)`;
     accept.onclick = () => acceptCyclePause(nextPhase);
   } else {
@@ -830,28 +764,20 @@ function triggerCycleTransition() {
     accept.onclick = acceptWorkResume;
   }
   document.getElementById('cycle-skip').onclick = skipCycleTransition;
-  overlay.classList.add('show');
-  playChime();
+  overlay.classList.add('show'); playChime();
 }
-
 function acceptCyclePause(nextPhase) {
   if (state.activeTaskId) {
     const t = state.tasks.find(x => x.id === state.activeTaskId);
     if (t && t.intervals.length) {
-      const last = t.intervals[t.intervals.length - 1];
-      if (!last.end) {
-        last.end = new Date().toISOString();
-        t.accumulatedMs = computeTaskMs(t);
-      }
+      const last = t.intervals[t.intervals.length-1];
+      if (!last.end) { last.end = new Date().toISOString(); t.accumulatedMs = computeTaskMs(t); }
     }
   }
   state.rhythm.currentPhase = nextPhase;
   state.rhythm.phaseStartedAt = new Date().toISOString();
-  closeCycleOverlay();
-  saveState();
-  render();
+  closeCycleOverlay(); saveState(); render();
 }
-
 function acceptWorkResume() {
   state.rhythm.currentCycle += 1;
   state.rhythm.currentPhase = 'work';
@@ -859,37 +785,27 @@ function acceptWorkResume() {
   if (state.activeTaskId) {
     const t = state.tasks.find(x => x.id === state.activeTaskId);
     if (t) {
-      const last = t.intervals[t.intervals.length - 1];
+      const last = t.intervals[t.intervals.length-1];
       if (last && last.end) t.intervals.push({ start: new Date().toISOString(), end: null });
     }
   }
-  closeCycleOverlay();
-  saveState();
-  render();
+  closeCycleOverlay(); saveState(); render();
 }
-
 function skipCycleTransition() {
   state.rhythm.phaseStartedAt = new Date().toISOString();
   if (state.rhythm.currentPhase === 'work') state.rhythm.currentCycle += 1;
-  closeCycleOverlay();
-  saveState();
-  render();
+  closeCycleOverlay(); saveState(); render();
 }
-
 function closeCycleOverlay() {
   cycleOverlayOpen = false;
   document.getElementById('cycle-overlay').classList.remove('show');
 }
-
 function playChime() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator(), g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination);
-    o.type = 'sine';
-    o.frequency.value = 660;
-    g.gain.value = 0.05;
+    o.type = 'sine'; o.frequency.value = 660; g.gain.value = 0.05;
     o.start();
     setTimeout(() => { o.frequency.value = 880; }, 180);
     setTimeout(() => {
@@ -899,32 +815,32 @@ function playChime() {
   } catch {}
 }
 
-/* ==========================================================================
-   TICK
-   ========================================================================== */
+/* ================= TICK ================= */
 function startTick() {
   if (tickInterval) clearInterval(tickInterval);
   tickCount = 0;
   tickInterval = setInterval(() => {
-    updateTimerDisplays();
-    checkRhythmTransition();
+    updateTimerDisplays(); checkRhythmTransition();
     if (++tickCount % 10 === 0) saveState();
   }, 1000);
 }
-
-function stopTick() {
-  if (tickInterval) clearInterval(tickInterval);
-  tickInterval = null;
-}
-
+function stopTick() { if (tickInterval) clearInterval(tickInterval); tickInterval = null; }
 function updateTimerDisplays() {
   document.getElementById('session-timer').textContent = fmtTime(computeSessionMs());
   const active = state.activeTaskId ? state.tasks.find(t => t.id === state.activeTaskId) : null;
   if (active) {
     document.getElementById('task-timer').textContent = fmtTime(computeTaskMs(active));
-    document.getElementById('task-name-display').textContent = active.name;
-    const row = document.querySelector(`[data-task-id="${active.id}"] .task-timer`);
+    document.getElementById('task-name-display').textContent = stripTags(active.name);
+    const row = document.querySelector(`[data-task-id="${active.id}"] .task-timer .own`);
     if (row) row.textContent = fmtTime(computeTaskMs(active));
+    // Update parent aggregated if applicable
+    if (active.parentId) {
+      const parent = state.tasks.find(t => t.id === active.parentId);
+      if (parent) {
+        const parentRow = document.querySelector(`[data-task-id="${parent.id}"] .task-timer .agg`);
+        if (parentRow) parentRow.textContent = '+ ' + fmtTime(computeTaskMsAgg(parent));
+      }
+    }
   } else {
     document.getElementById('task-timer').textContent = '00:00:00';
     document.getElementById('task-name-display').textContent = 'ninguna';
@@ -934,31 +850,15 @@ function updateTimerDisplays() {
     document.getElementById('rhythm-timer').textContent = fmtTime(Math.max(0, rem));
     const phaseName = state.rhythm.currentPhase === 'work' ? 'trabajo'
                     : state.rhythm.currentPhase === 'short' ? 'pausa corta' : 'pausa larga';
-    document.getElementById('rhythm-status').textContent =
-      `${phaseName} · ciclo ${state.rhythm.currentCycle}`;
+    document.getElementById('rhythm-status').textContent = `${phaseName} · ciclo ${state.rhythm.currentCycle}`;
   }
 }
 
-/* ==========================================================================
-   RENDER
-   ========================================================================== */
+/* ================= RENDER ================= */
 function render() {
-  renderHeader();
-  renderTimers();
-  renderRhythmSection();
-  renderTaskList();
-  renderSessionControls();
-  renderVisualization();
+  renderHeader(); renderTimers(); renderRhythmSection();
+  renderTaskList(); renderSessionControls(); renderVisualization();
 }
-
-function fmtSessionTitle(iso) {
-  const d = iso ? new Date(iso) : new Date();
-  const weekday = d.toLocaleDateString('es-PE', { weekday: 'long' });
-  const day = d.getDate();
-  const month = d.toLocaleDateString('es-PE', { month: 'long' });
-  return `${weekday} ${day} de ${month}`;
-}
-
 function renderHeader() {
   const titleEl = document.getElementById('session-title');
   const dateEl = document.getElementById('session-date');
@@ -968,31 +868,22 @@ function renderHeader() {
   if (!state.sessionTimer.started && !state.createdAt) {
     dateEl.textContent = 'sin iniciar';
   } else {
-    const startDate = new Date(start);
-    const timeStr = startDate.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = new Date(start).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'});
     let txt = `iniciada ${timeStr}`;
     if (state.sessionTimer.ended) txt += ' · terminada';
     else if (state.sessionTimer.isPaused) txt += ' · en pausa';
     dateEl.textContent = txt;
   }
 }
-
 function renderTimers() {
   const row = document.getElementById('timers-row');
   if (!state.sessionTimer.started) { row.classList.add('hidden'); return; }
   row.classList.remove('hidden');
   const sCard = document.getElementById('session-timer-card');
   sCard.classList.remove('running','paused','break');
-  if (state.sessionTimer.ended) {
-    sCard.classList.add('paused');
-    document.getElementById('session-status').textContent = 'terminada';
-  } else if (state.sessionTimer.isPaused) {
-    sCard.classList.add('paused');
-    document.getElementById('session-status').textContent = 'en pausa';
-  } else {
-    sCard.classList.add('running');
-    document.getElementById('session-status').textContent = 'activa';
-  }
+  if (state.sessionTimer.ended) { sCard.classList.add('paused'); document.getElementById('session-status').textContent = 'terminada'; }
+  else if (state.sessionTimer.isPaused) { sCard.classList.add('paused'); document.getElementById('session-status').textContent = 'en pausa'; }
+  else { sCard.classList.add('running'); document.getElementById('session-status').textContent = 'activa'; }
   const tCard = document.getElementById('task-timer-card');
   tCard.classList.remove('running','paused');
   tCard.classList.add(state.activeTaskId ? 'running' : 'paused');
@@ -1008,7 +899,6 @@ function renderTimers() {
   }
   updateTimerDisplays();
 }
-
 function renderRhythmSection() {
   const sec = document.getElementById('rhythm-section');
   if (state.sessionTimer.started) sec.classList.add('hidden');
@@ -1018,69 +908,87 @@ function renderRhythmSection() {
 function renderTaskList() {
   const list = document.getElementById('task-list');
   list.innerHTML = '';
-  state.tasks.sort((a,b) => a.order - b.order).forEach((task, idx) => {
+  flattenTasks().forEach(({task, depth, hasChildren}, displayIdx) => {
     const row = document.createElement('div');
     row.className = 'task-row';
     row.dataset.taskId = task.id;
     if (task.id === state.activeTaskId) row.classList.add('active');
     if (task.status === 'done') row.classList.add('done');
-    const taskMs = computeTaskMs(task);
-    if (task.estimateMin && taskMs > task.estimateMin * 60 * 1000) row.classList.add('exceeded');
+    if (depth > 0) row.classList.add('is-child');
+    if (hasChildren) row.classList.add('has-children');
+    const ownMs = computeTaskMs(task);
+    const aggMs = hasChildren ? computeTaskMsAgg(task) : ownMs;
+    if (task.estimateMin && aggMs > task.estimateMin*60*1000) row.classList.add('exceeded');
     row.draggable = true;
 
+    // Handle
     const handle = document.createElement('div');
-    handle.className = 'drag-handle';
-    handle.textContent = '⋮⋮';
-    handle.title = 'arrastrar para reordenar';
+    handle.className = 'drag-handle'; handle.textContent = '⋮⋮';
     row.appendChild(handle);
 
+    // Order
     const order = document.createElement('div');
     order.className = 'task-order';
-    order.textContent = String(idx + 1).padStart(2, '0');
+    if (depth === 0) {
+      const rootIdx = state.tasks.filter(t=>!t.parentId).sort((a,b)=>a.order-b.order).indexOf(task);
+      order.textContent = String(rootIdx+1).padStart(2,'0');
+    } else {
+      const parent = state.tasks.find(t => t.id === task.parentId);
+      const pIdx = state.tasks.filter(t=>!t.parentId).sort((a,b)=>a.order-b.order).indexOf(parent);
+      const cIdx = getTaskChildren(parent.id).indexOf(task);
+      order.textContent = `${String(pIdx+1).padStart(2,'0')}.${cIdx+1}`;
+    }
     row.appendChild(order);
 
+    // Name
     const name = document.createElement('input');
-    name.className = 'task-name';
-    name.type = 'text';
-    name.value = task.name;
+    name.className = 'task-name'; name.type = 'text'; name.value = task.name;
     name.addEventListener('blur', () => {
       const v = name.value.trim();
-      if (v && v !== task.name) updateTask(task.id, { name: v });
+      if (v && v !== task.name) updateTask(task.id, {name: v});
       else name.value = task.name;
     });
     name.addEventListener('keydown', e => { if (e.key === 'Enter') name.blur(); });
     row.appendChild(name);
 
+    // Estimate
     const est = document.createElement('input');
-    est.className = 'task-estimate';
-    est.type = 'number';
-    est.min = '0';
-    est.placeholder = 'est. min';
-    est.value = task.estimateMin || '';
+    est.className = 'task-estimate'; est.type = 'number'; est.min = '0';
+    est.placeholder = 'est. min'; est.value = task.estimateMin || '';
     est.addEventListener('change', () => {
-      const v = parseInt(est.value, 10);
-      updateTask(task.id, { estimateMin: isNaN(v) || v <= 0 ? null : v });
+      const v = parseInt(est.value,10);
+      updateTask(task.id, {estimateMin: isNaN(v)||v<=0 ? null : v});
     });
     row.appendChild(est);
 
+    // Status
     const status = document.createElement('select');
     status.className = 'task-status';
     status.style.borderLeftColor = STATE_COLORS[task.status];
     Object.keys(state.stateLabels).forEach(key => {
       const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = state.stateLabels[key];
+      opt.value = key; opt.textContent = state.stateLabels[key];
       if (task.status === key) opt.selected = true;
       status.appendChild(opt);
     });
     status.addEventListener('change', () => setTaskStatus(task.id, status.value));
     row.appendChild(status);
 
+    // Timer (own + agg)
     const timer = document.createElement('div');
     timer.className = 'task-timer';
-    timer.textContent = fmtTime(taskMs);
+    const ownSpan = document.createElement('span');
+    ownSpan.className = 'own'; ownSpan.textContent = fmtTime(ownMs);
+    timer.appendChild(ownSpan);
+    if (hasChildren) {
+      const aggSpan = document.createElement('span');
+      aggSpan.className = 'agg'; aggSpan.textContent = '+ ' + fmtTime(aggMs);
+      aggSpan.title = 'total con subtareas';
+      timer.appendChild(aggSpan);
+    }
     row.appendChild(timer);
 
+    // Start btn
     const btn = document.createElement('button');
     btn.className = 'task-start-btn';
     const isActive = task.id === state.activeTaskId;
@@ -1090,17 +998,31 @@ function renderTaskList() {
     btn.addEventListener('click', () => startTask(task.id));
     row.appendChild(btn);
 
+    // Note toggle
     const noteToggle = document.createElement('div');
     noteToggle.className = 'task-note-toggle';
     noteToggle.textContent = task.note ? '●' : '○';
-    noteToggle.title = 'nota / eliminar';
     if (task.note) noteToggle.classList.add('has-note');
     noteToggle.addEventListener('click', () => {
-      const n = row.querySelector('.task-note');
-      n.classList.toggle('show');
+      row.querySelector('.task-note').classList.toggle('show');
     });
     row.appendChild(noteToggle);
 
+    // Chips
+    const tags = parseTags(task.name);
+    if (tags.length) {
+      const chipsWrap = document.createElement('div');
+      chipsWrap.className = 'task-chips';
+      tags.forEach(t => {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.textContent = t;
+        chipsWrap.appendChild(chip);
+      });
+      row.appendChild(chipsWrap);
+    }
+
+    // Note panel
     const noteWrap = document.createElement('div');
     noteWrap.className = 'task-note';
     if (task.note) noteWrap.classList.add('show');
@@ -1108,44 +1030,112 @@ function renderTaskList() {
     ta.placeholder = 'notas, lo que faltó, contexto, informe...';
     ta.value = task.note || '';
     ta.addEventListener('blur', () => {
-      if (ta.value !== task.note) updateTask(task.id, { note: ta.value });
+      if (ta.value !== task.note) updateTask(task.id, {note: ta.value});
     });
     noteWrap.appendChild(ta);
-    const delRow = document.createElement('div');
-    delRow.className = 'delete-row';
-    const del = document.createElement('button');
-    del.textContent = 'eliminar tarea';
-    del.addEventListener('click', () => {
-      if (confirm(`¿eliminar "${task.name}"? se perderá su log.`)) deleteTask(task.id);
+
+    const meta = document.createElement('div');
+    meta.className = 'task-note-meta';
+    const psel = document.createElement('div');
+    psel.className = 'parent-select-wrap';
+    const plabel = document.createElement('span'); plabel.textContent = 'subtarea de:';
+    psel.appendChild(plabel);
+    const psels = document.createElement('select'); psels.className = 'parent-select';
+    const noneOpt = document.createElement('option');
+    noneOpt.value = ''; noneOpt.textContent = '(ninguna)';
+    psels.appendChild(noneOpt);
+    const hasKids = getTaskChildren(task.id).length > 0;
+    state.tasks.filter(t => !t.parentId && t.id !== task.id).forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.id; opt.textContent = stripTags(t.name) || '(sin nombre)';
+      if (task.parentId === t.id) opt.selected = true;
+      psels.appendChild(opt);
     });
-    delRow.appendChild(del);
-    noteWrap.appendChild(delRow);
+    psels.addEventListener('change', () => changeParent(task.id, psels.value || null));
+    psel.appendChild(psels);
+    if (hasKids) {
+      const hint = document.createElement('span');
+      hint.style.cssText = 'font-size:10px;color:var(--faint);';
+      hint.textContent = '(tiene subtareas)';
+      psel.appendChild(hint);
+    }
+    meta.appendChild(psel);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'delete-btn';
+    delBtn.textContent = 'eliminar tarea';
+    delBtn.addEventListener('click', () => {
+      const kids = getTaskChildren(task.id).length;
+      const msg = kids ? `¿eliminar "${stripTags(task.name)}"? sus ${kids} subtareas pasarán a ser principales.`
+                       : `¿eliminar "${stripTags(task.name)}"? se perderá su log.`;
+      if (confirm(msg)) deleteTask(task.id);
+    });
+    meta.appendChild(delBtn);
+    noteWrap.appendChild(meta);
     row.appendChild(noteWrap);
 
+    // Drag events
     row.addEventListener('dragstart', e => {
       row.classList.add('dragging');
       e.dataTransfer.setData('text/plain', task.id);
       e.dataTransfer.effectAllowed = 'move';
     });
-    row.addEventListener('dragend', () => row.classList.remove('dragging'));
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('.drop-before,.drop-after,.drop-nest')
+        .forEach(el => el.classList.remove('drop-before','drop-after','drop-nest'));
+    });
     row.addEventListener('dragover', e => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
+      const rect = row.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const h = rect.height;
+      row.classList.remove('drop-before','drop-after','drop-nest');
+      const canNest = !task.parentId;
+      if (y < h*0.33) row.classList.add('drop-before');
+      else if (y > h*0.67) row.classList.add('drop-after');
+      else if (canNest) row.classList.add('drop-nest');
+      else row.classList.add('drop-after');
+    });
+    row.addEventListener('dragleave', () => {
+      row.classList.remove('drop-before','drop-after','drop-nest');
     });
     row.addEventListener('drop', e => {
       e.preventDefault();
+      const zone = row.classList.contains('drop-before') ? 'before'
+                 : row.classList.contains('drop-nest') ? 'nest' : 'after';
+      row.classList.remove('drop-before','drop-after','drop-nest');
       const srcId = e.dataTransfer.getData('text/plain');
       if (!srcId || srcId === task.id) return;
       const src = state.tasks.find(t => t.id === srcId);
       if (!src) return;
-      const srcIdx = state.tasks.indexOf(src);
-      let dstIdx = state.tasks.indexOf(task);
-      state.tasks.splice(srcIdx, 1);
-      if (srcIdx < dstIdx) dstIdx -= 1;
-      state.tasks.splice(dstIdx, 0, src);
-      reorderTasks();
-      saveState();
-      render();
+
+      if (zone === 'nest') {
+        if (task.parentId) return;
+        if (getTaskChildren(src.id).length > 0) {
+          if (!confirm('esta tarea tiene subtareas. al anidarla, sus subtareas volverán a ser principales. ¿continuar?')) return;
+          getTaskChildren(src.id).forEach(c => c.parentId = null);
+        }
+        const oldParent = src.parentId;
+        src.parentId = task.id; src.order = 9999;
+        reorderSiblings(oldParent); reorderSiblings(task.id);
+      } else {
+        const targetParentId = task.parentId || null;
+        if (getTaskChildren(src.id).length > 0 && targetParentId) {
+          alert('tareas con subtareas solo pueden moverse al nivel principal'); return;
+        }
+        const oldParent = src.parentId;
+        src.parentId = targetParentId;
+        const siblings = state.tasks.filter(t => (t.parentId||null) === targetParentId && t.id !== src.id)
+          .sort((a,b) => a.order - b.order);
+        const targetIdx = siblings.indexOf(task);
+        const insertIdx = zone === 'before' ? targetIdx : targetIdx + 1;
+        siblings.splice(insertIdx, 0, src);
+        siblings.forEach((t,i) => t.order = i);
+        if (oldParent !== targetParentId) reorderSiblings(oldParent);
+      }
+      saveState(); render();
     });
 
     list.appendChild(row);
@@ -1153,241 +1143,265 @@ function renderTaskList() {
 }
 
 function renderSessionControls() {
-  const btnStart = document.getElementById('btn-start-session');
-  const btnPause = document.getElementById('btn-pause-session');
-  const btnResume = document.getElementById('btn-resume-session');
-  const btnEnd = document.getElementById('btn-end-session');
-  [btnStart, btnPause, btnResume, btnEnd].forEach(b => b.classList.add('hidden'));
-  if (!state.sessionTimer.started) {
-    btnStart.classList.remove('hidden');
-  } else if (state.sessionTimer.ended) {
-    // ended: no active controls (reset is in header)
-  } else if (state.sessionTimer.isPaused) {
-    btnResume.classList.remove('hidden');
-    btnEnd.classList.remove('hidden');
-  } else {
-    btnPause.classList.remove('hidden');
-    btnEnd.classList.remove('hidden');
-  }
+  const bs = document.getElementById('btn-start-session');
+  const bp = document.getElementById('btn-pause-session');
+  const br = document.getElementById('btn-resume-session');
+  const be = document.getElementById('btn-end-session');
+  [bs,bp,br,be].forEach(b => b.classList.add('hidden'));
+  if (!state.sessionTimer.started) bs.classList.remove('hidden');
+  else if (state.sessionTimer.ended) {}
+  else if (state.sessionTimer.isPaused) { br.classList.remove('hidden'); be.classList.remove('hidden'); }
+  else { bp.classList.remove('hidden'); be.classList.remove('hidden'); }
 }
 
-/* ==========================================================================
-   VISUALIZATION
-   ========================================================================== */
+/* ================= VIZ ================= */
 function renderVisualization() {
   const sec = document.getElementById('viz-section');
   if (!state.sessionTimer.started) { sec.classList.add('hidden'); return; }
   sec.classList.remove('hidden');
-  renderGantt();
-  renderDistribution();
-  renderStats();
+  renderGantt(); renderDistribution(); renderTagsSummary(); renderStats();
 }
-
 function renderGantt() {
   const svg = document.getElementById('gantt-svg');
-  const tasks = state.tasks;
-  if (!tasks.length) { svg.innerHTML = ''; return; }
-
+  const flat = flattenTasks();
+  if (!flat.length) { svg.innerHTML = ''; return; }
   const t0 = state.createdAt ? new Date(state.createdAt).getTime()
                              : new Date(state.sessionTimer.startedAt).getTime();
-  const tEnd = state.sessionTimer.ended
-    ? new Date(state.lastModified).getTime()
-    : now();
+  const tEnd = state.sessionTimer.ended ? new Date(state.lastModified).getTime() : now();
   const totalMs = Math.max(1, tEnd - t0);
-
-  const rowH = 26, gap = 4;
-  const padLeft = 150, padRight = 20, padTop = 24, padBottom = 12;
+  const rowH = 22, gap = 4, padLeft = 180, padRight = 20, padTop = 24, padBottom = 12;
   const width = Math.max(svg.parentElement.clientWidth, 600);
   const innerW = width - padLeft - padRight;
-  const height = padTop + padBottom + tasks.length * (rowH + gap);
-
+  const height = padTop + padBottom + flat.length * (rowH + gap);
   svg.setAttribute('width', width);
   svg.setAttribute('height', height);
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-
   let html = '';
-
-  // Rhythm breaks behind everything
+  // break shading
   if (state.rhythm.logCycles && state.rhythm.cycleLog.length) {
     state.rhythm.cycleLog.forEach(c => {
       if (c.phase === 'short' || c.phase === 'long') {
         const s = new Date(c.startedAt).getTime();
         const e = new Date(c.endedAt).getTime();
-        const x1 = padLeft + (s - t0) / totalMs * innerW;
-        const x2 = padLeft + (e - t0) / totalMs * innerW;
-        const w = Math.max(1, x2 - x1);
-        html += `<rect x="${x1}" y="${padTop}" width="${w}" height="${tasks.length*(rowH+gap) - gap}" fill="#c8c8c4" opacity="0.3"/>`;
+        const x1 = padLeft + (s-t0)/totalMs*innerW;
+        const x2 = padLeft + (e-t0)/totalMs*innerW;
+        html += `<rect x="${x1}" y="${padTop}" width="${Math.max(1,x2-x1)}" height="${flat.length*(rowH+gap)-gap}" fill="#c8c8c4" opacity="0.3"/>`;
       }
     });
   }
-
-  // Time axis
+  // ticks
   const ticks = 6;
   for (let i = 0; i <= ticks; i++) {
-    const x = padLeft + (innerW * i / ticks);
-    const tMs = totalMs * i / ticks;
-    html += `<line x1="${x}" y1="${padTop}" x2="${x}" y2="${height - padBottom}" stroke="#ececec" stroke-width="1"/>`;
-    html += `<text x="${x}" y="${padTop - 8}" font-size="9" fill="#888" font-family="monospace" text-anchor="middle">${fmtShort(tMs)}</text>`;
+    const x = padLeft + (innerW*i/ticks);
+    const tMs = totalMs*i/ticks;
+    html += `<line x1="${x}" y1="${padTop}" x2="${x}" y2="${height-padBottom}" stroke="#ececec" stroke-width="1"/>`;
+    html += `<text x="${x}" y="${padTop-8}" font-size="9" fill="#888" font-family="monospace" text-anchor="middle">${fmtShort(tMs)}</text>`;
   }
-
-  // Rows
-  tasks.forEach((task, idx) => {
-    const y = padTop + idx * (rowH + gap);
-    const label = task.name.length > 20 ? task.name.slice(0, 19) + '…' : task.name;
-    html += `<text x="${padLeft - 8}" y="${y + rowH/2 + 4}" font-size="11" fill="#1a1a1a" font-family="monospace" text-anchor="end">${escapeXml(label)}</text>`;
-    html += `<rect x="${padLeft}" y="${y}" width="${innerW}" height="${rowH}" fill="#fafafa" stroke="#ececec"/>`;
-
-    // Estimate: gray baseline from first start
+  // rows
+  flat.forEach(({task, depth}, idx) => {
+    const y = padTop + idx*(rowH+gap);
+    const indent = depth * 12;
+    const cleanName = stripTags(task.name) || '(sin nombre)';
+    const label = (depth>0 ? '└ ' : '') + cleanName;
+    const shown = label.length > 22 ? label.slice(0,21)+'…' : label;
+    html += `<text x="${padLeft-8}" y="${y+rowH/2+4}" font-size="11" fill="#1a1a1a" font-family="monospace" text-anchor="end">${escapeXml(shown)}</text>`;
+    html += `<rect x="${padLeft}" y="${y}" width="${innerW}" height="${rowH}" fill="#fafbfc" stroke="#ececec"/>`;
     if (task.estimateMin && task.intervals.length) {
       const first = new Date(task.intervals[0].start).getTime();
-      const estEnd = first + task.estimateMin * 60 * 1000;
-      const x1 = padLeft + (first - t0) / totalMs * innerW;
-      const x2 = padLeft + (estEnd - t0) / totalMs * innerW;
-      if (x2 > x1) {
-        html += `<rect x="${x1}" y="${y+rowH-3}" width="${Math.max(1,x2-x1)}" height="2" fill="#bcbcbc"/>`;
-      }
+      const estEnd = first + task.estimateMin*60*1000;
+      const x1 = padLeft + (first-t0)/totalMs*innerW;
+      const x2 = padLeft + (estEnd-t0)/totalMs*innerW;
+      if (x2 > x1) html += `<rect x="${x1}" y="${y+rowH-3}" width="${Math.max(1,x2-x1)}" height="2" fill="#bcbcbc"/>`;
     }
-
-    // Intervals
     task.intervals.forEach(iv => {
       const s = new Date(iv.start).getTime();
       const e = iv.end ? new Date(iv.end).getTime() : now();
-      const x1 = padLeft + (s - t0) / totalMs * innerW;
-      const x2 = padLeft + (e - t0) / totalMs * innerW;
-      const w = Math.max(1, x2 - x1);
+      const x1 = padLeft + (s-t0)/totalMs*innerW;
+      const x2 = padLeft + (e-t0)/totalMs*innerW;
+      const w = Math.max(1, x2-x1);
       const isActive = task.id === state.activeTaskId && !iv.end;
-      const color = isActive ? '#c94630' : '#1a1a1a';
+      const color = isActive ? '#c94630' : (depth > 0 ? '#3a5a7a' : '#1a1a1a');
       html += `<rect x="${x1}" y="${y+3}" width="${w}" height="${rowH-6}" fill="${color}" opacity="0.85"/>`;
     });
   });
-
   svg.innerHTML = html;
 }
-
 function renderDistribution() {
   const bar = document.getElementById('distribution-bar');
   const legend = document.getElementById('dist-legend');
-  bar.innerHTML = '';
-  legend.innerHTML = '';
-  const total = state.tasks.reduce((a, t) => a + computeTaskMs(t), 0);
+  bar.innerHTML = ''; legend.innerHTML = '';
+  const roots = state.tasks.filter(t => !t.parentId).sort((a,b)=>a.order-b.order);
+  const total = roots.reduce((a,t) => a + computeTaskMsAgg(t), 0);
   if (total === 0) {
     bar.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#888;font-size:11px;">sin tiempo registrado aún</div>';
     return;
   }
   const colors = ['#1a1a1a','#3a5a7a','#3a7a42','#b58b1e','#a04040','#666','#8a3a7a','#5a8a7a','#8a7a3a','#3a8a8a','#5a3a7a','#7a5a3a'];
-  state.tasks.forEach((task, i) => {
-    const ms = computeTaskMs(task);
+  roots.forEach((task, i) => {
+    const ms = computeTaskMsAgg(task);
     if (ms === 0) return;
-    const pct = (ms / total) * 100;
+    const pct = (ms/total)*100;
     const color = colors[i % colors.length];
     const seg = document.createElement('div');
-    seg.className = 'dist-segment';
-    seg.style.width = pct + '%';
+    seg.className = 'dist-segment'; seg.style.width = pct+'%';
     seg.style.background = color;
-    seg.title = `${task.name} · ${fmtShort(ms)} · ${pct.toFixed(1)}%`;
-    if (pct > 8) seg.textContent = pct.toFixed(0) + '%';
+    seg.title = `${stripTags(task.name)} · ${fmtShort(ms)} · ${pct.toFixed(1)}%`;
+    if (pct > 8) seg.textContent = pct.toFixed(0)+'%';
     bar.appendChild(seg);
-
     const li = document.createElement('div');
     li.className = 'dist-legend-item';
     const sw = document.createElement('span');
-    sw.className = 'dist-legend-swatch';
-    sw.style.background = color;
+    sw.className = 'dist-legend-swatch'; sw.style.background = color;
     li.appendChild(sw);
-    li.appendChild(document.createTextNode(`${task.name} · ${fmtShort(ms)}`));
+    li.appendChild(document.createTextNode(`${stripTags(task.name)} · ${fmtShort(ms)}`));
     legend.appendChild(li);
   });
 }
-
+function computeTagTotals() {
+  const tagMs = {};
+  state.tasks.forEach(t => {
+    const tags = parseTags(t.name);
+    if (!tags.length) return;
+    const ms = computeTaskMs(t);
+    tags.forEach(tag => { tagMs[tag] = (tagMs[tag] || 0) + ms; });
+  });
+  return Object.entries(tagMs).sort((a,b) => b[1]-a[1]);
+}
+function renderTagsSummary() {
+  const wrap = document.getElementById('tags-summary');
+  const bars = document.getElementById('tags-bars');
+  bars.innerHTML = '';
+  const totals = computeTagTotals();
+  if (!totals.length) { wrap.classList.add('hidden'); return; }
+  wrap.classList.remove('hidden');
+  const max = totals[0][1];
+  totals.forEach(([tag, ms]) => {
+    const row = document.createElement('div');
+    row.className = 'tag-bar-row';
+    const name = document.createElement('div');
+    name.className = 'tag-bar-name'; name.textContent = tag;
+    const track = document.createElement('div');
+    track.className = 'tag-bar-track';
+    const fill = document.createElement('div');
+    fill.className = 'tag-bar-fill'; fill.style.width = (ms/max*100)+'%';
+    track.appendChild(fill);
+    const val = document.createElement('div');
+    val.className = 'tag-bar-value'; val.textContent = fmtShort(ms);
+    row.appendChild(name); row.appendChild(track); row.appendChild(val);
+    bars.appendChild(row);
+  });
+}
 function renderStats() {
   const grid = document.getElementById('stats-grid');
   grid.innerHTML = '';
   const sessionMs = computeSessionMs();
   const workedMs = state.tasks.reduce((a,t) => a + computeTaskMs(t), 0);
   const idle = Math.max(0, sessionMs - workedMs);
-  const counts = { done: 0, advanced: 0, notDone: 0, pending: 0, inProgress: 0 };
+  const counts = { done:0, advanced:0, notDone:0, pending:0, inProgress:0 };
   state.tasks.forEach(t => counts[t.status]++);
   const items = [
-    ['tiempo total',  fmtTime(sessionMs)],
+    ['tiempo total', fmtTime(sessionMs)],
     ['tiempo activo', fmtTime(workedMs)],
-    ['sin tarea',     fmtTime(idle)],
-    ['tareas',        state.tasks.length],
-    [state.stateLabels.done,     counts.done],
+    ['sin tarea', fmtTime(idle)],
+    ['tareas', state.tasks.length],
+    [state.stateLabels.done, counts.done],
     [state.stateLabels.advanced, counts.advanced],
-    [state.stateLabels.notDone,  counts.notDone]
+    [state.stateLabels.notDone, counts.notDone]
   ];
   items.forEach(([label, value]) => {
     const d = document.createElement('div');
     d.className = 'stat';
-    const lb = document.createElement('div');
-    lb.className = 'stat-label'; lb.textContent = label;
-    const vl = document.createElement('div');
-    vl.className = 'stat-value'; vl.textContent = value;
-    d.appendChild(lb); d.appendChild(vl);
-    grid.appendChild(d);
+    const lb = document.createElement('div'); lb.className = 'stat-label'; lb.textContent = label;
+    const vl = document.createElement('div'); vl.className = 'stat-value'; vl.textContent = value;
+    d.appendChild(lb); d.appendChild(vl); grid.appendChild(d);
   });
 }
 
-/* ==========================================================================
-   IMPORT / EXPORT
-   ========================================================================== */
+/* ================= EXPORT / IMPORT ================= */
 function exportJSON() {
   saveState();
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   downloadBlob(blob, makeFilename('json'));
 }
-
 function exportTXT() {
   saveState();
-  const lines = [];
+  const L = [];
   const start = state.createdAt || state.sessionTimer.startedAt;
-  lines.push('SESIÓN DE TRABAJO');
-  lines.push('=================');
-  lines.push(`iniciada: ${fmtDate(start)}`);
-  lines.push(`duración total: ${fmtTime(computeSessionMs())}`);
-  lines.push(`modo de ritmo: ${state.rhythm.type}`);
-  lines.push(`estado: ${state.sessionTimer.ended ? 'terminada' : (state.sessionTimer.isPaused ? 'en pausa' : 'en curso')}`);
-  lines.push('');
-  lines.push('TAREAS');
-  lines.push('------');
-  state.tasks.forEach((t, i) => {
-    const ms = computeTaskMs(t);
+  L.push('SESIÓN DE TRABAJO');
+  L.push('=================');
+  L.push(`fecha: ${fmtSessionTitle(start)}`);
+  L.push(`iniciada: ${fmtDate(start)}`);
+  L.push(`duración total: ${fmtTime(computeSessionMs())}`);
+  L.push(`modo de ritmo: ${state.rhythm.type}`);
+  L.push(`estado: ${state.sessionTimer.ended ? 'terminada' : (state.sessionTimer.isPaused ? 'en pausa' : 'en curso')}`);
+  L.push('');
+  L.push('TAREAS');
+  L.push('------');
+  const roots = state.tasks.filter(t => !t.parentId).sort((a,b)=>a.order-b.order);
+  roots.forEach((t,i) => {
+    const tags = parseTags(t.name);
+    const tagsStr = tags.length ? `  [${tags.join(', ')}]` : '';
+    const ownMs = computeTaskMs(t);
+    const children = getTaskChildren(t.id);
+    const aggMs = computeTaskMsAgg(t);
     const label = state.stateLabels[t.status] || t.status;
     const est = t.estimateMin ? ` · estimado ${t.estimateMin}m` : '';
-    lines.push(`${String(i+1).padStart(2,'0')}. ${t.name}`);
-    lines.push(`    estado: ${label} · tiempo: ${fmtTime(ms)}${est}`);
-    if (t.intervals.length) lines.push(`    intervalos: ${t.intervals.length}`);
-    if (t.note && t.note.trim()) {
-      lines.push('    nota:');
-      t.note.split('\n').forEach(l => lines.push('      ' + l));
+    const num = String(i+1).padStart(2,'0');
+    L.push(`${num}. ${stripTags(t.name)}${tagsStr}`);
+    if (children.length) {
+      L.push(`    estado: ${label} · propio: ${fmtTime(ownMs)} · total con subtareas: ${fmtTime(aggMs)}${est}`);
+    } else {
+      L.push(`    estado: ${label} · tiempo: ${fmtTime(ownMs)}${est}`);
     }
-    lines.push('');
-  });
-  if (state.rhythm.logCycles && state.rhythm.cycleLog.length) {
-    lines.push('CICLOS DE RITMO');
-    lines.push('---------------');
-    state.rhythm.cycleLog.forEach(c => {
-      lines.push(`${c.phase} #${c.cycle} · ${fmtDate(c.startedAt)} → ${fmtDate(c.endedAt)}`);
+    if (t.note && t.note.trim()) {
+      L.push('    nota:');
+      t.note.split('\n').forEach(l => L.push('      ' + l));
+    }
+    children.forEach((c, j) => {
+      const ctags = parseTags(c.name);
+      const ctagsStr = ctags.length ? `  [${ctags.join(', ')}]` : '';
+      const cLabel = state.stateLabels[c.status] || c.status;
+      const cEst = c.estimateMin ? ` · estimado ${c.estimateMin}m` : '';
+      L.push('');
+      L.push(`    ${num}.${j+1}. ${stripTags(c.name)}${ctagsStr}`);
+      L.push(`          estado: ${cLabel} · tiempo: ${fmtTime(computeTaskMs(c))}${cEst}`);
+      if (c.note && c.note.trim()) {
+        L.push('          nota:');
+        c.note.split('\n').forEach(l => L.push('            ' + l));
+      }
     });
-    lines.push('');
+    L.push('');
+  });
+  const tagTotals = computeTagTotals();
+  if (tagTotals.length) {
+    L.push('TOTALES POR ETIQUETA');
+    L.push('--------------------');
+    tagTotals.forEach(([tag, ms]) => L.push(`  ${tag}: ${fmtTime(ms)}`));
+    L.push('');
   }
-  lines.push('RESUMEN');
-  lines.push('-------');
-  const counts = { done: 0, advanced: 0, notDone: 0, pending: 0, inProgress: 0 };
+  if (state.rhythm.logCycles && state.rhythm.cycleLog.length) {
+    L.push('CICLOS DE RITMO');
+    L.push('---------------');
+    state.rhythm.cycleLog.forEach(c => {
+      L.push(`${c.phase} #${c.cycle} · ${fmtDate(c.startedAt)} → ${fmtDate(c.endedAt)}`);
+    });
+    L.push('');
+  }
+  L.push('RESUMEN');
+  L.push('-------');
+  const counts = { done:0, advanced:0, notDone:0, pending:0, inProgress:0 };
   state.tasks.forEach(t => counts[t.status]++);
   Object.keys(counts).forEach(k => {
-    if (counts[k]) lines.push(`  ${state.stateLabels[k]}: ${counts[k]}`);
+    if (counts[k]) L.push(`  ${state.stateLabels[k]}: ${counts[k]}`);
   });
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const blob = new Blob([L.join('\n')], { type: 'text/plain;charset=utf-8' });
   downloadBlob(blob, makeFilename('txt'));
 }
-
 function makeFilename(ext) {
   const d = new Date(state.createdAt || now());
-  const stamp = d.toISOString().slice(0,16).replace(/[:T]/g, '-');
+  const stamp = d.toISOString().slice(0,16).replace(/[:T]/g,'-');
   return `sesion-${stamp}.${ext}`;
 }
-
 function downloadBlob(blob, name) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1395,45 +1409,31 @@ function downloadBlob(blob, name) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-
-function importJSON(fileContent) {
+function importJSON(content) {
   try {
-    const parsed = JSON.parse(fileContent);
-    if (!parsed.tasks || !parsed.sessionId) {
-      alert('archivo JSON no reconocido como sesión válida');
-      return;
-    }
+    const parsed = JSON.parse(content);
+    if (!parsed.tasks || !parsed.sessionId) { alert('archivo no reconocido'); return; }
     pendingImport = parsed;
     const d = new Date(parsed.createdAt || parsed.lastModified);
     const today = new Date();
     const sameDay = d.toDateString() === today.toDateString();
-    const info = document.getElementById('import-info');
-    info.innerHTML =
+    document.getElementById('import-info').innerHTML =
       `fecha original: <strong>${fmtDate(parsed.createdAt || parsed.lastModified)}</strong><br>` +
       `tareas: ${parsed.tasks.length}<br>` +
       `estado: ${parsed.sessionTimer && parsed.sessionTimer.ended ? 'terminada' : 'en curso / pausada'}<br><br>` +
-      (sameDay
-        ? 'es del día de hoy. puedes continuarla.'
-        : 'no es de hoy. puedes continuarla tal cual (se reanuda donde quedó), o usarla como plantilla para una sesión nueva.');
+      (sameDay ? 'es del día de hoy. puedes continuarla.'
+               : 'no es de hoy. puedes continuarla tal cual o usarla como plantilla.');
     document.getElementById('import-modal').classList.add('show');
-  } catch (e) {
-    alert('no se pudo leer el archivo: ' + e.message);
-  }
+  } catch (e) { alert('no se pudo leer el archivo: ' + e.message); }
 }
-
 function applyImportContinue() {
   if (!pendingImport) return;
-  const p = pendingImport;
-  state = { ...freshState(), ...p };
-  state.sessionTimer = { ...freshState().sessionTimer, ...(p.sessionTimer || {}) };
-  state.rhythm = { ...freshState().rhythm, ...(p.rhythm || {}) };
-  state.stateLabels = { ...DEFAULT_STATE_LABELS, ...(p.stateLabels || {}) };
-  // Always arrive paused, user decides when to resume
+  state = migrateState(pendingImport);
   if (state.sessionTimer.started && !state.sessionTimer.ended && !state.sessionTimer.isPaused) {
     if (state.activeTaskId) {
       const t = state.tasks.find(x => x.id === state.activeTaskId);
       if (t && t.intervals.length) {
-        const last = t.intervals[t.intervals.length - 1];
+        const last = t.intervals[t.intervals.length-1];
         if (!last.end) last.end = state.lastModified;
       }
     }
@@ -1442,58 +1442,49 @@ function applyImportContinue() {
     state.sessionTimer.isPaused = true;
     state.sessionTimer.pausedAt = state.lastModified;
   }
-  closeImportModal();
-  saveState();
-  render();
+  closeImportModal(); saveState(); render();
 }
-
 function applyImportTemplate() {
   if (!pendingImport) return;
-  const tasks = (pendingImport.tasks || []).map((t, i) => ({
-    id: crypto.randomUUID(),
-    name: t.name,
-    order: i,
-    status: 'pending',
-    estimateMin: t.estimateMin || null,
-    note: '',
-    accumulatedMs: 0,
-    intervals: []
-  }));
+  const srcTasks = pendingImport.tasks || [];
+  const idMap = new Map();
+  const newTasks = srcTasks.map(t => {
+    const newId = crypto.randomUUID();
+    idMap.set(t.id, newId);
+    return {
+      id: newId, name: t.name, order: t.order || 0,
+      status: 'pending', estimateMin: t.estimateMin || null,
+      note: '', accumulatedMs: 0, intervals: [],
+      parentId: null, _oldParent: t.parentId
+    };
+  });
+  newTasks.forEach(t => {
+    if (t._oldParent) t.parentId = idMap.get(t._oldParent) || null;
+    delete t._oldParent;
+  });
   state = freshState();
-  state.tasks = tasks;
+  state.tasks = newTasks;
   state.stateLabels = { ...DEFAULT_STATE_LABELS, ...(pendingImport.stateLabels || {}) };
-  closeImportModal();
-  saveState();
-  render();
+  closeImportModal(); saveState(); render();
 }
-
 function closeImportModal() {
   pendingImport = null;
   document.getElementById('import-modal').classList.remove('show');
 }
 
-/* ==========================================================================
-   SETTINGS
-   ========================================================================== */
+/* ================= SETTINGS ================= */
 function openSettings() {
   const editor = document.getElementById('states-editor');
   editor.innerHTML = '';
   Object.keys(state.stateLabels).forEach(key => {
-    const row = document.createElement('div');
-    row.className = 'state-edit-row';
-    const label = document.createElement('label');
-    label.textContent = key;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.dataset.key = key;
-    input.value = state.stateLabels[key];
-    row.appendChild(label);
-    row.appendChild(input);
-    editor.appendChild(row);
+    const row = document.createElement('div'); row.className = 'state-edit-row';
+    const lbl = document.createElement('label'); lbl.textContent = key;
+    const inp = document.createElement('input'); inp.type = 'text';
+    inp.dataset.key = key; inp.value = state.stateLabels[key];
+    row.appendChild(lbl); row.appendChild(inp); editor.appendChild(row);
   });
   document.getElementById('settings-modal').classList.add('show');
 }
-
 function saveSettings() {
   document.querySelectorAll('#states-editor input').forEach(input => {
     const key = input.dataset.key;
@@ -1501,75 +1492,48 @@ function saveSettings() {
     state.stateLabels[key] = v;
   });
   document.getElementById('settings-modal').classList.remove('show');
-  saveState();
-  render();
+  saveState(); render();
 }
 
-/* ==========================================================================
-   WIRING
-   ========================================================================== */
+/* ================= WIRING ================= */
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
-  if (state.sessionTimer.started && !state.sessionTimer.ended && !state.sessionTimer.isPaused) {
-    startTick();
-  }
+  if (state.sessionTimer.started && !state.sessionTimer.ended && !state.sessionTimer.isPaused) startTick();
 
   document.getElementById('new-task-input').addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      addTask(e.target.value);
-      e.target.value = '';
-    }
+    if (e.key === 'Enter') { addTask(e.target.value); e.target.value = ''; }
   });
-
   document.getElementById('btn-start-session').addEventListener('click', startSession);
   document.getElementById('btn-pause-session').addEventListener('click', pauseSession);
   document.getElementById('btn-resume-session').addEventListener('click', () => { resumeSession(); startTick(); });
   document.getElementById('btn-end-session').addEventListener('click', endSession);
   document.getElementById('btn-reset').addEventListener('click', resetSession);
-
   document.getElementById('btn-export-json').addEventListener('click', exportJSON);
   document.getElementById('btn-export-txt').addEventListener('click', exportTXT);
-  document.getElementById('btn-import').addEventListener('click', () =>
-    document.getElementById('file-input').click()
-  );
+  document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', e => {
-    const f = e.target.files[0];
-    if (!f) return;
-    const reader = new FileReader();
-    reader.onload = ev => importJSON(ev.target.result);
-    reader.readAsText(f);
-    e.target.value = '';
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = ev => importJSON(ev.target.result);
+    r.readAsText(f); e.target.value = '';
   });
   document.getElementById('import-cancel').addEventListener('click', closeImportModal);
   document.getElementById('import-continue').addEventListener('click', applyImportContinue);
   document.getElementById('import-template').addEventListener('click', applyImportTemplate);
-
   document.getElementById('btn-settings').addEventListener('click', openSettings);
   document.getElementById('settings-cancel').addEventListener('click', () =>
-    document.getElementById('settings-modal').classList.remove('show')
-  );
+    document.getElementById('settings-modal').classList.remove('show'));
   document.getElementById('settings-save').addEventListener('click', saveSettings);
-
   document.getElementById('rhythm-mode').addEventListener('change', e => {
-    const custom = document.getElementById('rhythm-custom');
-    if (e.target.value === 'custom') custom.classList.add('show');
-    else custom.classList.remove('show');
+    document.getElementById('rhythm-custom').classList.toggle('show', e.target.value === 'custom');
   });
-
-  // Pause tick when tab is hidden to reduce drift (timer still accurate via timestamps)
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      if (tickInterval) { clearInterval(tickInterval); tickInterval = null; }
-    } else {
-      if (state.sessionTimer.started && !state.sessionTimer.ended && !state.sessionTimer.isPaused && !tickInterval) {
-        startTick();
-        updateTimerDisplays();
-      }
+    if (document.hidden) { if (tickInterval) { clearInterval(tickInterval); tickInterval = null; } }
+    else if (state.sessionTimer.started && !state.sessionTimer.ended && !state.sessionTimer.isPaused && !tickInterval) {
+      startTick(); updateTimerDisplays();
     }
   });
-
   window.addEventListener('beforeunload', () => { saveState(); });
-
   render();
 });
 </script>
