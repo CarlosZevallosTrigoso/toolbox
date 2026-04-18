@@ -298,6 +298,11 @@ section {
     <button id="btn-import">importar</button>
     <button id="btn-export-json">JSON</button>
     <button id="btn-export-txt">TXT</button>
+    <button id="btn-open-drive" title="abrir la carpeta de drive en una pestaña nueva">abrir drive ↗</button>
+    <!-- botones de subida directa (andamiaje B, ocultos hasta configurar Client ID)
+    <button id="btn-upload-json" class="hidden">subir JSON</button>
+    <button id="btn-upload-txt" class="hidden">subir TXT</button>
+    -->
     <button id="btn-settings">estados</button>
     <button id="btn-reset">reset</button>
     <input type="file" id="file-input" class="file-input" accept=".json,application/json">
@@ -1323,8 +1328,7 @@ function exportJSON() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
   downloadBlob(blob, makeFilename('json'));
 }
-function exportTXT() {
-  saveState();
+function buildTXTContent() {
   const L = [];
   const start = state.createdAt || state.sessionTimer.startedAt;
   L.push('SESIÓN DE TRABAJO');
@@ -1394,7 +1398,11 @@ function exportTXT() {
   Object.keys(counts).forEach(k => {
     if (counts[k]) L.push(`  ${state.stateLabels[k]}: ${counts[k]}`);
   });
-  const blob = new Blob([L.join('\n')], { type: 'text/plain;charset=utf-8' });
+  return L.join('\n');
+}
+function exportTXT() {
+  saveState();
+  const blob = new Blob([buildTXTContent()], { type: 'text/plain;charset=utf-8' });
   downloadBlob(blob, makeFilename('txt'));
 }
 function makeFilename(ext) {
@@ -1472,6 +1480,123 @@ function closeImportModal() {
   document.getElementById('import-modal').classList.remove('show');
 }
 
+/* ================= DRIVE ================= */
+/*
+  Integración con Google Drive. Dos niveles:
+
+  NIVEL A (activo): botón "abrir drive" que abre la carpeta en una pestaña
+  nueva. Sin configuración. El usuario arrastra manualmente el archivo
+  descargado (JSON/TXT) a la pestaña de Drive.
+
+  NIVEL B (andamiaje, inactivo): subida directa vía Drive API v3 con OAuth.
+  Para activarlo:
+
+  1. Ir a https://console.cloud.google.com, crear un proyecto (o usar uno).
+  2. APIs & Services → Enable APIs → habilitar "Google Drive API".
+  3. APIs & Services → Credentials → Create Credentials → OAuth client ID.
+     Tipo: Web application.
+     Authorized JavaScript origins: agregar el dominio donde sirves este HTML
+     (p.ej. https://tu-usuario.github.io), y http://localhost si lo pruebas local.
+     No hacen falta redirect URIs (usamos GIS token flow).
+  4. Copiar el Client ID y pegarlo en DRIVE_CLIENT_ID abajo.
+  5. Descomentar el <script> de GIS al final del <body> (o se carga solo).
+  6. Descomentar los botones btn-upload-json y btn-upload-txt en el header
+     y quitarles la clase "hidden".
+  7. Descomentar el bloque WIRING DRIVE al final del DOMContentLoaded.
+
+  Scope usado: drive.file (solo archivos creados por la app; suficiente para
+  subir nuevos archivos a cualquier carpeta, incluida esta que ya existe).
+*/
+
+const DRIVE_FOLDER_ID = '1dFXs_PyEjBPpxxm2KDuO7sZvXgfCkc_-';
+const DRIVE_FOLDER_URL = 'https://drive.google.com/drive/folders/' + DRIVE_FOLDER_ID;
+const DRIVE_CLIENT_ID = ''; // ← pegar aquí el Client ID de Google Cloud Console
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+
+function openDriveFolder() {
+  window.open(DRIVE_FOLDER_URL, '_blank', 'noopener');
+}
+
+/* --- ANDAMIAJE NIVEL B (comentado hasta que configures DRIVE_CLIENT_ID) ---
+
+let driveTokenClient = null;
+let driveAccessToken = null;
+let pendingDriveAction = null;
+
+function loadGISScript() {
+  return new Promise((resolve, reject) => {
+    if (window.google && google.accounts && google.accounts.oauth2) return resolve();
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.defer = true;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('no se pudo cargar google identity services'));
+    document.head.appendChild(s);
+  });
+}
+
+async function ensureDriveClient() {
+  if (!DRIVE_CLIENT_ID) { alert('drive: falta configurar DRIVE_CLIENT_ID en el código'); return false; }
+  try { await loadGISScript(); }
+  catch (e) { alert(e.message); return false; }
+  if (!driveTokenClient) {
+    driveTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: DRIVE_CLIENT_ID,
+      scope: DRIVE_SCOPE,
+      callback: (resp) => {
+        if (resp.error) { alert('error de autorización: ' + resp.error); pendingDriveAction = null; return; }
+        driveAccessToken = resp.access_token;
+        if (pendingDriveAction) { const a = pendingDriveAction; pendingDriveAction = null; a(); }
+      }
+    });
+  }
+  return true;
+}
+
+async function withDriveToken(action) {
+  const ok = await ensureDriveClient();
+  if (!ok) return;
+  if (driveAccessToken) { action(); return; }
+  pendingDriveAction = action;
+  driveTokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function uploadBlobToDrive(blob, filename, mimeType) {
+  const metadata = { name: filename, parents: [DRIVE_FOLDER_ID], mimeType: mimeType };
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+  form.append('file', blob);
+  try {
+    const r = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + driveAccessToken },
+      body: form
+    });
+    if (r.status === 401) { driveAccessToken = null; withDriveToken(() => uploadBlobToDrive(blob, filename, mimeType)); return; }
+    if (!r.ok) { const t = await r.text(); throw new Error('HTTP ' + r.status + ': ' + t); }
+    const data = await r.json();
+    alert('subido a drive: ' + data.name);
+  } catch (e) { alert('error al subir: ' + e.message); }
+}
+
+function uploadJSONToDrive() {
+  saveState();
+  withDriveToken(() => {
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+    uploadBlobToDrive(blob, makeFilename('json'), 'application/json');
+  });
+}
+
+function uploadTXTToDrive() {
+  saveState();
+  withDriveToken(() => {
+    const blob = new Blob([buildTXTContent()], { type: 'text/plain;charset=utf-8' });
+    uploadBlobToDrive(blob, makeFilename('txt'), 'text/plain');
+  });
+}
+
+--- FIN ANDAMIAJE B --- */
+
 /* ================= SETTINGS ================= */
 function openSettings() {
   const editor = document.getElementById('states-editor');
@@ -1510,6 +1635,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-reset').addEventListener('click', resetSession);
   document.getElementById('btn-export-json').addEventListener('click', exportJSON);
   document.getElementById('btn-export-txt').addEventListener('click', exportTXT);
+  document.getElementById('btn-open-drive').addEventListener('click', openDriveFolder);
+  /* --- WIRING DRIVE (nivel B, descomentar cuando configures DRIVE_CLIENT_ID) ---
+  document.getElementById('btn-upload-json').addEventListener('click', uploadJSONToDrive);
+  document.getElementById('btn-upload-txt').addEventListener('click', uploadTXTToDrive);
+  --- */
   document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-input').click());
   document.getElementById('file-input').addEventListener('change', e => {
     const f = e.target.files[0]; if (!f) return;
