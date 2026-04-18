@@ -78,7 +78,7 @@ section {
   padding: 16px; margin-bottom: 20px;
 }
 
-.timers-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.timers-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
 .timer-card { background: var(--surface); border: 1px solid var(--border); padding: 16px; }
 .timer-label {
   font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase;
@@ -325,6 +325,11 @@ section {
     <div class="timer-value" id="rhythm-timer">–</div>
     <div class="timer-meta" id="rhythm-status">libre</div>
   </div>
+  <div class="timer-card" id="break-timer-card">
+    <div class="timer-label">descansos</div>
+    <div class="timer-value" id="break-timer">00:00:00</div>
+    <div class="timer-meta" id="break-status">–</div>
+  </div>
 </div>
 
 <section id="rhythm-section">
@@ -362,6 +367,7 @@ section {
   <button id="btn-start-session" class="primary">iniciar sesión</button>
   <button id="btn-pause-session" class="hidden">pausar sesión</button>
   <button id="btn-resume-session" class="hidden primary">reanudar sesión</button>
+  <button id="btn-break" class="hidden">descanso</button>
   <button id="btn-end-session" class="hidden">terminar sesión</button>
 </div>
 
@@ -449,7 +455,9 @@ function freshState() {
     },
     stateLabels: {...DEFAULT_STATE_LABELS},
     tasks: [],
-    activeTaskId: null
+    activeTaskId: null,
+    breaks: [],
+    onBreakSince: null
   };
 }
 
@@ -554,6 +562,13 @@ function loadState() {
             if (!last.end) last.end = state.lastModified;
           }
         }
+        if (state.onBreakSince) {
+          const endIso = state.lastModified;
+          if (new Date(endIso).getTime() > new Date(state.onBreakSince).getTime()) {
+            state.breaks.push({ start: state.onBreakSince, end: endIso });
+          }
+          state.onBreakSince = null;
+        }
         const elapsed = lastMod - new Date(state.sessionTimer.startedAt).getTime();
         state.sessionTimer.accumulatedMs += Math.max(0, elapsed);
         state.sessionTimer.isPaused = true;
@@ -578,6 +593,8 @@ function migrateState(p) {
     intervals: t.intervals || [],
     parentId: t.parentId ?? null
   }));
+  s.breaks = Array.isArray(p.breaks) ? p.breaks : [];
+  s.onBreakSince = p.onBreakSince || null;
   return s;
 }
 
@@ -616,6 +633,7 @@ function setTaskStatus(id, status) {
 }
 function startTask(id) {
   if (!state.sessionTimer.started || state.sessionTimer.isPaused || state.sessionTimer.ended) return;
+  if (isOnBreak()) endBreak();
   if (state.activeTaskId === id) { stopActiveTask(); return; }
   if (state.activeTaskId) stopActiveTask();
   const t = state.tasks.find(x => x.id === id);
@@ -675,6 +693,7 @@ function startSession() {
 }
 function pauseSession() {
   if (!state.sessionTimer.started || state.sessionTimer.isPaused) return;
+  if (isOnBreak()) endBreak();
   if (state.activeTaskId) {
     const t = state.tasks.find(x => x.id === state.activeTaskId);
     if (t && t.intervals.length) {
@@ -700,6 +719,7 @@ function resumeSession() {
 }
 function endSession() {
   if (!confirm('¿terminar la sesión?')) return;
+  if (isOnBreak()) endBreak();
   if (state.activeTaskId) stopActiveTask();
   if (!state.sessionTimer.isPaused && state.sessionTimer.started) {
     const elapsed = now() - new Date(state.sessionTimer.startedAt).getTime();
@@ -712,6 +732,48 @@ function resetSession() {
   if (!confirm('¿reiniciar? se perderá toda la sesión actual.')) return;
   state = freshState(); stopTick(); saveState(); render();
 }
+
+/* ================= BREAKS (descansos) ================= */
+/*
+  El descanso es una categoría de tiempo DENTRO de la sesión:
+  el reloj de sesión sigue corriendo, pero el tiempo se contabiliza
+  aparte del trabajo. Solo disponible en modo de ritmo "free".
+  Si hay un modo con ciclos (pomodoro, 52-17, etc.), las pausas ya
+  las gestiona el ritmo y el botón queda deshabilitado.
+*/
+function isBreakAvailable() {
+  return state.sessionTimer.started
+      && !state.sessionTimer.ended
+      && !state.sessionTimer.isPaused
+      && state.rhythm.type === 'free';
+}
+function isOnBreak() { return !!state.onBreakSince; }
+function computeBreaksMs() {
+  let total = state.breaks.reduce((a, b) => {
+    const s = new Date(b.start).getTime();
+    const e = new Date(b.end).getTime();
+    return a + Math.max(0, e - s);
+  }, 0);
+  if (state.onBreakSince) total += Math.max(0, now() - new Date(state.onBreakSince).getTime());
+  return total;
+}
+function startBreak() {
+  if (!isBreakAvailable() || isOnBreak()) return;
+  if (state.activeTaskId) stopActiveTask();
+  state.onBreakSince = new Date().toISOString();
+  saveState(); render();
+}
+function endBreak() {
+  if (!isOnBreak()) return;
+  const start = state.onBreakSince;
+  const end = new Date().toISOString();
+  if (new Date(end).getTime() > new Date(start).getTime()) {
+    state.breaks.push({ start, end });
+  }
+  state.onBreakSince = null;
+  saveState(); render();
+}
+function toggleBreak() { isOnBreak() ? endBreak() : startBreak(); }
 
 /* ================= RHYTHM ================= */
 function applyRhythmFromUI() {
@@ -857,6 +919,7 @@ function updateTimerDisplays() {
                     : state.rhythm.currentPhase === 'short' ? 'pausa corta' : 'pausa larga';
     document.getElementById('rhythm-status').textContent = `${phaseName} · ciclo ${state.rhythm.currentCycle}`;
   }
+  document.getElementById('break-timer').textContent = fmtTime(computeBreaksMs());
 }
 
 /* ================= RENDER ================= */
@@ -901,6 +964,17 @@ function renderTimers() {
     rCard.classList.add('running');
   } else {
     rCard.classList.add('break');
+  }
+  const bCard = document.getElementById('break-timer-card');
+  bCard.classList.remove('running','paused','break');
+  if (isOnBreak()) {
+    bCard.classList.add('break');
+    document.getElementById('break-status').textContent = 'en curso';
+  } else if (state.breaks.length) {
+    bCard.classList.add('paused');
+    document.getElementById('break-status').textContent = `${state.breaks.length} ${state.breaks.length === 1 ? 'intervalo' : 'intervalos'}`;
+  } else {
+    document.getElementById('break-status').textContent = state.rhythm.type === 'free' ? 'ninguno' : 'gestionado por ritmo';
   }
   updateTimerDisplays();
 }
@@ -1152,11 +1226,27 @@ function renderSessionControls() {
   const bp = document.getElementById('btn-pause-session');
   const br = document.getElementById('btn-resume-session');
   const be = document.getElementById('btn-end-session');
-  [bs,bp,br,be].forEach(b => b.classList.add('hidden'));
+  const bb = document.getElementById('btn-break');
+  [bs,bp,br,be,bb].forEach(b => b.classList.add('hidden'));
   if (!state.sessionTimer.started) bs.classList.remove('hidden');
   else if (state.sessionTimer.ended) {}
   else if (state.sessionTimer.isPaused) { br.classList.remove('hidden'); be.classList.remove('hidden'); }
-  else { bp.classList.remove('hidden'); be.classList.remove('hidden'); }
+  else {
+    bp.classList.remove('hidden');
+    be.classList.remove('hidden');
+    bb.classList.remove('hidden');
+    if (state.rhythm.type !== 'free') {
+      bb.disabled = true;
+      bb.textContent = 'descanso';
+      bb.title = 'descanso gestionado por el modo de ritmo activo';
+      bb.classList.remove('primary');
+    } else {
+      bb.disabled = false;
+      bb.title = '';
+      if (isOnBreak()) { bb.textContent = 'fin de descanso'; bb.classList.add('primary'); }
+      else { bb.textContent = 'descanso'; bb.classList.remove('primary'); }
+    }
+  }
 }
 
 /* ================= VIZ ================= */
@@ -1182,7 +1272,7 @@ function renderGantt() {
   svg.setAttribute('height', height);
   svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   let html = '';
-  // break shading
+  // break shading (ritmo con ciclos)
   if (state.rhythm.logCycles && state.rhythm.cycleLog.length) {
     state.rhythm.cycleLog.forEach(c => {
       if (c.phase === 'short' || c.phase === 'long') {
@@ -1194,6 +1284,18 @@ function renderGantt() {
       }
     });
   }
+  // break shading (descansos manuales)
+  const allBreaks = [...state.breaks];
+  if (state.onBreakSince) allBreaks.push({ start: state.onBreakSince, end: new Date(tEnd).toISOString() });
+  allBreaks.forEach(b => {
+    const s = new Date(b.start).getTime();
+    const e = new Date(b.end).getTime();
+    const x1 = padLeft + (s-t0)/totalMs*innerW;
+    const x2 = padLeft + (e-t0)/totalMs*innerW;
+    html += `<rect x="${x1}" y="${padTop}" width="${Math.max(1,x2-x1)}" height="${flat.length*(rowH+gap)-gap}" fill="#c8c8c4" opacity="0.35"/>`;
+    html += `<line x1="${x1}" y1="${padTop}" x2="${x1}" y2="${padTop+flat.length*(rowH+gap)-gap}" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="2,2"/>`;
+    if (x2-x1 > 2) html += `<line x1="${x2}" y1="${padTop}" x2="${x2}" y2="${padTop+flat.length*(rowH+gap)-gap}" stroke="#9a9a9a" stroke-width="1" stroke-dasharray="2,2"/>`;
+  });
   // ticks
   const ticks = 6;
   for (let i = 0; i <= ticks; i++) {
@@ -1236,7 +1338,9 @@ function renderDistribution() {
   const legend = document.getElementById('dist-legend');
   bar.innerHTML = ''; legend.innerHTML = '';
   const roots = state.tasks.filter(t => !t.parentId).sort((a,b)=>a.order-b.order);
-  const total = roots.reduce((a,t) => a + computeTaskMsAgg(t), 0);
+  const tasksMs = roots.reduce((a,t) => a + computeTaskMsAgg(t), 0);
+  const breaksMs = computeBreaksMs();
+  const total = tasksMs + breaksMs;
   if (total === 0) {
     bar.innerHTML = '<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#888;font-size:11px;">sin tiempo registrado aún</div>';
     return;
@@ -1261,6 +1365,23 @@ function renderDistribution() {
     li.appendChild(document.createTextNode(`${stripTags(task.name)} · ${fmtShort(ms)}`));
     legend.appendChild(li);
   });
+  if (breaksMs > 0) {
+    const pct = (breaksMs/total)*100;
+    const seg = document.createElement('div');
+    seg.className = 'dist-segment'; seg.style.width = pct+'%';
+    seg.style.background = '#c8c8c4';
+    seg.style.color = '#1a1a1a';
+    seg.title = `descanso · ${fmtShort(breaksMs)} · ${pct.toFixed(1)}%`;
+    if (pct > 8) seg.textContent = pct.toFixed(0)+'%';
+    bar.appendChild(seg);
+    const li = document.createElement('div');
+    li.className = 'dist-legend-item';
+    const sw = document.createElement('span');
+    sw.className = 'dist-legend-swatch'; sw.style.background = '#c8c8c4';
+    li.appendChild(sw);
+    li.appendChild(document.createTextNode(`descanso · ${fmtShort(breaksMs)}`));
+    legend.appendChild(li);
+  }
 }
 function computeTagTotals() {
   const tagMs = {};
@@ -1301,12 +1422,14 @@ function renderStats() {
   grid.innerHTML = '';
   const sessionMs = computeSessionMs();
   const workedMs = state.tasks.reduce((a,t) => a + computeTaskMs(t), 0);
-  const idle = Math.max(0, sessionMs - workedMs);
+  const breaksMs = computeBreaksMs();
+  const idle = Math.max(0, sessionMs - workedMs - breaksMs);
   const counts = { done:0, advanced:0, notDone:0, pending:0, inProgress:0 };
   state.tasks.forEach(t => counts[t.status]++);
   const items = [
     ['tiempo total', fmtTime(sessionMs)],
     ['tiempo activo', fmtTime(workedMs)],
+    ['tiempo en descanso', fmtTime(breaksMs)],
     ['sin tarea', fmtTime(idle)],
     ['tareas', state.tasks.length],
     [state.stateLabels.done, counts.done],
@@ -1391,6 +1514,22 @@ function buildTXTContent() {
     });
     L.push('');
   }
+  const allBreaks = [...state.breaks];
+  if (state.onBreakSince) allBreaks.push({ start: state.onBreakSince, end: new Date().toISOString() });
+  if (allBreaks.length) {
+    L.push('DESCANSOS');
+    L.push('---------');
+    let totalBreakMs = 0;
+    allBreaks.forEach((b, i) => {
+      const s = new Date(b.start).getTime();
+      const e = new Date(b.end).getTime();
+      const dur = Math.max(0, e - s);
+      totalBreakMs += dur;
+      L.push(`  ${String(i+1).padStart(2,'0')}. ${fmtDate(b.start)} → ${fmtDate(b.end)} · ${fmtTime(dur)}`);
+    });
+    L.push(`  total: ${fmtTime(totalBreakMs)}`);
+    L.push('');
+  }
   L.push('RESUMEN');
   L.push('-------');
   const counts = { done:0, advanced:0, notDone:0, pending:0, inProgress:0 };
@@ -1444,6 +1583,13 @@ function applyImportContinue() {
         const last = t.intervals[t.intervals.length-1];
         if (!last.end) last.end = state.lastModified;
       }
+    }
+    if (state.onBreakSince) {
+      const endIso = state.lastModified;
+      if (new Date(endIso).getTime() > new Date(state.onBreakSince).getTime()) {
+        state.breaks.push({ start: state.onBreakSince, end: endIso });
+      }
+      state.onBreakSince = null;
     }
     const elapsed = new Date(state.lastModified).getTime() - new Date(state.sessionTimer.startedAt).getTime();
     state.sessionTimer.accumulatedMs += Math.max(0, elapsed);
@@ -1632,6 +1778,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-pause-session').addEventListener('click', pauseSession);
   document.getElementById('btn-resume-session').addEventListener('click', () => { resumeSession(); startTick(); });
   document.getElementById('btn-end-session').addEventListener('click', endSession);
+  document.getElementById('btn-break').addEventListener('click', toggleBreak);
   document.getElementById('btn-reset').addEventListener('click', resetSession);
   document.getElementById('btn-export-json').addEventListener('click', exportJSON);
   document.getElementById('btn-export-txt').addEventListener('click', exportTXT);
