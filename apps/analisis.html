@@ -20,6 +20,10 @@
   --done: #3a7a42;
   --notDone: #a04040;
   --warn: #b58b1e;
+  --break-soft: #e8e8e4;
+  --break-mid: #c8c8c4;
+  --break-strong: #8a8a82;
+  --idle: #d8dde3;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { background: var(--bg); }
@@ -196,6 +200,143 @@ section {
 }
 .streak-bar-fill { height: 100%; background: var(--warn); opacity: 0.7; }
 
+/* ===== Filtros ===== */
+.filters-bar {
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+  padding: 12px 16px; background: var(--surface); border: 1px solid var(--border);
+  margin-bottom: 20px; font-size: 11px;
+}
+.filters-bar label { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+.filters-bar input[type="date"] {
+  font-family: inherit; font-size: 11px; padding: 4px 6px;
+  background: var(--bg); border: 1px solid var(--border); color: var(--text);
+}
+.filters-bar input[type="checkbox"] { accent-color: var(--accent); }
+.filter-reset {
+  font-size: 10px; padding: 3px 8px; margin-left: auto;
+}
+
+/* ===== Stat groups (resumen refinado) ===== */
+.stat-group { margin-bottom: 20px; }
+.stat-group:last-child { margin-bottom: 0; }
+.stat-group-title {
+  font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px; padding-bottom: 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.stat-group-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.stat-card {
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 4px;
+  position: relative;
+}
+.stat-card--break { border-left: 3px solid var(--break-strong); }
+.stat-value {
+  font-size: 22px; font-variant-numeric: tabular-nums; line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.stat-value--small { font-size: 12px; }
+.stat-meter {
+  height: 4px; background: var(--surface); border: 1px solid var(--border);
+  margin-top: 6px;
+}
+.stat-meter-fill {
+  height: 100%; background: var(--accent); transition: width 0.3s;
+}
+.stat-meter-fill--break { background: var(--break-strong); }
+.stat-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.sparkline {
+  width: 100%; height: 28px; margin-top: 6px; display: block;
+}
+
+/* ===== Donut de etiquetas ===== */
+.donut-grid {
+  display: grid; grid-template-columns: 240px 1fr; gap: 24px;
+  align-items: center;
+}
+.donut-svg { width: 220px; height: 220px; }
+.donut-legend {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px 16px; font-size: 11px;
+}
+.donut-legend-item {
+  display: grid; grid-template-columns: 12px 1fr auto;
+  gap: 8px; align-items: center;
+}
+.donut-legend-swatch {
+  width: 10px; height: 10px; display: inline-block;
+}
+.donut-legend-name { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.donut-legend-val { color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (max-width: 720px) {
+  .donut-grid { grid-template-columns: 1fr; }
+  .donut-svg { margin: 0 auto; }
+}
+
+/* ===== Sección descansos ===== */
+#breaks-section .stat-group-grid { margin-bottom: 16px; }
+.break-split-bar {
+  display: flex; height: 28px; border: 1px solid var(--border);
+  margin-bottom: 6px; overflow: hidden;
+}
+.break-split-seg {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: var(--text); letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.composition-list {
+  display: flex; flex-direction: column; gap: 4px; margin-top: 8px;
+}
+.comp-row {
+  display: grid; grid-template-columns: 110px 1fr 70px;
+  gap: 10px; align-items: center; font-size: 10px;
+}
+.comp-label { color: var(--muted); font-variant-numeric: tabular-nums; }
+.comp-bar {
+  height: 18px; display: flex; background: var(--bg);
+  border: 1px solid var(--border); overflow: hidden;
+}
+.comp-seg { height: 100%; }
+.comp-seg--work { background: var(--accent); }
+.comp-seg--break { background: var(--break-mid); }
+.comp-seg--idle { background: var(--idle); }
+.comp-val { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.comp-legend {
+  display: flex; gap: 16px; margin-top: 12px; font-size: 10px; color: var(--muted);
+}
+.comp-legend-swatch { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: middle; }
+
+/* ===== Calendar heatmap ===== */
+.cal-scroll { overflow-x: auto; padding-bottom: 8px; }
+.cal-svg { display: block; }
+.cal-legend {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 10px; color: var(--muted); margin-top: 8px; justify-content: flex-end;
+}
+.cal-scale {
+  display: flex; gap: 2px;
+}
+.cal-scale > div {
+  width: 12px; height: 12px; border-radius: 2px;
+}
+
+/* ===== Time series ===== */
+.ts-scroll { overflow-x: auto; padding-bottom: 8px; }
+.ts-svg { display: block; min-width: 100%; }
+.ts-legend {
+  display: flex; gap: 16px; margin-top: 8px;
+  font-size: 10px; color: var(--muted);
+}
+.ts-swatch { display: inline-block; width: 10px; height: 10px; margin-right: 4px; vertical-align: middle; }
+
+/* ===== Tags + donut layout ===== */
+.tags-with-donut { display: grid; grid-template-columns: 1fr; gap: 24px; }
+
 .hidden { display: none !important; }
 .file-input { display: none; }
 
@@ -231,6 +372,13 @@ section {
   <div class="files-list" id="files-list"></div>
 </section>
 
+<div class="filters-bar hidden" id="filters-bar">
+  <label>desde <input type="date" id="filter-from"></label>
+  <label>hasta <input type="date" id="filter-to"></label>
+  <label><input type="checkbox" id="filter-include-breaks" checked> incluir descansos en composición</label>
+  <button class="filter-reset" id="filter-reset">resetear filtros</button>
+</div>
+
 <div id="analysis-content" class="hidden">
 
   <section>
@@ -240,8 +388,35 @@ section {
 
   <section>
     <h2>tiempo por etiqueta</h2>
-    <div class="tags-bars" id="tags-bars"></div>
+    <div id="tags-donut-wrap"></div>
+    <div class="tags-bars" id="tags-bars" style="margin-top: 24px;"></div>
     <div class="note" id="tags-note"></div>
+  </section>
+
+  <section id="breaks-section" class="hidden">
+    <h2>descansos</h2>
+    <div class="stat-group-grid" id="breaks-stats"></div>
+    <div id="breaks-split" style="margin-top: 16px;"></div>
+    <h2 style="margin-top: 24px;">composición por sesión</h2>
+    <div class="composition-list" id="breaks-composition"></div>
+    <div class="comp-legend">
+      <span><span class="comp-legend-swatch" style="background:var(--accent)"></span>trabajo</span>
+      <span><span class="comp-legend-swatch" style="background:var(--break-mid)"></span>descanso</span>
+      <span><span class="comp-legend-swatch" style="background:var(--idle)"></span>sin tarea</span>
+    </div>
+    <div class="note">cada barra representa una sesión completa al 100%. el descanso suma intervalos manuales y pausas gestionadas por el ritmo (pomodoro, 52-17, etc.).</div>
+  </section>
+
+  <section>
+    <h2>actividad en el calendario</h2>
+    <div id="calendar-heatmap-wrap"></div>
+    <div class="note">tiempo trabajado por día. una semana por columna, los días van de lunes a domingo.</div>
+  </section>
+
+  <section>
+    <h2>evolución por sesión</h2>
+    <div id="timeseries-wrap"></div>
+    <div class="note">cada barra es una sesión en orden cronológico. apila trabajo + descanso + tiempo sin tarea hasta el total de la sesión.</div>
   </section>
 
   <section>
@@ -305,6 +480,7 @@ section {
 <script>
 const TAG_RE = /#([\p{L}\p{N}_-]+)/gu;
 let sessions = []; // loaded session objects
+let filters = { from: null, to: null, includeBreaksInTotal: true };
 
 /* ================= HELPERS ================= */
 function fmtTime(ms) {
@@ -350,6 +526,50 @@ function sessionDate(s) {
   return new Date(s.createdAt || s.sessionTimer?.startedAt || s.lastModified);
 }
 
+/* Devuelve todos los descansos de una sesión, unificando dos fuentes:
+   1. state.breaks (descansos manuales en modo libre).
+   2. state.rhythm.cycleLog phases 'short'/'long' (gestionados por el ritmo).
+   Cada item: {start, end, source: 'manual'|'rhythm'} */
+function getSessionBreaks(s) {
+  const out = [];
+  (s.breaks || []).forEach(b => {
+    if (b.start && b.end) out.push({ start: b.start, end: b.end, source: 'manual' });
+  });
+  if (s.onBreakSince) {
+    const endIso = s.lastModified || new Date().toISOString();
+    if (new Date(endIso).getTime() > new Date(s.onBreakSince).getTime()) {
+      out.push({ start: s.onBreakSince, end: endIso, source: 'manual' });
+    }
+  }
+  const cycles = s.rhythm?.cycleLog || [];
+  cycles.forEach(c => {
+    if ((c.phase === 'short' || c.phase === 'long') && c.startedAt && c.endedAt) {
+      out.push({ start: c.startedAt, end: c.endedAt, source: 'rhythm' });
+    }
+  });
+  return out.sort((a,b) => new Date(a.start) - new Date(b.start));
+}
+
+function computeSessionBreakMs(s) {
+  return getSessionBreaks(s).reduce((a, b) =>
+    a + Math.max(0, new Date(b.end).getTime() - new Date(b.start).getTime()), 0);
+}
+
+function dayKey(date) {
+  const d = new Date(date);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function getFilteredSessions() {
+  return sessions.filter(s => {
+    if (!filters.from && !filters.to) return true;
+    const d = sessionDate(s).getTime();
+    if (filters.from && d < new Date(filters.from + 'T00:00:00').getTime()) return false;
+    if (filters.to && d > new Date(filters.to + 'T23:59:59').getTime()) return false;
+    return true;
+  });
+}
+
 /* ================= FILE LOADING ================= */
 function handleFiles(files) {
   const readers = [...files].map(f => new Promise((resolve, reject) => {
@@ -390,9 +610,14 @@ function removeSession(id) {
 
 function clearAll() {
   sessions = [];
+  filters = { from: null, to: null, includeBreaksInTotal: true };
+  document.getElementById('filter-from').value = '';
+  document.getElementById('filter-to').value = '';
+  document.getElementById('filter-include-breaks').checked = true;
   renderFilesList();
   document.getElementById('analysis-content').classList.add('hidden');
   document.getElementById('files-section').classList.add('hidden');
+  document.getElementById('filters-bar').classList.add('hidden');
   document.getElementById('btn-export-csv').disabled = true;
   document.getElementById('btn-clear').disabled = true;
   document.getElementById('subtitle').textContent = 'carga uno o más JSON exportados desde la app de sesión';
@@ -400,10 +625,20 @@ function clearAll() {
 
 function renderFilesList() {
   const wrap = document.getElementById('files-section');
+  const fbar = document.getElementById('filters-bar');
   const list = document.getElementById('files-list');
   list.innerHTML = '';
-  if (!sessions.length) { wrap.classList.add('hidden'); return; }
+  if (!sessions.length) { wrap.classList.add('hidden'); fbar.classList.add('hidden'); return; }
   wrap.classList.remove('hidden');
+  fbar.classList.remove('hidden');
+  // Set default filter date bounds (placeholders only) based on current dataset
+  const dates = sessions.map(sessionDate).sort((a,b) => a-b);
+  const minIso = dates[0].toISOString().slice(0,10);
+  const maxIso = dates[dates.length-1].toISOString().slice(0,10);
+  document.getElementById('filter-from').min = minIso;
+  document.getElementById('filter-from').max = maxIso;
+  document.getElementById('filter-to').min = minIso;
+  document.getElementById('filter-to').max = maxIso;
   sessions.forEach(s => {
     const row = document.createElement('div');
     row.className = 'file-row';
@@ -426,30 +661,40 @@ function renderFilesList() {
 
 /* ================= ANALYSIS ================= */
 function computeSummary() {
-  const totalMs = sessions.reduce((a,s) => a + (s.sessionTimer?.accumulatedMs || 0), 0);
-  const workedMs = sessions.reduce((a,s) =>
+  const ss = getFilteredSessions();
+  const totalMs = ss.reduce((a,s) => a + (s.sessionTimer?.accumulatedMs || 0), 0);
+  const workedMs = ss.reduce((a,s) =>
     a + s.tasks.reduce((b,t) => b + computeTaskMs(t), 0), 0);
-  const totalTasks = sessions.reduce((a,s) => a + s.tasks.length, 0);
+  const breakMs = ss.reduce((a,s) => a + computeSessionBreakMs(s), 0);
+  const totalTasks = ss.reduce((a,s) => a + s.tasks.length, 0);
   const uniqueNames = new Set();
-  sessions.forEach(s => s.tasks.forEach(t => {
+  ss.forEach(s => s.tasks.forEach(t => {
     const n = normalizeName(t.name);
     if (n) uniqueNames.add(n);
   }));
-  const dates = sessions.map(sessionDate).sort((a,b) => a-b);
+  const dates = ss.map(sessionDate).sort((a,b) => a-b);
   const uniqueTags = new Set();
-  sessions.forEach(s => s.tasks.forEach(t => parseTags(t.name).forEach(x => uniqueTags.add(x))));
+  ss.forEach(s => s.tasks.forEach(t => parseTags(t.name).forEach(x => uniqueTags.add(x))));
+  // sparkline de tiempo trabajado por sesión cronológica
+  const sparkSeries = ss.slice().sort((a,b) => sessionDate(a) - sessionDate(b))
+    .map(s => s.tasks.reduce((b,t) => b + computeTaskMs(t), 0));
+  // tareas done por sesión
+  const doneSeries = ss.slice().sort((a,b) => sessionDate(a) - sessionDate(b))
+    .map(s => s.tasks.filter(t => t.status === 'done').length);
   return {
-    count: sessions.length,
-    totalMs, workedMs,
+    count: ss.length,
+    totalMs, workedMs, breakMs,
     totalTasks, uniqueNames: uniqueNames.size,
     firstDate: dates[0], lastDate: dates[dates.length-1],
-    uniqueTags: uniqueTags.size
+    uniqueTags: uniqueTags.size,
+    sparkSeries, doneSeries
   };
 }
 
 function computeTagTotals() {
+  const ss = getFilteredSessions();
   const tagMs = {}, tagTasks = {};
-  sessions.forEach(s => s.tasks.forEach(t => {
+  ss.forEach(s => s.tasks.forEach(t => {
     const tags = parseTags(t.name);
     const ms = computeTaskMs(t);
     tags.forEach(tag => {
@@ -462,8 +707,9 @@ function computeTagTotals() {
 }
 
 function computeRecurring() {
+  const ss = getFilteredSessions();
   const groups = new Map();
-  sessions.forEach(s => s.tasks.forEach(t => {
+  ss.forEach(s => s.tasks.forEach(t => {
     const key = normalizeName(t.name);
     if (!key) return;
     if (!groups.has(key)) groups.set(key, {name: key, sessions: new Set(), totalMs: 0, done: 0, total: 0});
@@ -480,8 +726,9 @@ function computeRecurring() {
 }
 
 function computeHeatmap() {
+  const ss = getFilteredSessions();
   const grid = Array.from({length: 7}, () => new Array(24).fill(0));
-  sessions.forEach(s => s.tasks.forEach(t => {
+  ss.forEach(s => s.tasks.forEach(t => {
     (t.intervals || []).forEach(iv => {
       if (!iv.end) return;
       let cursor = new Date(iv.start).getTime();
@@ -500,8 +747,9 @@ function computeHeatmap() {
 }
 
 function computeEstimation() {
+  const ss = getFilteredSessions();
   const items = [];
-  sessions.forEach(s => s.tasks.forEach(t => {
+  ss.forEach(s => s.tasks.forEach(t => {
     if (!t.estimateMin) return;
     const actualMin = computeTaskMs(t) / 60000;
     if (actualMin < 0.5) return;
@@ -531,8 +779,9 @@ function computeEstimation() {
 }
 
 function computeCompletionByTag() {
+  const ss = getFilteredSessions();
   const byTag = {};
-  sessions.forEach(s => s.tasks.forEach(t => {
+  ss.forEach(s => s.tasks.forEach(t => {
     parseTags(t.name).forEach(tag => {
       if (!byTag[tag]) byTag[tag] = { done:0, advanced:0, notDone:0, other:0, total:0 };
       byTag[tag].total++;
@@ -549,7 +798,7 @@ function computeCompletionByTag() {
 }
 
 function computeSwitching() {
-  return sessions.map(s => {
+  return getFilteredSessions().map(s => {
     const starts = s.tasks.reduce((a,t) => a + ((t.intervals||[]).length), 0);
     const tasksWorked = s.tasks.filter(t => (t.intervals||[]).length > 0).length;
     return {
@@ -562,8 +811,9 @@ function computeSwitching() {
 }
 
 function computeStreaks() {
+  const ss = getFilteredSessions();
   const tagDays = {};
-  sessions.forEach(s => {
+  ss.forEach(s => {
     const day = sessionDate(s).toISOString().slice(0,10);
     s.tasks.forEach(t => {
       parseTags(t.name).forEach(tag => {
@@ -594,13 +844,101 @@ function computeStreaks() {
   }).sort((a,b) => b.longest - a.longest);
 }
 
+/* ================= NEW ANALYSIS: BREAKS, CALENDAR, TIMESERIES ================= */
+
+function computeBreaks() {
+  const ss = getFilteredSessions();
+  const allBreaks = [];
+  const perSession = ss.map(s => {
+    const breaks = getSessionBreaks(s);
+    const totalMs = breaks.reduce((a,b) =>
+      a + Math.max(0, new Date(b.end).getTime() - new Date(b.start).getTime()), 0);
+    breaks.forEach(b => allBreaks.push({
+      ...b,
+      ms: Math.max(0, new Date(b.end).getTime() - new Date(b.start).getTime()),
+      sessionId: s.sessionId,
+      sessionDate: sessionDate(s)
+    }));
+    return {
+      sessionId: s.sessionId,
+      date: sessionDate(s),
+      filename: s._filename,
+      totalMs: s.sessionTimer?.accumulatedMs || 0,
+      workedMs: s.tasks.reduce((a,t) => a + computeTaskMs(t), 0),
+      breakMs: totalMs,
+      breakCount: breaks.length,
+      hasManual: breaks.some(b => b.source === 'manual'),
+      hasRhythm: breaks.some(b => b.source === 'rhythm')
+    };
+  }).sort((a,b) => a.date - b.date);
+  const totalMs = allBreaks.reduce((a,b) => a + b.ms, 0);
+  const manualMs = allBreaks.filter(b => b.source === 'manual').reduce((a,b) => a + b.ms, 0);
+  const rhythmMs = totalMs - manualMs;
+  const longest = allBreaks.length ? Math.max(...allBreaks.map(b => b.ms)) : 0;
+  const avgMs = allBreaks.length ? totalMs / allBreaks.length : 0;
+  const sessionsWithBreaks = perSession.filter(p => p.breakMs > 0).length;
+  return {
+    totalMs, manualMs, rhythmMs, longest, avgMs,
+    count: allBreaks.length,
+    sessionsWithBreaks,
+    perSession,
+    allBreaks: allBreaks.sort((a,b) => b.ms - a.ms)
+  };
+}
+
+function computeCalendarHeatmap() {
+  // Devuelve {dayKey: {workedMs, breakMs, sessionCount}} y rango
+  const ss = getFilteredSessions();
+  if (!ss.length) return { days: {}, start: null, end: null };
+  const days = {};
+  ss.forEach(s => {
+    const k = dayKey(sessionDate(s));
+    if (!days[k]) days[k] = { workedMs: 0, breakMs: 0, sessionCount: 0 };
+    days[k].workedMs += s.tasks.reduce((a,t) => a + computeTaskMs(t), 0);
+    days[k].breakMs += computeSessionBreakMs(s);
+    days[k].sessionCount += 1;
+  });
+  // Rango del calendario: del lunes anterior al primer día al domingo posterior al último
+  const dates = ss.map(sessionDate).sort((a,b) => a-b);
+  const first = new Date(dates[0]); first.setHours(0,0,0,0);
+  const last = new Date(dates[dates.length-1]); last.setHours(0,0,0,0);
+  // Retroceder al lunes (1 = lun, 0 = dom)
+  const dow = first.getDay(); // 0..6
+  const back = (dow + 6) % 7; // a lunes
+  const start = new Date(first); start.setDate(start.getDate() - back);
+  const fwd = (7 - last.getDay()) % 7;
+  const end = new Date(last); end.setDate(end.getDate() + fwd);
+  return { days, start, end };
+}
+
+function computeTimeSeries() {
+  // Por sesión: {date, workedMs, breakMs, idleMs, totalMs, label}
+  return getFilteredSessions().map(s => {
+    const totalMs = s.sessionTimer?.accumulatedMs || 0;
+    const workedMs = s.tasks.reduce((a,t) => a + computeTaskMs(t), 0);
+    const breakMs = computeSessionBreakMs(s);
+    const idleMs = Math.max(0, totalMs - workedMs - breakMs);
+    return {
+      date: sessionDate(s),
+      sessionId: s.sessionId,
+      filename: s._filename,
+      totalMs, workedMs, breakMs, idleMs,
+      label: fmtDate(sessionDate(s))
+    };
+  }).sort((a,b) => a.date - b.date);
+}
+
 /* ================= RENDER ================= */
 function runAnalysis() {
   const wrap = document.getElementById('analysis-content');
   if (!sessions.length) { wrap.classList.add('hidden'); return; }
   wrap.classList.remove('hidden');
   renderSummary();
+  renderTagsDonut();
   renderTags();
+  renderBreaks();
+  renderCalendarHeatmap();
+  renderTimeSeries();
   renderRecurring();
   renderHeatmap();
   renderEstimation();
@@ -611,26 +949,94 @@ function runAnalysis() {
 
 function renderSummary() {
   const s = computeSummary();
-  const grid = document.getElementById('summary-stats');
-  grid.innerHTML = '';
+  const wrap = document.getElementById('summary-stats');
+  wrap.innerHTML = '';
+  if (!s.count) {
+    wrap.innerHTML = '<div class="note">no hay sesiones en el rango seleccionado.</div>';
+    return;
+  }
+  const productivity = s.totalMs > 0 ? (s.workedMs / s.totalMs * 100) : 0;
+  const breakRatio = s.totalMs > 0 ? (s.breakMs / s.totalMs * 100) : 0;
   const range = s.firstDate && s.lastDate
     ? `${fmtDate(s.firstDate)} → ${fmtDate(s.lastDate)}` : '—';
-  const items = [
-    ['sesiones', s.count],
-    ['tiempo total', fmtTime(s.totalMs)],
-    ['tiempo trabajado', fmtTime(s.workedMs)],
-    ['tareas totales', s.totalTasks],
-    ['tareas únicas', s.uniqueNames],
-    ['etiquetas únicas', s.uniqueTags],
-    ['rango', range]
+  const daysSpan = s.firstDate && s.lastDate
+    ? Math.max(1, Math.round((s.lastDate - s.firstDate) / 86400000) + 1) : 1;
+  const sessionsPerWeek = (s.count / daysSpan * 7).toFixed(1);
+
+  const groups = [
+    { title: 'volumen', items: [
+      { label: 'sesiones', value: s.count, spark: s.sparkSeries },
+      { label: 'tiempo total', value: fmtTime(s.totalMs), big: false },
+      { label: 'tiempo trabajado', value: fmtTime(s.workedMs), pct: productivity, pctLabel: productivity.toFixed(0)+'% del total' },
+      { label: 'tiempo en descanso', value: fmtTime(s.breakMs), pct: breakRatio, pctLabel: breakRatio.toFixed(0)+'% del total', accent: 'break' }
+    ]},
+    { title: 'cobertura', items: [
+      { label: 'tareas totales', value: s.totalTasks, spark: s.doneSeries, sparkLabel: 'done por sesión' },
+      { label: 'tareas únicas', value: s.uniqueNames },
+      { label: 'etiquetas únicas', value: s.uniqueTags }
+    ]},
+    { title: 'calendario', items: [
+      { label: 'rango', value: range, big: false },
+      { label: 'sesiones / semana', value: sessionsPerWeek }
+    ]}
   ];
-  items.forEach(([l,v]) => {
-    const d = document.createElement('div'); d.className = 'stat';
-    const lb = document.createElement('div'); lb.className = 'stat-label'; lb.textContent = l;
-    const vl = document.createElement('div'); vl.className = 'stat-value';
-    vl.textContent = v; vl.style.fontSize = (typeof v === 'string' && v.length > 20) ? '12px' : '18px';
-    d.appendChild(lb); d.appendChild(vl); grid.appendChild(d);
+  groups.forEach(g => {
+    const grp = document.createElement('div');
+    grp.className = 'stat-group';
+    const ttl = document.createElement('div');
+    ttl.className = 'stat-group-title'; ttl.textContent = g.title;
+    grp.appendChild(ttl);
+    const grid = document.createElement('div');
+    grid.className = 'stat-group-grid';
+    g.items.forEach(it => {
+      const card = document.createElement('div');
+      card.className = 'stat-card' + (it.accent ? ' stat-card--' + it.accent : '');
+      const lb = document.createElement('div'); lb.className = 'stat-label'; lb.textContent = it.label;
+      const vl = document.createElement('div'); vl.className = 'stat-value';
+      vl.textContent = it.value;
+      if (it.big === false || (typeof it.value === 'string' && it.value.length > 16)) vl.classList.add('stat-value--small');
+      card.appendChild(lb); card.appendChild(vl);
+      if (it.pct !== undefined) {
+        const meter = document.createElement('div'); meter.className = 'stat-meter';
+        const fill = document.createElement('div');
+        fill.className = 'stat-meter-fill' + (it.accent === 'break' ? ' stat-meter-fill--break' : '');
+        fill.style.width = Math.min(100, it.pct) + '%';
+        meter.appendChild(fill); card.appendChild(meter);
+        const sub = document.createElement('div'); sub.className = 'stat-sub'; sub.textContent = it.pctLabel;
+        card.appendChild(sub);
+      }
+      if (it.spark && it.spark.length > 1) {
+        card.appendChild(makeSparkline(it.spark));
+        if (it.sparkLabel) {
+          const sub = document.createElement('div'); sub.className = 'stat-sub'; sub.textContent = it.sparkLabel;
+          card.appendChild(sub);
+        }
+      }
+      grid.appendChild(card);
+    });
+    grp.appendChild(grid);
+    wrap.appendChild(grp);
   });
+}
+
+function makeSparkline(values) {
+  const w = 120, h = 28, pad = 2;
+  const max = Math.max(...values, 1);
+  const step = values.length > 1 ? (w - pad*2) / (values.length - 1) : 0;
+  const pts = values.map((v,i) => {
+    const x = pad + i * step;
+    const y = h - pad - (v / max) * (h - pad*2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'sparkline');
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.innerHTML = `
+    <polyline points="${pts}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <polyline points="${pad},${h-pad} ${pts} ${w-pad},${h-pad}" fill="var(--accent)" opacity="0.12" stroke="none"/>
+  `;
+  return svg;
 }
 
 function renderTags() {
@@ -851,6 +1257,252 @@ function renderStreaks() {
   });
 }
 
+/* ================= NEW RENDERS: BREAKS, CALENDAR, TIMESERIES, DONUT ================= */
+
+function renderTagsDonut() {
+  const wrap = document.getElementById('tags-donut-wrap');
+  const totals = computeTagTotals();
+  if (!totals.length || totals.length < 2) {
+    wrap.innerHTML = '';
+    return;
+  }
+  const top = totals.slice(0, 8);
+  const restMs = totals.slice(8).reduce((a,t) => a + t.ms, 0);
+  const slices = restMs > 0 ? [...top, { tag: 'otras', ms: restMs }] : top;
+  const total = slices.reduce((a,s) => a + s.ms, 0);
+  if (total === 0) { wrap.innerHTML = ''; return; }
+  const colors = ['#3a5a7a','#3a7a42','#b58b1e','#a04040','#8a3a7a','#5a8a7a','#8a7a3a','#3a8a8a','#bcbcbc'];
+  const cx = 110, cy = 110, r = 90, rIn = 56;
+  let cursor = -Math.PI / 2;
+  let paths = '';
+  let labels = '';
+  slices.forEach((sl, i) => {
+    const frac = sl.ms / total;
+    const a = cursor;
+    const b = cursor + frac * Math.PI * 2;
+    const x1 = cx + r * Math.cos(a), y1 = cy + r * Math.sin(a);
+    const x2 = cx + r * Math.cos(b), y2 = cy + r * Math.sin(b);
+    const xi1 = cx + rIn * Math.cos(b), yi1 = cy + rIn * Math.sin(b);
+    const xi2 = cx + rIn * Math.cos(a), yi2 = cy + rIn * Math.sin(a);
+    const large = (b - a) > Math.PI ? 1 : 0;
+    const d = `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} L ${xi1.toFixed(2)} ${yi1.toFixed(2)} A ${rIn} ${rIn} 0 ${large} 0 ${xi2.toFixed(2)} ${yi2.toFixed(2)} Z`;
+    const color = colors[i % colors.length];
+    paths += `<path d="${d}" fill="${color}" opacity="0.85" stroke="#fff" stroke-width="1"><title>${sl.tag} · ${fmtShort(sl.ms)} · ${(frac*100).toFixed(1)}%</title></path>`;
+    cursor = b;
+  });
+  let legend = '';
+  slices.forEach((sl, i) => {
+    const frac = sl.ms / total;
+    const color = colors[i % colors.length];
+    legend += `<div class="donut-legend-item"><span class="donut-legend-swatch" style="background:${color}"></span><span class="donut-legend-name">${sl.tag}</span><span class="donut-legend-val">${(frac*100).toFixed(1)}%</span></div>`;
+  });
+  wrap.innerHTML = `
+    <div class="donut-grid">
+      <svg viewBox="0 0 220 220" class="donut-svg">
+        ${paths}
+        <text x="110" y="105" text-anchor="middle" font-family="Fira Code, monospace" font-size="11" fill="#888">tiempo</text>
+        <text x="110" y="125" text-anchor="middle" font-family="Fira Code, monospace" font-size="14" fill="#1a1a1a" font-weight="500">${fmtShort(total)}</text>
+      </svg>
+      <div class="donut-legend">${legend}</div>
+    </div>`;
+}
+
+function renderBreaks() {
+  const sec = document.getElementById('breaks-section');
+  const data = computeBreaks();
+  if (data.count === 0) {
+    sec.classList.add('hidden');
+    return;
+  }
+  sec.classList.remove('hidden');
+
+  // Stat cards
+  const stats = document.getElementById('breaks-stats');
+  stats.innerHTML = '';
+  const items = [
+    ['tiempo total en descanso', fmtTime(data.totalMs)],
+    ['intervalos', data.count],
+    ['duración media', fmtShort(data.avgMs)],
+    ['descanso más largo', fmtShort(data.longest)]
+  ];
+  items.forEach(([l,v]) => {
+    const card = document.createElement('div'); card.className = 'stat-card stat-card--break';
+    const lb = document.createElement('div'); lb.className = 'stat-label'; lb.textContent = l;
+    const vl = document.createElement('div'); vl.className = 'stat-value'; vl.textContent = v;
+    card.appendChild(lb); card.appendChild(vl);
+    stats.appendChild(card);
+  });
+
+  // Source split
+  const split = document.getElementById('breaks-split');
+  const totalForSplit = data.manualMs + data.rhythmMs;
+  if (totalForSplit > 0 && (data.manualMs > 0 && data.rhythmMs > 0)) {
+    const mPct = (data.manualMs / totalForSplit * 100).toFixed(0);
+    const rPct = 100 - mPct;
+    split.innerHTML = `
+      <div class="break-split-bar">
+        <div class="break-split-seg" style="width:${mPct}%;background:var(--break-mid)" title="manuales · ${fmtShort(data.manualMs)}">manual ${mPct}%</div>
+        <div class="break-split-seg" style="width:${rPct}%;background:var(--break-strong);color:#fff" title="ritmo · ${fmtShort(data.rhythmMs)}">ritmo ${rPct}%</div>
+      </div>
+      <div class="note">${fmtShort(data.manualMs)} en descansos manuales · ${fmtShort(data.rhythmMs)} en pausas de ritmo</div>`;
+  } else if (data.manualMs > 0) {
+    split.innerHTML = `<div class="note">todos los descansos fueron manuales (${fmtShort(data.manualMs)}).</div>`;
+  } else {
+    split.innerHTML = `<div class="note">todos los descansos vinieron del ritmo (${fmtShort(data.rhythmMs)}).</div>`;
+  }
+
+  // Composition per session: stacked bars
+  const comp = document.getElementById('breaks-composition');
+  comp.innerHTML = '';
+  data.perSession.forEach(p => {
+    const t = Math.max(1, p.totalMs);
+    const wPct = (p.workedMs / t) * 100;
+    const bPct = (p.breakMs / t) * 100;
+    const iPct = Math.max(0, 100 - wPct - bPct);
+    const row = document.createElement('div'); row.className = 'comp-row';
+    const lbl = document.createElement('div'); lbl.className = 'comp-label';
+    lbl.textContent = fmtDate(p.date);
+    const bar = document.createElement('div'); bar.className = 'comp-bar';
+    bar.innerHTML = `
+      <div class="comp-seg comp-seg--work" style="width:${wPct.toFixed(2)}%" title="trabajo · ${fmtShort(p.workedMs)}"></div>
+      <div class="comp-seg comp-seg--break" style="width:${bPct.toFixed(2)}%" title="descanso · ${fmtShort(p.breakMs)}"></div>
+      <div class="comp-seg comp-seg--idle" style="width:${iPct.toFixed(2)}%" title="sin tarea · ${fmtShort(t * iPct / 100)}"></div>`;
+    const val = document.createElement('div'); val.className = 'comp-val';
+    val.textContent = bPct > 0 ? bPct.toFixed(0) + '% desc' : '—';
+    row.appendChild(lbl); row.appendChild(bar); row.appendChild(val);
+    comp.appendChild(row);
+  });
+}
+
+function renderCalendarHeatmap() {
+  const wrap = document.getElementById('calendar-heatmap-wrap');
+  const data = computeCalendarHeatmap();
+  if (!data.start) { wrap.innerHTML = '<div class="note">sin datos.</div>'; return; }
+  const cell = 12, gap = 3;
+  const days = []; // [{date, key, ms}]
+  const cur = new Date(data.start);
+  while (cur <= data.end) {
+    const k = dayKey(cur);
+    const ms = data.days[k]?.workedMs || 0;
+    days.push({ date: new Date(cur), key: k, ms, sessions: data.days[k]?.sessionCount || 0 });
+    cur.setDate(cur.getDate() + 1);
+  }
+  const weeks = Math.ceil(days.length / 7);
+  const w = weeks * (cell + gap) + 30;
+  const h = 7 * (cell + gap) + 26;
+  const max = Math.max(...days.map(d => d.ms), 1);
+  let cells = '';
+  let monthLabels = '';
+  let lastMonth = -1;
+  days.forEach((d, i) => {
+    // Lunes = día 1 en el sistema; convertimos JS getDay() (0=dom) a 0=lun..6=dom
+    const dow = (d.date.getDay() + 6) % 7;
+    const week = Math.floor(i / 7);
+    const x = 30 + week * (cell + gap);
+    const y = 20 + dow * (cell + gap);
+    let fill = '#eef2f7';
+    if (d.ms > 0) {
+      const intensity = 0.2 + (d.ms / max) * 0.8;
+      fill = `rgba(58, 90, 122, ${intensity})`;
+    }
+    const tip = d.ms > 0
+      ? `${d.date.toLocaleDateString('es-PE')} · ${fmtShort(d.ms)} · ${d.sessions} ${d.sessions === 1 ? 'sesión' : 'sesiones'}`
+      : `${d.date.toLocaleDateString('es-PE')} · sin actividad`;
+    cells += `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" fill="${fill}" rx="2" ry="2"><title>${tip}</title></rect>`;
+    if (dow === 0 && d.date.getMonth() !== lastMonth) {
+      lastMonth = d.date.getMonth();
+      const monthName = d.date.toLocaleDateString('es-PE', { month: 'short' });
+      monthLabels += `<text x="${x}" y="14" font-size="9" fill="#888" font-family="Fira Code, monospace">${monthName}</text>`;
+    }
+  });
+  const dowLabels = ['L','M','M','J','V','S','D'];
+  let dowMarks = '';
+  dowLabels.forEach((dl, i) => {
+    if (i % 2 === 0) {
+      const y = 20 + i * (cell + gap) + cell - 2;
+      dowMarks += `<text x="20" y="${y}" font-size="9" fill="#888" font-family="Fira Code, monospace" text-anchor="end">${dl}</text>`;
+    }
+  });
+  wrap.innerHTML = `
+    <div class="cal-scroll">
+      <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="cal-svg">
+        ${monthLabels}${dowMarks}${cells}
+      </svg>
+    </div>
+    <div class="cal-legend">
+      <span>menos</span>
+      <div class="cal-scale">
+        <div style="background:#eef2f7"></div>
+        <div style="background:rgba(58,90,122,0.3)"></div>
+        <div style="background:rgba(58,90,122,0.5)"></div>
+        <div style="background:rgba(58,90,122,0.7)"></div>
+        <div style="background:rgba(58,90,122,1)"></div>
+      </div>
+      <span>más</span>
+    </div>`;
+}
+
+function renderTimeSeries() {
+  const wrap = document.getElementById('timeseries-wrap');
+  const data = computeTimeSeries();
+  if (!data.length) { wrap.innerHTML = '<div class="note">sin datos.</div>'; return; }
+  const padL = 40, padR = 14, padT = 14, padB = 40;
+  const barW = Math.min(34, Math.max(8, 700 / data.length));
+  const innerW = data.length * (barW + 4) - 4;
+  const w = padL + innerW + padR;
+  const h = 240;
+  const innerH = h - padT - padB;
+  const max = Math.max(...data.map(d => d.totalMs), 1);
+  // Ticks en horas
+  const maxH = max / 3600000;
+  const niceMaxH = Math.ceil(maxH * 2) / 2; // 0.5h
+  const tickStep = niceMaxH <= 2 ? 0.5 : niceMaxH <= 6 ? 1 : niceMaxH <= 12 ? 2 : 4;
+  const ticks = [];
+  for (let v = 0; v <= niceMaxH + 0.001; v += tickStep) ticks.push(v);
+  const niceMaxMs = niceMaxH * 3600000;
+
+  let bars = '';
+  let xLabels = '';
+  data.forEach((d, i) => {
+    const x = padL + i * (barW + 4);
+    const wPxTotal = innerH * (d.totalMs / niceMaxMs);
+    const wH = innerH * (d.workedMs / niceMaxMs);
+    const bH = innerH * (d.breakMs / niceMaxMs);
+    const iH = innerH * (d.idleMs / niceMaxMs);
+    const yWork = padT + innerH - wH;
+    const yBreak = yWork - bH;
+    const yIdle = yBreak - iH;
+    bars += `<g><title>${d.label} · trabajo ${fmtShort(d.workedMs)} · descanso ${fmtShort(d.breakMs)} · sin tarea ${fmtShort(d.idleMs)}</title>`;
+    bars += `<rect x="${x}" y="${yWork}" width="${barW}" height="${wH}" fill="var(--accent)" opacity="0.85"/>`;
+    if (bH > 0) bars += `<rect x="${x}" y="${yBreak}" width="${barW}" height="${bH}" fill="var(--break-mid)"/>`;
+    if (iH > 0) bars += `<rect x="${x}" y="${yIdle}" width="${barW}" height="${iH}" fill="var(--faint)" opacity="0.6"/>`;
+    bars += `</g>`;
+    // x-label cada cierto cuántos para evitar solapamiento
+    const everyN = Math.ceil(data.length / 10);
+    if (i % everyN === 0 || i === data.length - 1) {
+      const lbl = d.date.toLocaleDateString('es-PE', { day: '2-digit', month: 'short' });
+      xLabels += `<text x="${x + barW/2}" y="${h - padB + 14}" font-size="9" fill="#888" font-family="Fira Code, monospace" text-anchor="middle" transform="rotate(-35 ${x + barW/2} ${h - padB + 14})">${lbl}</text>`;
+    }
+  });
+  let yLabels = '';
+  ticks.forEach(t => {
+    const y = padT + innerH - innerH * (t * 3600000 / niceMaxMs);
+    yLabels += `<line x1="${padL}" y1="${y}" x2="${w - padR}" y2="${y}" stroke="#ececec" stroke-width="1"/>`;
+    yLabels += `<text x="${padL - 6}" y="${y + 3}" font-size="9" fill="#888" font-family="Fira Code, monospace" text-anchor="end">${t}h</text>`;
+  });
+  wrap.innerHTML = `
+    <div class="ts-scroll">
+      <svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" class="ts-svg">
+        ${yLabels}${bars}${xLabels}
+      </svg>
+    </div>
+    <div class="ts-legend">
+      <span><span class="ts-swatch" style="background:var(--accent);opacity:0.85"></span>trabajo</span>
+      <span><span class="ts-swatch" style="background:var(--break-mid)"></span>descanso</span>
+      <span><span class="ts-swatch" style="background:var(--faint);opacity:0.6"></span>sin tarea</span>
+    </div>`;
+}
+
 /* ================= CSV EXPORT ================= */
 function exportCSV() {
   if (!sessions.length) return;
@@ -908,6 +1560,25 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   document.getElementById('btn-clear').addEventListener('click', clearAll);
   document.getElementById('btn-export-csv').addEventListener('click', exportCSV);
+  document.getElementById('filter-from').addEventListener('change', e => {
+    filters.from = e.target.value || null;
+    if (sessions.length) runAnalysis();
+  });
+  document.getElementById('filter-to').addEventListener('change', e => {
+    filters.to = e.target.value || null;
+    if (sessions.length) runAnalysis();
+  });
+  document.getElementById('filter-include-breaks').addEventListener('change', e => {
+    filters.includeBreaksInTotal = e.target.checked;
+    if (sessions.length) runAnalysis();
+  });
+  document.getElementById('filter-reset').addEventListener('click', () => {
+    filters = { from: null, to: null, includeBreaksInTotal: true };
+    document.getElementById('filter-from').value = '';
+    document.getElementById('filter-to').value = '';
+    document.getElementById('filter-include-breaks').checked = true;
+    if (sessions.length) runAnalysis();
+  });
 });
 </script>
 </body>
