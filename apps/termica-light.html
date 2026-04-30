@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>termica · c17</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Crimson+Pro:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #fafaf6;
+    --surface-2: #f0eee8;
+    --workspace: #e8e6df;
+    --rule: #1a1a1d;
+    --rule-soft: #c8c5bc;
+    --rule-hair: #e0ddd5;
+    --text: #0a0a0b;
+    --text-soft: #4a4a48;
+    --text-faint: #8a8a85;
+    --accent: #5a7a3a;
+    --accent-hi: #4a6a2a;
+    --accent-soft: #eaf0e0;
+    --warn: #b85c2a;
+    --ui: 'Fira Code', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--ui);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: var(--bg); }
+  .app {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    height: 100vh;
+  }
+  /* ── HEADER ─────────────────────────────── */
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 20px 12px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--surface);
+  }
+  .brand {
+    font-family: var(--ui);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+  .brand::before {
+    content: '[ ';
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .brand::after {
+    content: ' ]';
+    color: var(--accent);
+    font-weight: 400;
+  }
+  .meta {
+    font-family: var(--ui);
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex: 1;
+  }
+  .meta span { color: var(--text-soft); }
+  .header-actions { display: flex; gap: 6px; }
+  /* ── HELP BAR ───────────────────────────── */
+  .help-bar {
+    background: var(--accent-soft);
+    border-bottom: 1px solid var(--rule-soft);
+    padding: 8px 20px;
+    font-size: 11px;
+    color: var(--text-soft);
+    display: none;
+  }
+  .help-bar.show { display: block; }
+  .help-bar code {
+    background: var(--bg);
+    padding: 1px 6px;
+    border: 1px solid var(--rule-soft);
+    color: var(--accent-hi);
+    font-family: var(--ui);
+    margin: 0 2px;
+  }
+  .help-bar strong { color: var(--text); font-weight: 600; }
+  /* ── MAIN GRID ──────────────────────────── */
+  main {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    overflow: hidden;
+  }
+  /* ── SIDEBAR ────────────────────────────── */
+  aside {
+    border-right: 1px solid var(--rule);
+    overflow-y: auto;
+    background: var(--surface);
+  }
+  aside::-webkit-scrollbar { width: 6px; }
+  aside::-webkit-scrollbar-track { background: transparent; }
+  aside::-webkit-scrollbar-thumb { background: var(--rule-soft); }
+  aside::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+  .section {
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--rule-hair);
+  }
+  .section:last-child { border-bottom: none; }
+  .section h2 {
+    font-family: var(--ui);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 12px;
+  }
+  .section h2::before {
+    content: '◆ ';
+    color: var(--accent);
+    font-size: 8px;
+  }
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 11px;
+    color: var(--text-soft);
+    margin-bottom: 5px;
+  }
+  .field label .val {
+    color: var(--accent-hi);
+    font-weight: 600;
+  }
+  .field input[type="text"],
+  .field input[type="number"],
+  .field select,
+  .field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--rule-soft);
+    color: var(--text);
+    font-family: var(--ui);
+    font-size: 12px;
+    padding: 7px 9px;
+    outline: none;
+    transition: border-color 0.1s;
+  }
+  .field input:focus,
+  .field select:focus,
+  .field textarea:focus {
+    border-color: var(--accent);
+  }
+  .field select {
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%235a7a3a' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    appearance: none;
+    padding-right: 24px;
+  }
+  .field textarea {
+    resize: vertical;
+    min-height: 200px;
+    line-height: 1.55;
+    font-size: 12px;
+  }
+  .field textarea::-webkit-scrollbar { width: 6px; }
+  .field textarea::-webkit-scrollbar-thumb { background: var(--rule-soft); }
+  .field input[type="range"] {
+    width: 100%;
+    accent-color: var(--accent);
+    background: transparent;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  /* ── SEGMENTED CONTROL ──────────────────── */
+  .seg {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border: 1px solid var(--rule-soft);
+    background: var(--bg);
+  }
+  .seg button {
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--rule-soft);
+    padding: 7px;
+    font-family: var(--ui);
+    font-size: 11px;
+    color: var(--text-soft);
+    cursor: pointer;
+    transition: all 0.1s;
+  }
+  .seg button:last-child { border-right: none; }
+  .seg button:hover { color: var(--text); background: var(--surface-2); }
+  .seg button.active {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 500;
+  }
+  /* ── CHECKBOX ───────────────────────────── */
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 11px;
+    color: var(--text-soft);
+    line-height: 1.4;
+  }
+  .check input { 
+    accent-color: var(--accent); 
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  /* ── BUTTONS ────────────────────────────── */
+  .btn {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--rule-soft);
+    padding: 7px 14px;
+    font-family: var(--ui);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent-hi);
+    background: var(--accent-soft);
+  }
+  .btn-primary {
+    border-color: var(--accent);
+    color: var(--accent-hi);
+    background: var(--accent-soft);
+  }
+  .btn-primary:hover {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  /* ── PREVIEW ────────────────────────────── */
+  .preview-wrap {
+    overflow: auto;
+    background: 
+      linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px) 0 0 / 1px 24px,
+      var(--workspace);
+    display: flex;
+    justify-content: center;
+    padding: 36px 24px;
+    position: relative;
+  }
+  .preview-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+  .preview-wrap::-webkit-scrollbar-track { background: var(--surface-2); }
+  .preview-wrap::-webkit-scrollbar-thumb { background: var(--rule-soft); }
+  .preview-wrap::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+  .paper {
+    background: white;
+    height: fit-content;
+    position: relative;
+    box-shadow: 
+      0 0 0 1px rgba(0, 0, 0, 0.08),
+      0 16px 40px -10px rgba(0, 0, 0, 0.18),
+      0 6px 14px -2px rgba(0, 0, 0, 0.10);
+  }
+  .paper::before, .paper::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 10px;
+    background-image: 
+      repeating-linear-gradient(90deg,
+        white 0,
+        white 4px,
+        var(--workspace) 4px,
+        var(--workspace) 5px);
+    background-size: 5px 10px;
+  }
+  .paper::before { top: -10px; }
+  .paper::after { bottom: -10px; }
+  #preview {
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  /* ── ZOOM CONTROL ───────────────────────── */
+  .scale-control {
+    position: absolute;
+    top: 8px;
+    right: 16px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-faint);
+    background: var(--surface);
+    border: 1px solid var(--rule-soft);
+    padding: 4px 6px;
+  }
+  .scale-control button {
+    background: none;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13px;
+    padding: 0 4px;
+    line-height: 1;
+  }
+  .scale-control button:hover { color: var(--accent-hi); }
+  .scale-control span { padding: 0 4px; }
+  .scale-control .zv { color: var(--accent-hi); min-width: 30px; text-align: center; font-weight: 500; }
+  /* ── FOOTER ─────────────────────────────── */
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 8px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--surface);
+    font-size: 11px;
+    color: var(--text-soft);
+  }
+  .status { display: flex; gap: 22px; }
+  .status .label {
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-right: 6px;
+  }
+  .status .value { color: var(--accent-hi); font-weight: 500; }
+  .status-right .value { color: var(--text-soft); font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">termica</div>
+    <div class="meta">c17 · <span>384px · 203dpi · 1bit</span> · generador de impresión continua</div>
+    <div class="header-actions">
+      <button class="btn" id="btn-help">sintaxis</button>
+      <button class="btn" id="btn-jpg">jpg</button>
+      <button class="btn btn-primary" id="btn-png">png ↓</button>
+    </div>
+  </header>
+
+  <div class="help-bar" id="help-bar">
+    <strong>sintaxis:</strong>
+    <code># título</code> nivel 1
+    <code>## subtítulo</code> nivel 2
+    <code>---</code> separador horizontal
+    · línea en blanco entre párrafos
+    · el resto se trata como prosa con quiebre automático al ancho del papel
+  </div>
+
+  <main>
+    <aside>
+      <div class="section">
+        <h2>texto</h2>
+        <div class="field">
+          <textarea id="input" spellcheck="false" placeholder="# título
+
+texto..."># sobre la fragilidad del archivo
+
+la impresión térmica es, por definición, un acto efímero. el papel térmico se decolora con el tiempo, con el calor, con la luz. lo que se imprime aquí no aspira a la permanencia.
+
+y sin embargo, hay algo en el gesto de imprimir un texto largo en un rollo continuo que recuerda formas previas de la escritura: el volumen, la tira, la cinta de möbius del pensamiento que se desenrolla.
+
+---
+
+## una nota técnica
+
+a doscientos tres puntos por pulgada, cada centímetro de papel contiene ochenta píxeles de altura. la aritmética del cabezal es modesta pero exacta.</textarea>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>tipografía</h2>
+        <div class="field">
+          <label>familia</label>
+          <select id="font-family">
+            <option value="'Crimson Pro', Georgia, serif">crimson pro · serif</option>
+            <option value="'IBM Plex Serif', Georgia, serif">ibm plex serif</option>
+            <option value="'IBM Plex Sans', Helvetica, sans-serif">ibm plex sans</option>
+            <option value="'JetBrains Mono', monospace">jetbrains mono</option>
+            <option value="'Fira Code', monospace">fira code</option>
+            <option value="Georgia, serif">georgia · sistema</option>
+            <option value="'Times New Roman', serif">times</option>
+            <option value="Helvetica, Arial, sans-serif">helvetica · sistema</option>
+            <option value="'Courier New', monospace">courier · sistema</option>
+          </select>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>cuerpo <span class="val" id="size-val">22</span></label>
+            <input type="range" id="font-size" min="14" max="48" value="22">
+          </div>
+          <div class="field">
+            <label>interlin. <span class="val" id="lh-val">1.40</span></label>
+            <input type="range" id="line-height" min="1.0" max="2.2" step="0.05" value="1.4">
+          </div>
+        </div>
+        <div class="field">
+          <label>alineación</label>
+          <div class="seg" id="align-seg">
+            <button data-val="left" class="active">izq</button>
+            <button data-val="center">centro</button>
+            <button data-val="right">der</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>disposición</h2>
+        <div class="row">
+          <div class="field">
+            <label>m. lat. <span class="val" id="mx-val">24</span></label>
+            <input type="range" id="margin-x" min="0" max="80" value="24">
+          </div>
+          <div class="field">
+            <label>m. ↕ <span class="val" id="my-val">48</span></label>
+            <input type="range" id="margin-y" min="0" max="160" value="48">
+          </div>
+        </div>
+        <div class="field">
+          <label>ancho <span class="val" id="w-val">384 px</span></label>
+          <input type="range" id="width" min="240" max="576" step="8" value="384">
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>render</h2>
+        <div class="field">
+          <label>umbral binarización <span class="val" id="th-val">160</span></label>
+          <input type="range" id="threshold" min="60" max="220" value="160">
+        </div>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="dither">
+            <span>tramado floyd-steinberg<br><span style="color:var(--text-faint)">para imágenes con tonos</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>segmentación</h2>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="segment">
+            <span>dividir en archivos múltiples</span>
+          </label>
+        </div>
+        <div class="field">
+          <label>altura máx. por archivo <span class="val" id="seg-val">3000 px</span></label>
+          <input type="range" id="seg-height" min="500" max="8000" step="100" value="3000">
+        </div>
+      </div>
+    </aside>
+
+    <div class="preview-wrap" id="preview-wrap">
+      <div class="scale-control">
+        <span>zoom</span>
+        <button id="zoom-out">−</button>
+        <span class="zv" id="zoom-val">2.0×</span>
+        <button id="zoom-in">+</button>
+      </div>
+      <div class="paper" id="paper">
+        <canvas id="preview"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="status">
+      <div><span class="label">dim</span><span class="value" id="stat-dim">—</span></div>
+      <div><span class="label">papel</span><span class="value" id="stat-cm">—</span></div>
+      <div><span class="label">archivos</span><span class="value" id="stat-files">1</span></div>
+    </div>
+    <div class="status status-right">
+      <div><span class="label">cabezal</span><span class="value">203 dpi · 1 bit</span></div>
+    </div>
+  </footer>
+</div>
+
+<script>
+'use strict';
+
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  text: $('input').value,
+  fontFamily: $('font-family').value,
+  fontSize: 22,
+  lineHeight: 1.4,
+  align: 'left',
+  marginX: 24,
+  marginY: 48,
+  width: 384,
+  threshold: 160,
+  dither: false,
+  segment: false,
+  segHeight: 3000,
+  zoom: 2.0,
+  layout: null
+};
+
+// ─────────────────────────────────────────────
+// PARSING
+// ─────────────────────────────────────────────
+function parseBlocks(text) {
+  const lines = text.split('\n');
+  const blocks = [];
+  let buf = [];
+  const flush = () => {
+    if (buf.length) {
+      blocks.push({ type: 'p', text: buf.join(' ') });
+      buf = [];
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (line === '') {
+      flush();
+    } else if (line === '---' || line === '***') {
+      flush();
+      blocks.push({ type: 'hr' });
+    } else if (line.startsWith('# ')) {
+      flush();
+      blocks.push({ type: 'h1', text: line.slice(2).trim() });
+    } else if (line.startsWith('## ')) {
+      flush();
+      blocks.push({ type: 'h2', text: line.slice(3).trim() });
+    } else {
+      buf.push(line);
+    }
+  }
+  flush();
+  return blocks;
+}
+
+// ─────────────────────────────────────────────
+// LAYOUT
+// ─────────────────────────────────────────────
+function wrapLine(ctx, text, maxWidth) {
+  if (!text) return [''];
+  const words = text.split(/\s+/).filter(Boolean);
+  if (!words.length) return [''];
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const test = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(test).width > maxWidth && cur) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = test;
+    }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function fontSpec(type, base) {
+  if (type === 'h1') return { size: Math.round(base * 1.55), weight: 700 };
+  if (type === 'h2') return { size: Math.round(base * 1.22), weight: 600 };
+  return { size: base, weight: 400 };
+}
+
+function buildLayout(blocks, ctx) {
+  const w = state.width;
+  const innerWidth = w - 2 * state.marginX;
+  const layout = [];
+  const safeBreaks = [0];
+  let y = state.marginY;
+  const baseSpacing = Math.round(state.fontSize * 0.7);
+
+  for (const block of blocks) {
+    if (block.type === 'hr') {
+      y += Math.round(baseSpacing * 0.6);
+      layout.push({ type: 'hr', y, height: 1 });
+      y += Math.round(baseSpacing * 0.6) + 1;
+      safeBreaks.push(y);
+      continue;
+    }
+    const { size, weight } = fontSpec(block.type, state.fontSize);
+    ctx.font = `${weight} ${size}px ${state.fontFamily}`;
+    const lh = Math.round(size * state.lineHeight);
+    const lines = wrapLine(ctx, block.text, innerWidth);
+    const blockHeight = lines.length * lh;
+    const topPadding = block.type === 'h1' ? Math.round(baseSpacing * 1.4) :
+                       block.type === 'h2' ? Math.round(baseSpacing * 1.0) :
+                       0;
+    if (layout.length > 0) y += topPadding;
+    layout.push({
+      type: block.type,
+      y,
+      lines,
+      size,
+      weight,
+      lineHeight: lh,
+      height: blockHeight
+    });
+    y += blockHeight + baseSpacing;
+    safeBreaks.push(y);
+  }
+  y -= Math.round(baseSpacing * 0.4);
+  y += state.marginY;
+  return { layout, totalHeight: Math.max(y, state.marginY * 2 + 10), safeBreaks };
+}
+
+function alignX(ctx, line, align, totalW, mx) {
+  const lw = ctx.measureText(line).width;
+  if (align === 'center') return Math.round((totalW - lw) / 2);
+  if (align === 'right') return Math.round(totalW - mx - lw);
+  return mx;
+}
+
+// ─────────────────────────────────────────────
+// RENDER
+// ─────────────────────────────────────────────
+function render() {
+  const blocks = parseBlocks(state.text);
+  const measureCanvas = document.createElement('canvas');
+  const mctx = measureCanvas.getContext('2d');
+  const { layout, totalHeight, safeBreaks } = buildLayout(blocks, mctx);
+
+  const canvas = $('preview');
+  canvas.width = state.width;
+  canvas.height = Math.max(totalHeight, 60);
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#000000';
+  ctx.textBaseline = 'top';
+
+  for (const item of layout) {
+    if (item.type === 'hr') {
+      const ruleW = state.width - 2 * state.marginX;
+      ctx.fillRect(state.marginX, item.y, ruleW, 1);
+      continue;
+    }
+    ctx.font = `${item.weight} ${item.size}px ${state.fontFamily}`;
+    let yy = item.y;
+    for (const line of item.lines) {
+      const x = alignX(ctx, line, state.align, state.width, state.marginX);
+      ctx.fillText(line, x, yy);
+      yy += item.lineHeight;
+    }
+  }
+
+  if (state.dither) {
+    ditherFloydSteinberg(canvas, state.threshold);
+  } else {
+    binarize(canvas, state.threshold);
+  }
+
+  canvas.style.width = (state.width * state.zoom) + 'px';
+  canvas.style.height = (canvas.height * state.zoom) + 'px';
+
+  state.layout = { totalHeight: canvas.height, safeBreaks };
+  updateStatus();
+}
+
+// ─────────────────────────────────────────────
+// BINARIZATION
+// ─────────────────────────────────────────────
+function binarize(canvas, threshold) {
+  const ctx = canvas.getContext('2d');
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+    const v = gray < threshold ? 0 : 255;
+    d[i] = d[i+1] = d[i+2] = v;
+    d[i+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function ditherFloydSteinberg(canvas, threshold) {
+  const ctx = canvas.getContext('2d');
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = img.data;
+  const w = canvas.width, h = canvas.height;
+  const gray = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+    gray[j] = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+  }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const old = gray[idx];
+      const nw = old < threshold ? 0 : 255;
+      gray[idx] = nw;
+      const err = old - nw;
+      if (x + 1 < w)              gray[idx + 1]     += err * 7/16;
+      if (x - 1 >= 0 && y+1 < h)  gray[idx + w - 1] += err * 3/16;
+      if (y + 1 < h)              gray[idx + w]     += err * 5/16;
+      if (x+1 < w  && y+1 < h)    gray[idx + w + 1] += err * 1/16;
+    }
+  }
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+    const v = gray[j] < threshold ? 0 : 255;
+    d[i] = d[i+1] = d[i+2] = v;
+    d[i+3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ─────────────────────────────────────────────
+// STATUS
+// ─────────────────────────────────────────────
+function updateStatus() {
+  const canvas = $('preview');
+  const wPx = canvas.width;
+  const hPx = canvas.height;
+  const wMm = wPx / 8;
+  const hMm = hPx / 8;
+  $('stat-dim').textContent = `${wPx} × ${hPx} px`;
+  $('stat-cm').textContent = `${(wMm/10).toFixed(1)} × ${(hMm/10).toFixed(1)} cm`;
+  if (state.segment && hPx > state.segHeight) {
+    const n = Math.ceil(hPx / state.segHeight);
+    $('stat-files').textContent = `${n} archivos`;
+  } else {
+    $('stat-files').textContent = '1 archivo';
+  }
+}
+
+// ─────────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────────
+function findSafeBreak(targetY, safeBreaks) {
+  let best = 0;
+  for (const b of safeBreaks) {
+    if (b <= targetY && b > best) best = b;
+  }
+  return best;
+}
+
+function exportImage(format) {
+  const canvas = $('preview');
+  const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+  const ext = format === 'jpg' ? 'jpg' : 'png';
+  const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+  const baseName = `termica-${stamp}`;
+
+  if (!state.segment || canvas.height <= state.segHeight) {
+    canvas.toBlob((blob) => downloadBlob(blob, `${baseName}.${ext}`), mime, 0.95);
+    return;
+  }
+
+  const safeBreaks = state.layout?.safeBreaks || [canvas.height];
+  let yStart = 0;
+  const total = canvas.height;
+  const segs = [];
+
+  while (yStart < total) {
+    const targetEnd = yStart + state.segHeight;
+    let yEnd;
+    if (targetEnd >= total) {
+      yEnd = total;
+    } else {
+      const safe = findSafeBreak(targetEnd, safeBreaks);
+      yEnd = (safe > yStart + 100) ? safe : targetEnd;
+    }
+    segs.push([yStart, yEnd]);
+    yStart = yEnd;
+  }
+
+  segs.forEach(([y0, y1], i) => {
+    const segCanvas = document.createElement('canvas');
+    segCanvas.width = canvas.width;
+    segCanvas.height = y1 - y0;
+    const sctx = segCanvas.getContext('2d');
+    sctx.fillStyle = '#ffffff';
+    sctx.fillRect(0, 0, segCanvas.width, segCanvas.height);
+    sctx.drawImage(canvas, 0, y0, canvas.width, y1 - y0, 0, 0, canvas.width, y1 - y0);
+    const num = String(i + 1).padStart(2, '0');
+    setTimeout(() => {
+      segCanvas.toBlob((blob) => downloadBlob(blob, `${baseName}-${num}.${ext}`), mime, 0.95);
+    }, i * 250);
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ─────────────────────────────────────────────
+// EVENTS
+// ─────────────────────────────────────────────
+let renderTimer = null;
+function scheduleRender() {
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(render, 80);
+}
+
+$('input').addEventListener('input', (e) => {
+  state.text = e.target.value;
+  scheduleRender();
+});
+
+$('font-family').addEventListener('change', (e) => {
+  state.fontFamily = e.target.value;
+  scheduleRender();
+});
+
+const bindRange = (id, key, fmt, valueId) => {
+  $(id).addEventListener('input', (e) => {
+    const v = parseFloat(e.target.value);
+    state[key] = v;
+    $(valueId).textContent = fmt(v);
+    scheduleRender();
+  });
+};
+
+bindRange('font-size', 'fontSize', v => `${v}`, 'size-val');
+bindRange('line-height', 'lineHeight', v => v.toFixed(2), 'lh-val');
+bindRange('margin-x', 'marginX', v => `${v}`, 'mx-val');
+bindRange('margin-y', 'marginY', v => `${v}`, 'my-val');
+bindRange('width', 'width', v => `${v} px`, 'w-val');
+bindRange('threshold', 'threshold', v => v.toString(), 'th-val');
+bindRange('seg-height', 'segHeight', v => `${v} px`, 'seg-val');
+
+document.querySelectorAll('#align-seg button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#align-seg button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.align = btn.dataset.val;
+    scheduleRender();
+  });
+});
+
+$('dither').addEventListener('change', (e) => {
+  state.dither = e.target.checked;
+  scheduleRender();
+});
+
+$('segment').addEventListener('change', (e) => {
+  state.segment = e.target.checked;
+  updateStatus();
+});
+
+$('btn-png').addEventListener('click', () => exportImage('png'));
+$('btn-jpg').addEventListener('click', () => exportImage('jpg'));
+
+$('btn-help').addEventListener('click', () => {
+  $('help-bar').classList.toggle('show');
+});
+
+$('zoom-in').addEventListener('click', () => {
+  state.zoom = Math.min(4, state.zoom + 0.5);
+  $('zoom-val').textContent = state.zoom.toFixed(1) + '×';
+  render();
+});
+$('zoom-out').addEventListener('click', () => {
+  state.zoom = Math.max(0.5, state.zoom - 0.5);
+  $('zoom-val').textContent = state.zoom.toFixed(1) + '×';
+  render();
+});
+
+document.addEventListener('keydown', (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault();
+    exportImage('png');
+  }
+});
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => render());
+} else {
+  setTimeout(render, 200);
+}
+</script>
+</body>
+</html>
