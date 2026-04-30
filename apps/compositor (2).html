@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>compositor · c17</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #fafaf6;
+    --surface-2: #f0eee8;
+    --workspace: #e8e6df;
+    --rule: #1a1a1d;
+    --rule-soft: #c8c5bc;
+    --rule-hair: #e0ddd5;
+    --text: #0a0a0b;
+    --text-soft: #4a4a48;
+    --text-faint: #8a8a85;
+    --accent: #5a7a3a;
+    --accent-hi: #4a6a2a;
+    --accent-soft: #eaf0e0;
+    --warn: #b85c2a;
+    --ui: 'Fira Code', ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: var(--ui); font-size: 12px; line-height: 1.5;
+    overflow: hidden; -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--accent); color: var(--bg); }
+  .app { display: grid; grid-template-rows: auto 1fr auto; height: 100vh; }
+  header {
+    border-bottom: 1px solid var(--rule);
+    padding: 14px 20px 12px;
+    display: flex; align-items: center; gap: 20px;
+    background: var(--surface);
+  }
+  .brand { font-weight: 600; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .brand::before { content: '[ '; color: var(--accent); font-weight: 400; }
+  .brand::after { content: ' ]'; color: var(--accent); font-weight: 400; }
+  .meta { font-size: 11px; color: var(--text-faint); letter-spacing: 0.08em; text-transform: uppercase; flex: 1; }
+  .meta span { color: var(--text-soft); }
+  .header-actions { display: flex; gap: 6px; }
+  main { display: grid; grid-template-columns: 320px 1fr; overflow: hidden; }
+  aside { border-right: 1px solid var(--rule); overflow-y: auto; background: var(--surface); }
+  aside::-webkit-scrollbar { width: 6px; }
+  aside::-webkit-scrollbar-thumb { background: var(--rule-soft); }
+  .section { padding: 16px 18px; border-bottom: 1px solid var(--rule-hair); }
+  .section:last-child { border-bottom: none; }
+  .section h2 {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-faint); margin-bottom: 12px;
+  }
+  .section h2::before { content: '◆ '; color: var(--accent); font-size: 8px; }
+  .subgroup.disabled { opacity: 0.4; pointer-events: none; }
+  .field { margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; color: var(--text-soft); margin-bottom: 5px;
+  }
+  .field label .val { color: var(--accent-hi); font-weight: 600; }
+  .field input[type="number"], .field input[type="text"] {
+    width: 100%; background: var(--bg); border: 1px solid var(--rule-soft);
+    color: var(--text); font-family: var(--ui); font-size: 12px;
+    padding: 7px 9px; outline: none;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .field input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .check {
+    display: flex; align-items: flex-start; gap: 8px;
+    cursor: pointer; font-size: 11px; color: var(--text-soft); line-height: 1.4;
+  }
+  .check input { accent-color: var(--accent); margin-top: 2px; flex-shrink: 0; }
+  .hint {
+    font-size: 10px; color: var(--text-faint);
+    background: var(--surface-2); padding: 8px 10px;
+    border-left: 2px solid var(--accent);
+    margin-bottom: 12px; line-height: 1.5;
+  }
+  .btn {
+    background: var(--bg); color: var(--text);
+    border: 1px solid var(--rule-soft);
+    padding: 7px 14px; font-family: var(--ui); font-size: 11px;
+    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent-hi); background: var(--accent-soft); }
+  .btn-primary { border-color: var(--accent); color: var(--accent-hi); background: var(--accent-soft); }
+  .btn-primary:hover { background: var(--accent); color: var(--bg); }
+  .btn-warn:hover { border-color: var(--warn); color: var(--warn); background: #fef3eb; }
+  .btn-full { width: 100%; padding: 9px; }
+  .btn-sm { padding: 5px 8px; font-size: 10px; }
+  .dropzone {
+    border: 1.5px dashed var(--rule-soft); background: var(--bg);
+    padding: 22px 12px; text-align: center;
+    color: var(--text-faint); font-size: 11px;
+    cursor: pointer; transition: all 0.15s; margin-bottom: 10px;
+  }
+  .dropzone:hover, .dropzone.over {
+    border-color: var(--accent); background: var(--accent-soft); color: var(--accent-hi);
+  }
+  .dropzone strong { color: var(--text); display: block; margin-bottom: 4px; font-weight: 500; }
+  .obj-list { 
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 180px; overflow-y: auto;
+    border: 1px solid var(--rule-soft); background: var(--bg); padding: 4px;
+  }
+  .obj-list::-webkit-scrollbar { width: 4px; }
+  .obj-list::-webkit-scrollbar-thumb { background: var(--rule-soft); }
+  .obj-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 8px; cursor: pointer;
+    font-size: 11px; color: var(--text-soft);
+    border: 1px solid transparent;
+  }
+  .obj-item:hover { background: var(--surface-2); }
+  .obj-item.selected {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--text);
+  }
+  .obj-item .num { color: var(--text-faint); font-weight: 500; min-width: 16px; }
+  .obj-item .name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .obj-list-empty { text-align: center; color: var(--text-faint); font-size: 11px; padding: 12px; font-style: italic; }
+  .canvas-wrap {
+    overflow: auto;
+    background: linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px) 0 0 / 1px 24px, var(--workspace);
+    display: flex; justify-content: center;
+    padding: 36px 24px; position: relative;
+  }
+  .canvas-wrap.over { background: var(--accent-soft); }
+  .canvas-wrap::-webkit-scrollbar { width: 8px; height: 8px; }
+  .canvas-wrap::-webkit-scrollbar-track { background: var(--surface-2); }
+  .canvas-wrap::-webkit-scrollbar-thumb { background: var(--rule-soft); }
+  .paper {
+    background: white; height: fit-content; position: relative;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08), 0 16px 40px -10px rgba(0,0,0,0.18), 0 6px 14px -2px rgba(0,0,0,0.10);
+  }
+  .paper::before, .paper::after {
+    content: ''; position: absolute; left: 0; right: 0; height: 10px;
+    background-image: repeating-linear-gradient(90deg, white 0, white 4px, var(--workspace) 4px, var(--workspace) 5px);
+    background-size: 5px 10px;
+  }
+  .paper::before { top: -10px; }
+  .paper::after { bottom: -10px; }
+  #canvas {
+    display: block;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    cursor: default;
+  }
+  .top-controls {
+    position: absolute; top: 8px; right: 16px;
+    display: flex; gap: 6px; z-index: 10;
+  }
+  .control-pill {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: var(--text-faint);
+    background: var(--surface); border: 1px solid var(--rule-soft);
+    padding: 4px 6px;
+  }
+  .control-pill button {
+    background: none; border: none; color: var(--text);
+    cursor: pointer; font-family: inherit; font-size: 13px;
+    padding: 0 4px; line-height: 1;
+  }
+  .control-pill button:hover { color: var(--accent-hi); }
+  .control-pill .v { color: var(--accent-hi); min-width: 30px; text-align: center; font-weight: 500; padding: 0 4px; }
+  .mode-toggle {
+    background: var(--surface); border: 1px solid var(--rule-soft);
+    padding: 4px 10px; font-family: var(--ui); font-size: 10px;
+    color: var(--text-soft); cursor: pointer;
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+  .mode-toggle.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .mode-toggle:disabled { opacity: 0.4; cursor: not-allowed; }
+  footer {
+    border-top: 1px solid var(--rule);
+    padding: 8px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--surface);
+    font-size: 11px; color: var(--text-soft);
+  }
+  .status { display: flex; gap: 22px; }
+  .status .label {
+    color: var(--text-faint); text-transform: uppercase;
+    letter-spacing: 0.1em; margin-right: 6px;
+  }
+  .status .value { color: var(--accent-hi); font-weight: 500; }
+  .status-right .value { color: var(--text-soft); font-weight: 400; }
+  #file-input { display: none; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand">compositor</div>
+    <div class="meta">c17 · <span>collage continuo · 384px</span></div>
+    <div class="header-actions">
+      <button class="btn" id="btn-jpg">jpg</button>
+      <button class="btn btn-primary" id="btn-png">png ↓</button>
+    </div>
+  </header>
+
+  <main>
+    <aside>
+      <div class="section">
+        <h2>añadir</h2>
+        <div class="dropzone" id="dropzone">
+          <strong>arrastrá imágenes acá</strong>
+          o hacé click para seleccionar
+        </div>
+        <input type="file" id="file-input" accept="image/*" multiple>
+        <div class="obj-list" id="obj-list">
+          <div class="obj-list-empty">sin imágenes</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>lienzo</h2>
+        <div class="hint">
+          ancho fijo · 384 px · 48 mm imprimibles del cabezal c17 (papel 58 mm)
+        </div>
+        <div class="field">
+          <label>altura <span class="val" id="h-val">800 px</span></label>
+          <input type="range" id="canvas-height" min="200" max="6000" step="50" value="800">
+        </div>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="auto-height" checked>
+            <span>altura automática<br><span style="color:var(--text-faint)">crece con el contenido</span></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="section" id="object-section">
+        <h2>objeto</h2>
+        <div id="no-selection" style="text-align:center;color:var(--text-faint);font-style:italic;font-size:11px;padding:12px 0;">ningún objeto seleccionado</div>
+        <div id="object-controls" style="display:none;">
+          <div class="row">
+            <div class="field">
+              <label>x <span class="val" id="obj-x-val">0</span></label>
+              <input type="range" id="obj-x" min="-200" max="600" value="0">
+            </div>
+            <div class="field">
+              <label>y <span class="val" id="obj-y-val">0</span></label>
+              <input type="range" id="obj-y" min="-200" max="6000" value="0">
+            </div>
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>ancho <span class="val" id="obj-w-val">0</span></label>
+              <input type="range" id="obj-w" min="20" max="600" value="100">
+            </div>
+            <div class="field">
+              <label>alto <span class="val" id="obj-h-val">0</span></label>
+              <input type="range" id="obj-h" min="20" max="3000" value="100">
+            </div>
+          </div>
+          <div class="field">
+            <label>brillo <span class="val" id="bri-val">0</span></label>
+            <input type="range" id="brightness" min="-50" max="50" value="0">
+          </div>
+          <div class="field">
+            <label>contraste <span class="val" id="con-val">0</span></label>
+            <input type="range" id="contrast" min="-50" max="100" value="0">
+          </div>
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" id="invert">
+              <span>invertir colores</span>
+            </label>
+          </div>
+          <div class="field">
+            <label>rotación <span class="val" id="rot-val">0°</span></label>
+            <input type="range" id="rotation" min="-180" max="180" step="1" value="0">
+          </div>
+          <div class="field">
+            <div class="row-3">
+              <button class="btn btn-sm" id="btn-rot-l" title="rotar -90°">↺ 90°</button>
+              <button class="btn btn-sm" id="btn-rot-r" title="rotar +90°">↻ 90°</button>
+              <button class="btn btn-sm" id="btn-rot-0" title="resetear rotación">0°</button>
+            </div>
+          </div>
+          <div class="field">
+            <div class="row-3">
+              <button class="btn btn-sm" id="btn-back">↓ atrás</button>
+              <button class="btn btn-sm" id="btn-forward">↑ frente</button>
+              <button class="btn btn-sm" id="btn-dup">duplicar</button>
+            </div>
+          </div>
+          <div class="field">
+            <button class="btn btn-sm btn-full" id="btn-fit-width">ajustar al ancho del papel</button>
+          </div>
+          <div class="field">
+            <button class="btn btn-sm btn-full btn-warn" id="btn-delete">eliminar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>salida</h2>
+        <div class="hint">
+          por defecto el archivo se exporta natural y la impresora hace su propio tramado. activá la binarización solo si querés controlar exactamente cómo se va a quemar el cabezal.
+        </div>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="apply-binarize">
+            <span>binarizar antes de exportar</span>
+          </label>
+        </div>
+        <div class="subgroup disabled" id="binarize-controls">
+          <div class="field">
+            <label>umbral <span class="val" id="th-val">128</span></label>
+            <input type="range" id="threshold" min="60" max="220" value="128">
+          </div>
+          <div class="field">
+            <label class="check">
+              <input type="checkbox" id="dither" checked>
+              <span>tramado floyd-steinberg<br><span style="color:var(--text-faint)">recomendado para fotos con tonos</span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>segmentación</h2>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="segment">
+            <span>dividir en archivos múltiples</span>
+          </label>
+        </div>
+        <div class="field">
+          <label>altura máx. por archivo <span class="val" id="seg-val">3000 px</span></label>
+          <input type="range" id="seg-height" min="500" max="8000" step="100" value="3000">
+        </div>
+      </div>
+    </aside>
+
+    <div class="canvas-wrap" id="canvas-wrap">
+      <div class="top-controls">
+        <button class="mode-toggle" id="quick-preview" title="atajo: barra espaciadora (mantener)" disabled>previa térmica</button>
+        <div class="control-pill">
+          <span style="padding:0 4px">zoom</span>
+          <button id="zoom-out">−</button>
+          <span class="v" id="zoom-val">2.0×</span>
+          <button id="zoom-in">+</button>
+        </div>
+      </div>
+      <div class="paper" id="paper">
+        <canvas id="canvas"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="status">
+      <div><span class="label">objetos</span><span class="value" id="stat-count">0</span></div>
+      <div><span class="label">dim</span><span class="value" id="stat-dim">—</span></div>
+      <div><span class="label">papel</span><span class="value" id="stat-cm">—</span></div>
+      <div><span class="label">salida</span><span class="value" id="stat-mode">natural</span></div>
+      <div><span class="label">archivos</span><span class="value" id="stat-files">1</span></div>
+    </div>
+    <div class="status status-right">
+      <div><span class="label">cabezal</span><span class="value">203 dpi · 1 bit</span></div>
+    </div>
+  </footer>
+</div>
+
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const canvas = $('canvas');
+const ctx = canvas.getContext('2d');
+let idCounter = 0;
+
+const state = {
+  width: 384, height: 800, autoHeight: true,
+  objects: [], selected: null,
+  applyBinarize: false, threshold: 128, dither: true,
+  mode: 'edit', segment: false, segHeight: 3000, zoom: 2.0,
+  isDragging: false, isResizing: false, isRotating: false, resizeHandle: null,
+  dragStart: null, spaceDown: false
+};
+
+function addImageFromFile(file) {
+  if (!file.type.startsWith('image/')) return;
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    const ratio = img.width / img.height;
+    let w = Math.min(state.width - 20, img.width);
+    let h = w / ratio;
+    if (h > 250) { h = 250; w = h * ratio; }
+    const obj = {
+      id: ++idCounter, img, src: url, name: file.name,
+      x: Math.round((state.width - w) / 2),
+      y: Math.round(getNextY()),
+      w: Math.round(w), h: Math.round(h),
+      rotation: 0,
+      brightness: 0, contrast: 0, invert: false
+    };
+    state.objects.push(obj);
+    state.selected = obj;
+    if (state.autoHeight) growHeight();
+    refreshUI(); render();
+  };
+  img.src = url;
+}
+
+function getNextY() {
+  if (state.objects.length === 0) return 30;
+  let maxBottom = 0;
+  for (const o of state.objects) if (o.y + o.h > maxBottom) maxBottom = o.y + o.h;
+  return maxBottom + 20;
+}
+
+function growHeight() {
+  let maxBottom = 200;
+  for (const o of state.objects) if (o.y + o.h > maxBottom) maxBottom = o.y + o.h;
+  state.height = Math.max(200, Math.round(maxBottom + 30));
+  $('canvas-height').value = state.height;
+  $('h-val').textContent = `${state.height} px`;
+}
+
+function render() {
+  canvas.width = state.width;
+  canvas.height = state.height;
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  for (const obj of state.objects) drawObject(ctx, obj);
+  if (state.applyBinarize && state.mode === 'preview') {
+    if (state.dither) ditherFloydSteinberg(canvas, state.threshold);
+    else binarize(canvas, state.threshold);
+  } else if (state.mode === 'edit') {
+    if (state.selected) drawSelection(ctx, state.selected);
+  }
+  canvas.style.width = (state.width * state.zoom) + 'px';
+  canvas.style.height = (state.height * state.zoom) + 'px';
+  updateStatus();
+}
+
+function drawObject(ctx, obj) {
+  ctx.save();
+  const filters = [];
+  if (obj.brightness !== 0) filters.push(`brightness(${100 + obj.brightness}%)`);
+  if (obj.contrast !== 0) filters.push(`contrast(${100 + obj.contrast}%)`);
+  if (obj.invert) filters.push('invert(1)');
+  if (filters.length) ctx.filter = filters.join(' ');
+  const cx = obj.x + obj.w / 2;
+  const cy = obj.y + obj.h / 2;
+  ctx.translate(cx, cy);
+  if (obj.rotation) ctx.rotate(obj.rotation * Math.PI / 180);
+  try { ctx.drawImage(obj.img, -obj.w / 2, -obj.h / 2, obj.w, obj.h); } catch (e) {}
+  ctx.restore();
+}
+
+function getCornerPositions(obj) {
+  const cx = obj.x + obj.w / 2;
+  const cy = obj.y + obj.h / 2;
+  const rad = (obj.rotation || 0) * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  const hw = obj.w / 2, hh = obj.h / 2;
+  const tx = (lx, ly) => ({ x: cx + lx * cos - ly * sin, y: cy + lx * sin + ly * cos });
+  return {
+    nw: tx(-hw, -hh),
+    ne: tx(hw, -hh),
+    sw: tx(-hw, hh),
+    se: tx(hw, hh),
+    n:  tx(0, -hh),
+    rot: tx(0, -hh - 22) // 22px above top-center in local space
+  };
+}
+
+function drawSelection(ctx, obj) {
+  ctx.save();
+  const cx = obj.x + obj.w / 2;
+  const cy = obj.y + obj.h / 2;
+  // Outline (rotated rect)
+  ctx.translate(cx, cy);
+  if (obj.rotation) ctx.rotate(obj.rotation * Math.PI / 180);
+  ctx.strokeStyle = '#5a7a3a';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.strokeRect(-obj.w/2 - 0.5, -obj.h/2 - 0.5, obj.w + 1, obj.h + 1);
+  ctx.setLineDash([]);
+  // Rotation tether (from top-center going up)
+  ctx.beginPath();
+  ctx.moveTo(0, -obj.h/2);
+  ctx.lineTo(0, -obj.h/2 - 22);
+  ctx.stroke();
+  ctx.restore();
+  // Corner handles + rotation handle in absolute coords
+  const p = getCornerPositions(obj);
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = '#5a7a3a';
+  ctx.lineWidth = 1.5;
+  const HS = 5;
+  for (const name of ['nw', 'ne', 'sw', 'se']) {
+    const c = p[name];
+    ctx.fillRect(c.x - HS, c.y - HS, HS * 2, HS * 2);
+    ctx.strokeRect(c.x - HS, c.y - HS, HS * 2, HS * 2);
+  }
+  // Rotation handle (circle)
+  ctx.beginPath();
+  ctx.arc(p.rot.x, p.rot.y, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+}
+
+function binarize(cv, threshold) {
+  const c = cv.getContext('2d');
+  const img = c.getImageData(0, 0, cv.width, cv.height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+    const v = gray < threshold ? 0 : 255;
+    d[i] = d[i+1] = d[i+2] = v;
+    d[i+3] = 255;
+  }
+  c.putImageData(img, 0, 0);
+}
+
+function ditherFloydSteinberg(cv, threshold) {
+  const c = cv.getContext('2d');
+  const img = c.getImageData(0, 0, cv.width, cv.height);
+  const d = img.data;
+  const w = cv.width, h = cv.height;
+  const gray = new Float32Array(w * h);
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+    gray[j] = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+  }
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const idx = y * w + x;
+      const old = gray[idx];
+      const nw = old < threshold ? 0 : 255;
+      gray[idx] = nw;
+      const err = old - nw;
+      if (x + 1 < w)              gray[idx + 1]     += err * 7/16;
+      if (x - 1 >= 0 && y+1 < h)  gray[idx + w - 1] += err * 3/16;
+      if (y + 1 < h)              gray[idx + w]     += err * 5/16;
+      if (x+1 < w  && y+1 < h)    gray[idx + w + 1] += err * 1/16;
+    }
+  }
+  for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+    const v = gray[j] < threshold ? 0 : 255;
+    d[i] = d[i+1] = d[i+2] = v;
+    d[i+3] = 255;
+  }
+  c.putImageData(img, 0, 0);
+}
+
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (e.clientX - rect.left) * canvas.width / rect.width,
+    y: (e.clientY - rect.top) * canvas.height / rect.height
+  };
+}
+
+function getHandleAt(obj, x, y) {
+  if (!obj) return null;
+  const HS = 8 / state.zoom;
+  const p = getCornerPositions(obj);
+  // rotation handle first (it's outside the bounds)
+  if (Math.hypot(x - p.rot.x, y - p.rot.y) < HS) return 'rot';
+  for (const name of ['nw', 'ne', 'sw', 'se']) {
+    if (Math.abs(x - p[name].x) < HS && Math.abs(y - p[name].y) < HS) return name;
+  }
+  return null;
+}
+
+function hitObject(x, y) {
+  for (let i = state.objects.length - 1; i >= 0; i--) {
+    const o = state.objects[i];
+    const cx = o.x + o.w / 2;
+    const cy = o.y + o.h / 2;
+    const rad = -(o.rotation || 0) * Math.PI / 180;
+    const cos = Math.cos(rad), sin = Math.sin(rad);
+    const dx = x - cx, dy = y - cy;
+    const lx = dx * cos - dy * sin;
+    const ly = dx * sin + dy * cos;
+    if (lx >= -o.w/2 && lx <= o.w/2 && ly >= -o.h/2 && ly <= o.h/2) return o;
+  }
+  return null;
+}
+
+canvas.addEventListener('mousedown', (e) => {
+  if (state.mode !== 'edit') return;
+  const { x, y } = getMousePos(e);
+  if (state.selected) {
+    const h = getHandleAt(state.selected, x, y);
+    if (h === 'rot') {
+      state.isRotating = true;
+      const cx = state.selected.x + state.selected.w / 2;
+      const cy = state.selected.y + state.selected.h / 2;
+      state.dragStart = {
+        startAngle: Math.atan2(y - cy, x - cx),
+        initialRotation: state.selected.rotation || 0
+      };
+      return;
+    }
+    if (h) {
+      state.isResizing = true;
+      state.resizeHandle = h;
+      state.dragStart = { x, y, snap: { x: state.selected.x, y: state.selected.y, w: state.selected.w, h: state.selected.h, rotation: state.selected.rotation || 0 } };
+      return;
+    }
+  }
+  const hit = hitObject(x, y);
+  if (hit) {
+    state.selected = hit;
+    state.isDragging = true;
+    state.dragStart = { x, y, snap: { x: hit.x, y: hit.y } };
+    refreshUI(); render();
+    return;
+  }
+  state.selected = null;
+  refreshUI(); render();
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!state.isDragging && !state.isResizing && !state.isRotating) return;
+  const { x, y } = getMousePos(e);
+  const o = state.selected;
+  if (!o) return;
+  if (state.isRotating) {
+    const cx = o.x + o.w / 2;
+    const cy = o.y + o.h / 2;
+    const currentAngle = Math.atan2(y - cy, x - cx);
+    const delta = currentAngle - state.dragStart.startAngle;
+    let newRot = state.dragStart.initialRotation + delta * 180 / Math.PI;
+    // normalize to -180..180
+    while (newRot > 180) newRot -= 360;
+    while (newRot < -180) newRot += 360;
+    if (e.shiftKey) newRot = Math.round(newRot / 15) * 15;
+    o.rotation = Math.round(newRot * 10) / 10;
+    render();
+    return;
+  }
+  const dx = x - state.dragStart.x;
+  const dy = y - state.dragStart.y;
+  if (state.isDragging) {
+    o.x = Math.round(state.dragStart.snap.x + dx);
+    o.y = Math.round(state.dragStart.snap.y + dy);
+  } else if (state.isResizing) {
+    resizeBy(o, state.resizeHandle, state.dragStart.snap, dx, dy, !e.shiftKey);
+  }
+  if (state.autoHeight) growHeight();
+  render();
+});
+
+window.addEventListener('mouseup', () => {
+  state.isDragging = false;
+  state.isResizing = false;
+  state.isRotating = false;
+  state.resizeHandle = null;
+  refreshUI();
+});
+
+function resizeBy(obj, handle, snap, dx, dy, keepAspect) {
+  const rot = snap.rotation || 0;
+  const rad = rot * Math.PI / 180;
+  const cos = Math.cos(rad), sin = Math.sin(rad);
+  // transform mouse delta to object's local axes
+  const localDx = dx * cos + dy * sin;
+  const localDy = -dx * sin + dy * cos;
+  const signX = handle.includes('e') ? 1 : -1;
+  const signY = handle.includes('s') ? 1 : -1;
+  let nw = snap.w + signX * localDx;
+  let nh = keepAspect ? nw * (snap.h / snap.w) : snap.h + signY * localDy;
+  if (nw < 20) nw = 20;
+  if (nh < 20) nh = 20;
+  // Keep the OPPOSITE corner anchored in place
+  // Original opposite corner offset from center (in local space)
+  const oppOffX = -signX * snap.w / 2;
+  const oppOffY = -signY * snap.h / 2;
+  // Original opposite corner in absolute space
+  const oldCx = snap.x + snap.w / 2;
+  const oldCy = snap.y + snap.h / 2;
+  const oppAbsX = oldCx + oppOffX * cos - oppOffY * sin;
+  const oppAbsY = oldCy + oppOffX * sin + oppOffY * cos;
+  // New opposite corner offset from new center
+  const newOppOffX = -signX * nw / 2;
+  const newOppOffY = -signY * nh / 2;
+  // Solve for new center so that opposite corner stays in place
+  const newCx = oppAbsX - (newOppOffX * cos - newOppOffY * sin);
+  const newCy = oppAbsY - (newOppOffX * sin + newOppOffY * cos);
+  obj.w = Math.round(nw);
+  obj.h = Math.round(nh);
+  obj.x = Math.round(newCx - nw / 2);
+  obj.y = Math.round(newCy - nh / 2);
+}
+
+canvas.addEventListener('mousemove', (e) => {
+  if (state.isDragging || state.isResizing || state.isRotating || state.mode !== 'edit') return;
+  const { x, y } = getMousePos(e);
+  if (state.selected) {
+    const h = getHandleAt(state.selected, x, y);
+    if (h === 'rot') { canvas.style.cursor = 'grab'; return; }
+    if (h) {
+      const cur = (h === 'nw' || h === 'se') ? 'nwse-resize' : 'nesw-resize';
+      canvas.style.cursor = cur;
+      return;
+    }
+  }
+  const hit = hitObject(x, y);
+  canvas.style.cursor = hit ? 'move' : 'default';
+});
+
+const dropzone = $('dropzone');
+const fileInput = $('file-input');
+const canvasWrap = $('canvas-wrap');
+
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  for (const f of e.target.files) addImageFromFile(f);
+  fileInput.value = '';
+});
+
+['dragenter', 'dragover'].forEach(ev => {
+  dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.add('over'); });
+  canvasWrap.addEventListener(ev, (e) => { e.preventDefault(); canvasWrap.classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(ev => {
+  dropzone.addEventListener(ev, (e) => { e.preventDefault(); dropzone.classList.remove('over'); });
+  canvasWrap.addEventListener(ev, (e) => { e.preventDefault(); canvasWrap.classList.remove('over'); });
+});
+dropzone.addEventListener('drop', (e) => { for (const f of e.dataTransfer.files) addImageFromFile(f); });
+canvasWrap.addEventListener('drop', (e) => { for (const f of e.dataTransfer.files) addImageFromFile(f); });
+
+function refreshObjectList() {
+  const list = $('obj-list');
+  list.innerHTML = '';
+  if (state.objects.length === 0) {
+    list.innerHTML = '<div class="obj-list-empty">sin imágenes</div>';
+    return;
+  }
+  state.objects.forEach((obj, i) => {
+    const item = document.createElement('div');
+    item.className = 'obj-item' + (state.selected === obj ? ' selected' : '');
+    item.innerHTML = `<span class="num">${String(i+1).padStart(2,'0')}</span><span class="name">${obj.name}</span>`;
+    item.addEventListener('click', () => {
+      state.selected = obj;
+      refreshUI(); render();
+    });
+    list.appendChild(item);
+  });
+}
+
+function refreshUI() {
+  refreshObjectList();
+  const objSection = $('object-controls');
+  const noSel = $('no-selection');
+  if (state.selected) {
+    objSection.style.display = 'block';
+    noSel.style.display = 'none';
+    const o = state.selected;
+    $('obj-x').value = o.x; $('obj-x-val').textContent = o.x;
+    $('obj-y').value = o.y; $('obj-y-val').textContent = o.y;
+    $('obj-y').max = Math.max(state.height, 6000);
+    $('obj-w').value = o.w; $('obj-w-val').textContent = o.w;
+    $('obj-h').value = o.h; $('obj-h-val').textContent = o.h;
+    $('brightness').value = o.brightness; $('bri-val').textContent = o.brightness;
+    $('contrast').value = o.contrast; $('con-val').textContent = o.contrast;
+    $('invert').checked = o.invert;
+    const r = o.rotation || 0;
+    $('rotation').value = r;
+    $('rot-val').textContent = `${r}°`;
+  } else {
+    objSection.style.display = 'none';
+    noSel.style.display = 'block';
+  }
+}
+
+const bindObjectRange = (id, prop, valId) => {
+  $(id).addEventListener('input', (e) => {
+    if (!state.selected) return;
+    const v = parseInt(e.target.value);
+    state.selected[prop] = v;
+    $(valId).textContent = v;
+    if (state.autoHeight) growHeight();
+    render();
+  });
+};
+bindObjectRange('obj-x', 'x', 'obj-x-val');
+bindObjectRange('obj-y', 'y', 'obj-y-val');
+bindObjectRange('obj-w', 'w', 'obj-w-val');
+bindObjectRange('obj-h', 'h', 'obj-h-val');
+bindObjectRange('brightness', 'brightness', 'bri-val');
+bindObjectRange('contrast', 'contrast', 'con-val');
+
+$('invert').addEventListener('change', (e) => {
+  if (!state.selected) return;
+  state.selected.invert = e.target.checked;
+  render();
+});
+
+$('rotation').addEventListener('input', (e) => {
+  if (!state.selected) return;
+  const v = parseFloat(e.target.value);
+  state.selected.rotation = v;
+  $('rot-val').textContent = `${v}°`;
+  render();
+});
+
+function nudgeRotation(delta) {
+  if (!state.selected) return;
+  let r = (state.selected.rotation || 0) + delta;
+  while (r > 180) r -= 360;
+  while (r < -180) r += 360;
+  state.selected.rotation = r;
+  refreshUI();
+  render();
+}
+$('btn-rot-l').addEventListener('click', () => nudgeRotation(-90));
+$('btn-rot-r').addEventListener('click', () => nudgeRotation(90));
+$('btn-rot-0').addEventListener('click', () => {
+  if (!state.selected) return;
+  state.selected.rotation = 0;
+  refreshUI();
+  render();
+});
+
+$('btn-back').addEventListener('click', () => {
+  if (!state.selected) return;
+  const i = state.objects.indexOf(state.selected);
+  if (i > 0) {
+    state.objects.splice(i, 1);
+    state.objects.splice(i - 1, 0, state.selected);
+    refreshUI(); render();
+  }
+});
+$('btn-forward').addEventListener('click', () => {
+  if (!state.selected) return;
+  const i = state.objects.indexOf(state.selected);
+  if (i < state.objects.length - 1) {
+    state.objects.splice(i, 1);
+    state.objects.splice(i + 1, 0, state.selected);
+    refreshUI(); render();
+  }
+});
+$('btn-dup').addEventListener('click', () => {
+  if (!state.selected) return;
+  const o = state.selected;
+  const dup = { ...o, id: ++idCounter, x: o.x + 12, y: o.y + 12 };
+  state.objects.push(dup);
+  state.selected = dup;
+  if (state.autoHeight) growHeight();
+  refreshUI(); render();
+});
+$('btn-delete').addEventListener('click', () => deleteSelected());
+
+function deleteSelected() {
+  if (!state.selected) return;
+  const i = state.objects.indexOf(state.selected);
+  if (i >= 0) state.objects.splice(i, 1);
+  state.selected = null;
+  if (state.autoHeight) growHeight();
+  refreshUI(); render();
+}
+
+$('btn-fit-width').addEventListener('click', () => {
+  if (!state.selected) return;
+  const o = state.selected;
+  const ratio = o.w / o.h;
+  o.w = state.width;
+  o.h = Math.round(o.w / ratio);
+  o.x = 0;
+  if (state.autoHeight) growHeight();
+  refreshUI(); render();
+});
+
+$('canvas-height').addEventListener('input', (e) => {
+  state.height = parseInt(e.target.value);
+  $('h-val').textContent = `${state.height} px`;
+  render();
+});
+$('auto-height').addEventListener('change', (e) => {
+  state.autoHeight = e.target.checked;
+  if (state.autoHeight) { growHeight(); render(); }
+});
+
+$('apply-binarize').addEventListener('change', (e) => {
+  state.applyBinarize = e.target.checked;
+  $('binarize-controls').classList.toggle('disabled', !state.applyBinarize);
+  $('quick-preview').disabled = !state.applyBinarize;
+  if (!state.applyBinarize && state.mode === 'preview') {
+    state.mode = 'edit';
+  }
+  render();
+});
+
+$('threshold').addEventListener('input', (e) => {
+  state.threshold = parseInt(e.target.value);
+  $('th-val').textContent = state.threshold;
+  if (state.applyBinarize && state.mode === 'preview') render();
+});
+
+$('dither').addEventListener('change', (e) => {
+  state.dither = e.target.checked;
+  if (state.applyBinarize && state.mode === 'preview') render();
+});
+
+$('quick-preview').addEventListener('mousedown', () => {
+  if (!state.applyBinarize) return;
+  if (state.mode !== 'preview') {
+    state._prevMode = state.mode;
+    state.mode = 'preview';
+    $('quick-preview').classList.add('active');
+    render();
+  }
+});
+function releasePreview() {
+  if (state._prevMode) {
+    state.mode = state._prevMode;
+    state._prevMode = null;
+    $('quick-preview').classList.remove('active');
+    render();
+  }
+}
+$('quick-preview').addEventListener('mouseup', releasePreview);
+$('quick-preview').addEventListener('mouseleave', releasePreview);
+
+$('segment').addEventListener('change', (e) => {
+  state.segment = e.target.checked;
+  updateStatus();
+});
+$('seg-height').addEventListener('input', (e) => {
+  state.segHeight = parseInt(e.target.value);
+  $('seg-val').textContent = `${state.segHeight} px`;
+  updateStatus();
+});
+
+$('zoom-in').addEventListener('click', () => {
+  state.zoom = Math.min(4, state.zoom + 0.5);
+  $('zoom-val').textContent = state.zoom.toFixed(1) + '×';
+  render();
+});
+$('zoom-out').addEventListener('click', () => {
+  state.zoom = Math.max(0.5, state.zoom - 0.5);
+  $('zoom-val').textContent = state.zoom.toFixed(1) + '×';
+  render();
+});
+
+function updateStatus() {
+  $('stat-count').textContent = state.objects.length;
+  $('stat-dim').textContent = `${state.width} × ${state.height} px`;
+  const hMm = state.height / 8;
+  $('stat-cm').textContent = `${(state.width/80).toFixed(1)} × ${(hMm/10).toFixed(1)} cm`;
+  if (state.applyBinarize) {
+    $('stat-mode').textContent = state.dither ? 'tramado' : 'binario';
+  } else {
+    $('stat-mode').textContent = 'natural';
+  }
+  if (state.segment && state.height > state.segHeight) {
+    const n = Math.ceil(state.height / state.segHeight);
+    $('stat-files').textContent = `${n} archivos`;
+  } else {
+    $('stat-files').textContent = '1 archivo';
+  }
+}
+
+function renderForExport() {
+  const exp = document.createElement('canvas');
+  exp.width = state.width;
+  exp.height = state.height;
+  const c = exp.getContext('2d');
+  c.fillStyle = '#ffffff';
+  c.fillRect(0, 0, exp.width, exp.height);
+  for (const obj of state.objects) drawObject(c, obj);
+  if (state.applyBinarize) {
+    if (state.dither) ditherFloydSteinberg(exp, state.threshold);
+    else binarize(exp, state.threshold);
+  }
+  return exp;
+}
+
+function exportImage(format) {
+  const exp = renderForExport();
+  const mime = format === 'jpg' ? 'image/jpeg' : 'image/png';
+  const ext = format === 'jpg' ? 'jpg' : 'png';
+  const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16);
+  const baseName = `compositor-${stamp}`;
+  if (!state.segment || exp.height <= state.segHeight) {
+    exp.toBlob((blob) => downloadBlob(blob, `${baseName}.${ext}`), mime, 0.95);
+    return;
+  }
+  const total = exp.height;
+  const segs = [];
+  let yStart = 0;
+  while (yStart < total) {
+    const yEnd = Math.min(yStart + state.segHeight, total);
+    segs.push([yStart, yEnd]);
+    yStart = yEnd;
+  }
+  segs.forEach(([y0, y1], i) => {
+    const segCanvas = document.createElement('canvas');
+    segCanvas.width = exp.width;
+    segCanvas.height = y1 - y0;
+    const sctx = segCanvas.getContext('2d');
+    sctx.fillStyle = '#ffffff';
+    sctx.fillRect(0, 0, segCanvas.width, segCanvas.height);
+    sctx.drawImage(exp, 0, y0, exp.width, y1 - y0, 0, 0, exp.width, y1 - y0);
+    const num = String(i + 1).padStart(2, '0');
+    setTimeout(() => {
+      segCanvas.toBlob((blob) => downloadBlob(blob, `${baseName}-${num}.${ext}`), mime, 0.95);
+    }, i * 250);
+  });
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+$('btn-png').addEventListener('click', () => exportImage('png'));
+$('btn-jpg').addEventListener('click', () => exportImage('jpg'));
+
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault(); exportImage('png'); return;
+  }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'd' && state.selected) {
+    e.preventDefault(); $('btn-dup').click(); return;
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && state.selected) {
+    e.preventDefault(); deleteSelected(); return;
+  }
+  if (e.key === ' ' && !state.spaceDown && state.applyBinarize) {
+    e.preventDefault();
+    state.spaceDown = true;
+    state._prevMode = state.mode;
+    state.mode = 'preview';
+    render();
+  }
+  if (state.selected && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 1;
+    if (e.key === 'ArrowUp') state.selected.y -= step;
+    if (e.key === 'ArrowDown') state.selected.y += step;
+    if (e.key === 'ArrowLeft') state.selected.x -= step;
+    if (e.key === 'ArrowRight') state.selected.x += step;
+    if (state.autoHeight) growHeight();
+    refreshUI(); render();
+  }
+});
+document.addEventListener('keyup', (e) => {
+  if (e.key === ' ' && state.spaceDown) {
+    state.spaceDown = false;
+    if (state._prevMode) {
+      state.mode = state._prevMode;
+      state._prevMode = null;
+      render();
+    }
+  }
+});
+
+render();
+</script>
+</body>
+</html>
