@@ -237,6 +237,37 @@
             <span>altura automática<br><span style="color:var(--text-faint)">crece con el contenido</span></span>
           </label>
         </div>
+        <div class="field">
+          <label>margen seguridad <span class="val" id="margin-val">16 px</span></label>
+          <input type="range" id="safety-margin" min="0" max="40" value="16">
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>alineación</h2>
+        <div class="field">
+          <label style="margin-bottom:7px;">al papel</label>
+          <div class="row-3">
+            <button class="btn btn-sm" id="btn-align-l" title="alinear a la izquierda (con margen)">⬅</button>
+            <button class="btn btn-sm" id="btn-align-c" title="centrar horizontalmente">▮</button>
+            <button class="btn btn-sm" id="btn-align-r" title="alinear a la derecha (con margen)">➡</button>
+          </div>
+        </div>
+        <div class="field">
+          <button class="btn btn-sm btn-full" id="btn-fit-all">ajustar todas al ancho del papel</button>
+        </div>
+        <div class="field">
+          <button class="btn btn-sm btn-full" id="btn-distribute">distribuir verticalmente</button>
+        </div>
+        <div class="field">
+          <button class="btn btn-sm btn-full" id="btn-stack">apilar sin huecos</button>
+        </div>
+        <div class="field">
+          <label class="check">
+            <input type="checkbox" id="snap" checked>
+            <span>snap a guías al arrastrar<br><span style="color:var(--text-faint)">centro, bordes y otras imágenes</span></span>
+          </label>
+        </div>
       </div>
 
       <div class="section" id="object-section">
@@ -383,11 +414,14 @@ let idCounter = 0;
 
 const state = {
   width: 384, height: 800, autoHeight: true,
+  safetyMargin: 16,
   objects: [], selected: null,
   applyBinarize: false, threshold: 128, dither: true,
   mode: 'edit', segment: false, segHeight: 3000, zoom: 2.0,
+  snapEnabled: true,
   isDragging: false, isResizing: false, isRotating: false, resizeHandle: null,
-  dragStart: null, spaceDown: false
+  dragStart: null, spaceDown: false,
+  snapGuides: []  // active guides shown during drag
 };
 
 function addImageFromFile(file) {
@@ -396,14 +430,13 @@ function addImageFromFile(file) {
   const img = new Image();
   img.onload = () => {
     const ratio = img.width / img.height;
-    let w = Math.min(state.width - 20, img.width);
-    let h = w / ratio;
-    if (h > 250) { h = 250; w = h * ratio; }
+    const targetW = state.width - 2 * state.safetyMargin;
+    const targetH = Math.round(targetW / ratio);
     const obj = {
       id: ++idCounter, img, src: url, name: file.name,
-      x: Math.round((state.width - w) / 2),
+      x: state.safetyMargin,
       y: Math.round(getNextY()),
-      w: Math.round(w), h: Math.round(h),
+      w: targetW, h: targetH,
       rotation: 0,
       brightness: 0, contrast: 0, invert: false
     };
@@ -440,11 +473,48 @@ function render() {
     if (state.dither) ditherFloydSteinberg(canvas, state.threshold);
     else binarize(canvas, state.threshold);
   } else if (state.mode === 'edit') {
+    drawMarginGuides(ctx);
     if (state.selected) drawSelection(ctx, state.selected);
+    drawSnapGuides(ctx);
   }
   canvas.style.width = (state.width * state.zoom) + 'px';
   canvas.style.height = (state.height * state.zoom) + 'px';
   updateStatus();
+}
+
+function drawMarginGuides(ctx) {
+  if (state.safetyMargin <= 0) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(90, 122, 58, 0.18)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 3]);
+  ctx.beginPath();
+  ctx.moveTo(state.safetyMargin + 0.5, 0);
+  ctx.lineTo(state.safetyMargin + 0.5, state.height);
+  ctx.moveTo(state.width - state.safetyMargin - 0.5, 0);
+  ctx.lineTo(state.width - state.safetyMargin - 0.5, state.height);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawSnapGuides(ctx) {
+  if (!state.snapGuides || state.snapGuides.length === 0) return;
+  ctx.save();
+  ctx.strokeStyle = '#5a7a3a';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([]);
+  for (const g of state.snapGuides) {
+    ctx.beginPath();
+    if (g.axis === 'x') {
+      ctx.moveTo(g.pos + 0.5, 0);
+      ctx.lineTo(g.pos + 0.5, state.height);
+    } else {
+      ctx.moveTo(0, g.pos + 0.5);
+      ctx.lineTo(state.width, g.pos + 0.5);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawObject(ctx, obj) {
@@ -593,6 +663,79 @@ function hitObject(x, y) {
   return null;
 }
 
+function applySnap(obj, nx, ny) {
+  const TOL = 6; // pixels of snap tolerance
+  const guides = [];
+  // Vertical targets (snap on X)
+  // Format: { value, type: 'edge'|'objEdge', from?: {x:..} }
+  const objLeft = nx;
+  const objRight = nx + obj.w;
+  const objCenterX = nx + obj.w / 2;
+  const paperCenterX = state.width / 2;
+  const paperLeft = state.safetyMargin;
+  const paperRight = state.width - state.safetyMargin;
+  // Try center, then edges
+  const xTargets = [
+    { obj: objCenterX, target: paperCenterX, line: paperCenterX, label: 'centro' },
+    { obj: objLeft, target: paperLeft, line: paperLeft, label: 'borde izq' },
+    { obj: objRight, target: paperRight, line: paperRight, label: 'borde der' },
+    { obj: objLeft, target: 0, line: 0, label: 'sangrado izq' },
+    { obj: objRight, target: state.width, line: state.width, label: 'sangrado der' }
+  ];
+  // Add object-to-object snap targets (left, right, center of every other object)
+  for (const other of state.objects) {
+    if (other === obj) continue;
+    const otherLeft = other.x;
+    const otherRight = other.x + other.w;
+    const otherCx = other.x + other.w / 2;
+    xTargets.push({ obj: objLeft, target: otherLeft, line: otherLeft, label: 'obj' });
+    xTargets.push({ obj: objRight, target: otherRight, line: otherRight, label: 'obj' });
+    xTargets.push({ obj: objCenterX, target: otherCx, line: otherCx, label: 'obj' });
+    xTargets.push({ obj: objLeft, target: otherRight, line: otherRight, label: 'obj' });
+    xTargets.push({ obj: objRight, target: otherLeft, line: otherLeft, label: 'obj' });
+  }
+  // Find best X snap (nearest within tolerance)
+  let bestX = null;
+  for (const t of xTargets) {
+    const d = Math.abs(t.obj - t.target);
+    if (d < TOL && (bestX === null || d < bestX.dist)) {
+      bestX = { dist: d, delta: t.target - t.obj, line: t.line };
+    }
+  }
+  if (bestX !== null) {
+    nx += bestX.delta;
+    guides.push({ axis: 'x', pos: bestX.line });
+  }
+  // Y snap (object to object only — there's no fixed paper centerY for vertical layouts)
+  const objTop = ny;
+  const objBottom = ny + obj.h;
+  const objCenterY = ny + obj.h / 2;
+  const yTargets = [];
+  for (const other of state.objects) {
+    if (other === obj) continue;
+    const otherTop = other.y;
+    const otherBottom = other.y + other.h;
+    const otherCy = other.y + other.h / 2;
+    yTargets.push({ obj: objTop, target: otherTop, line: otherTop });
+    yTargets.push({ obj: objBottom, target: otherBottom, line: otherBottom });
+    yTargets.push({ obj: objCenterY, target: otherCy, line: otherCy });
+    yTargets.push({ obj: objTop, target: otherBottom, line: otherBottom }); // stack-snap
+    yTargets.push({ obj: objBottom, target: otherTop, line: otherTop });
+  }
+  let bestY = null;
+  for (const t of yTargets) {
+    const d = Math.abs(t.obj - t.target);
+    if (d < TOL && (bestY === null || d < bestY.dist)) {
+      bestY = { dist: d, delta: t.target - t.obj, line: t.line };
+    }
+  }
+  if (bestY !== null) {
+    ny += bestY.delta;
+    guides.push({ axis: 'y', pos: bestY.line });
+  }
+  return { x: nx, y: ny, guides };
+}
+
 canvas.addEventListener('mousedown', (e) => {
   if (state.mode !== 'edit') return;
   const { x, y } = getMousePos(e);
@@ -649,8 +792,17 @@ window.addEventListener('mousemove', (e) => {
   const dx = x - state.dragStart.x;
   const dy = y - state.dragStart.y;
   if (state.isDragging) {
-    o.x = Math.round(state.dragStart.snap.x + dx);
-    o.y = Math.round(state.dragStart.snap.y + dy);
+    let nx = Math.round(state.dragStart.snap.x + dx);
+    let ny = Math.round(state.dragStart.snap.y + dy);
+    if (state.snapEnabled && !e.altKey) {
+      const snapped = applySnap(o, nx, ny);
+      nx = snapped.x; ny = snapped.y;
+      state.snapGuides = snapped.guides;
+    } else {
+      state.snapGuides = [];
+    }
+    o.x = nx;
+    o.y = ny;
   } else if (state.isResizing) {
     resizeBy(o, state.resizeHandle, state.dragStart.snap, dx, dy, !e.shiftKey);
   }
@@ -663,7 +815,9 @@ window.addEventListener('mouseup', () => {
   state.isResizing = false;
   state.isRotating = false;
   state.resizeHandle = null;
+  state.snapGuides = [];
   refreshUI();
+  render();
 });
 
 function resizeBy(obj, handle, snap, dx, dy, keepAspect) {
@@ -872,9 +1026,83 @@ $('btn-fit-width').addEventListener('click', () => {
   if (!state.selected) return;
   const o = state.selected;
   const ratio = o.w / o.h;
-  o.w = state.width;
+  o.w = state.width - 2 * state.safetyMargin;
   o.h = Math.round(o.w / ratio);
-  o.x = 0;
+  o.x = state.safetyMargin;
+  o.rotation = 0;
+  if (state.autoHeight) growHeight();
+  refreshUI(); render();
+});
+
+// Margin slider
+$('safety-margin').addEventListener('input', (e) => {
+  state.safetyMargin = parseInt(e.target.value);
+  $('margin-val').textContent = `${state.safetyMargin} px`;
+  render();
+});
+
+$('snap').addEventListener('change', (e) => {
+  state.snapEnabled = e.target.checked;
+});
+
+// Align selected to paper
+function alignSelected(side) {
+  if (!state.selected) return;
+  const o = state.selected;
+  if (side === 'left') o.x = state.safetyMargin;
+  else if (side === 'right') o.x = state.width - state.safetyMargin - o.w;
+  else if (side === 'center') o.x = Math.round((state.width - o.w) / 2);
+  refreshUI(); render();
+}
+$('btn-align-l').addEventListener('click', () => alignSelected('left'));
+$('btn-align-c').addEventListener('click', () => alignSelected('center'));
+$('btn-align-r').addEventListener('click', () => alignSelected('right'));
+
+// Fit ALL images to paper width
+$('btn-fit-all').addEventListener('click', () => {
+  const targetW = state.width - 2 * state.safetyMargin;
+  for (const o of state.objects) {
+    const ratio = o.w / o.h;
+    o.w = targetW;
+    o.h = Math.round(o.w / ratio);
+    o.x = state.safetyMargin;
+    o.rotation = 0;
+  }
+  if (state.autoHeight) growHeight();
+  refreshUI(); render();
+});
+
+// Distribute vertically with even spacing
+$('btn-distribute').addEventListener('click', () => {
+  if (state.objects.length < 2) return;
+  // Sort by current y (don't reorder the array, but compute order)
+  const sorted = [...state.objects].sort((a, b) => a.y - b.y);
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const top = first.y;
+  const bottom = last.y + last.h;
+  const totalSpan = bottom - top;
+  const sumHeights = sorted.reduce((s, o) => s + o.h, 0);
+  const totalGap = totalSpan - sumHeights;
+  const gap = sorted.length > 1 ? totalGap / (sorted.length - 1) : 0;
+  let cursor = top;
+  for (const o of sorted) {
+    o.y = Math.round(cursor);
+    cursor += o.h + gap;
+  }
+  if (state.autoHeight) growHeight();
+  refreshUI(); render();
+});
+
+// Stack with no gaps (touching each other from current top)
+$('btn-stack').addEventListener('click', () => {
+  if (state.objects.length === 0) return;
+  const sorted = [...state.objects].sort((a, b) => a.y - b.y);
+  let cursor = sorted[0].y;
+  for (const o of sorted) {
+    o.y = Math.round(cursor);
+    cursor += o.h;
+  }
   if (state.autoHeight) growHeight();
   refreshUI(); render();
 });
