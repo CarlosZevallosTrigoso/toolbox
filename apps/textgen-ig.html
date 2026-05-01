@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TXT·IG — generador tipográfico</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fafafa;
+    --panel: #ffffff;
+    --ink: #1a1a1a;
+    --ink-soft: #555;
+    --line: #e4e4e4;
+    --line-soft: #efefef;
+    --accent: #5a7a3a;
+    --accent-soft: #5a7a3a22;
+    --warn: #b35c1a;
+    --mono: 'Fira Code', ui-monospace, 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.4;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    grid-template-rows: 44px 1fr;
+    grid-template-areas:
+      "header header"
+      "sidebar main";
+  }
+
+  header {
+    grid-area: header;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+
+  header h1 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    color: var(--ink);
+  }
+  header h1 .accent { color: var(--accent); }
+  header h1 .meta { color: var(--ink-soft); margin-left: 8px; font-weight: 400; }
+
+  header .actions {
+    display: flex;
+    gap: 4px;
+  }
+
+  aside {
+    grid-area: sidebar;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  main {
+    grid-area: main;
+    background:
+      radial-gradient(circle at 1px 1px, #d8d8d8 1px, transparent 0) 0 0/16px 16px,
+      var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 24px;
+    overflow: auto;
+    position: relative;
+  }
+
+  .stage {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+  }
+
+  .canvas-wrap {
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.04);
+    position: relative;
+  }
+  .canvas-wrap canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .stage-meta {
+    margin-top: 12px;
+    font-size: 10px;
+    color: var(--ink-soft);
+    letter-spacing: 0.05em;
+  }
+
+  .export-bar {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  /* Sections */
+  .section {
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .section-title {
+    padding: 12px 16px 6px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    font-weight: 500;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .section-reset {
+    border: none;
+    background: none;
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    padding: 2px 0;
+    opacity: 0.5;
+    transition: all 120ms;
+  }
+  .section-reset:hover {
+    color: var(--accent);
+    opacity: 1;
+  }
+  .section-body {
+    padding: 4px 16px 14px;
+  }
+
+  .field {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .field-stack {
+    display: block;
+    margin-bottom: 6px;
+  }
+  .field label, .field-stack label {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    text-transform: lowercase;
+  }
+  .field-stack label {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  /* Inputs */
+  input[type="text"],
+  input[type="number"],
+  textarea,
+  select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 5px 7px;
+    border-radius: 0;
+    outline: none;
+    transition: border-color 120ms;
+  }
+  input[type="text"]:focus,
+  input[type="number"]:focus,
+  textarea:focus,
+  select:focus {
+    border-color: var(--accent);
+  }
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+  }
+
+  input[type="number"] {
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  /* Range */
+  .range-row {
+    display: grid;
+    grid-template-columns: 1fr 50px;
+    gap: 6px;
+    align-items: center;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background: var(--line);
+    height: 2px;
+    width: 100%;
+    cursor: pointer;
+    margin: 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+  .range-val {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Color */
+  input[type="color"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 24px;
+    border: 1px solid var(--line);
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+  }
+  input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type="color"]::-webkit-color-swatch { border: none; }
+  input[type="color"]::-moz-color-swatch { border: none; }
+
+  .color-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .color-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .color-cell label {
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    text-transform: lowercase;
+  }
+
+  .preset-row {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .preset-chip {
+    flex: 1;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 6px;
+    cursor: pointer;
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+    transition: all 120ms;
+  }
+  .preset-chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .preset-chip.bw-1 {
+    background: white; color: black;
+  }
+  .preset-chip.bw-2 {
+    background: black; color: white;
+  }
+
+  /* Format selector */
+  .format-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .format-btn {
+    border: 1px solid var(--line);
+    background: var(--bg);
+    cursor: pointer;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    transition: all 120ms;
+    font-family: var(--mono);
+  }
+  .format-btn:hover {
+    border-color: var(--accent);
+  }
+  .format-btn.active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .format-shape {
+    background: var(--ink-soft);
+    transition: background 120ms;
+  }
+  .format-btn.active .format-shape {
+    background: var(--accent);
+  }
+  .format-label {
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    text-transform: lowercase;
+    letter-spacing: 0.04em;
+  }
+  .format-btn.active .format-label {
+    color: var(--accent);
+  }
+
+  /* Segmented buttons */
+  .segmented {
+    display: flex;
+    border: 1px solid var(--line);
+  }
+  .seg-btn {
+    flex: 1;
+    border: none;
+    background: var(--bg);
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    padding: 5px 4px;
+    cursor: pointer;
+    transition: all 100ms;
+    border-right: 1px solid var(--line);
+  }
+  .seg-btn:last-child { border-right: none; }
+  .seg-btn:hover { color: var(--ink); }
+  .seg-btn.active {
+    background: var(--accent);
+    color: white;
+  }
+
+  /* Buttons */
+  .btn {
+    border: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 120ms;
+    text-transform: lowercase;
+    letter-spacing: 0.05em;
+  }
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn.primary {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: white;
+  }
+  .btn.primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  /* Padding lock */
+  .padding-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+  .padding-cell { display: flex; flex-direction: column; gap: 2px; }
+  .padding-cell label {
+    font-size: 9px;
+    color: var(--ink-soft);
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .padding-cell input {
+    text-align: center;
+  }
+
+  .pad-link {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    user-select: none;
+  }
+  .pad-link input { width: auto; }
+
+  .toggle-inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10.5px;
+    color: var(--ink);
+    cursor: pointer;
+    user-select: none;
+    text-transform: lowercase;
+  }
+  .toggle-inline input { width: auto; cursor: pointer; }
+
+  .range-val.computed {
+    color: var(--accent);
+    font-weight: 500;
+  }
+  .range-val.computed::before {
+    content: '· ';
+    opacity: 0.5;
+  }
+
+  /* Loader */
+  .loader {
+    position: fixed;
+    bottom: 12px; right: 12px;
+    background: var(--ink);
+    color: white;
+    font-size: 10px;
+    padding: 6px 10px;
+    letter-spacing: 0.05em;
+    opacity: 0;
+    transition: opacity 200ms;
+    pointer-events: none;
+    z-index: 100;
+  }
+  .loader.show { opacity: 1; }
+
+  /* Hidden */
+  .hidden { display: none !important; }
+
+  /* Scrollbar */
+  aside::-webkit-scrollbar, main::-webkit-scrollbar { width: 8px; height: 8px; }
+  aside::-webkit-scrollbar-track, main::-webkit-scrollbar-track { background: transparent; }
+  aside::-webkit-scrollbar-thumb, main::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 4px;
+  }
+  aside::-webkit-scrollbar-thumb:hover, main::-webkit-scrollbar-thumb:hover {
+    background: var(--ink-soft);
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    body {
+      grid-template-columns: 1fr;
+      grid-template-rows: 44px auto 1fr;
+      grid-template-areas:
+        "header"
+        "main"
+        "sidebar";
+    }
+    aside {
+      max-height: 50vh;
+      border-right: none;
+      border-top: 1px solid var(--line);
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="accent">TXT</span>·IG <span class="meta">// generador tipográfico</span></h1>
+  <div class="actions">
+    <button class="btn" id="presetSave" title="Descargar preset JSON">save</button>
+    <button class="btn" id="presetLoad" title="Cargar preset JSON">load</button>
+    <button class="btn" id="presetReset" title="Restablecer">reset</button>
+    <input type="file" id="presetFile" accept="application/json" class="hidden">
+  </div>
+</header>
+
+<aside>
+
+  <!-- Formato -->
+  <div class="section">
+    <div class="section-title">formato</div>
+    <div class="section-body">
+      <div class="format-grid" id="formatGrid">
+        <!-- generado por JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenido -->
+  <div class="section">
+    <div class="section-title">texto</div>
+    <div class="section-body">
+      <textarea id="text" placeholder="escribe aquí…">El presente no termina nunca de pasar.</textarea>
+    </div>
+  </div>
+
+  <!-- Color -->
+  <div class="section">
+    <div class="section-title">
+      <span>color</span>
+      <button class="section-reset" data-section="color">reset</button>
+    </div>
+    <div class="section-body">
+      <div class="color-row">
+        <div class="color-cell">
+          <label>fondo</label>
+          <input type="color" id="bgColor" value="#ffffff">
+        </div>
+        <div class="color-cell">
+          <label>texto</label>
+          <input type="color" id="textColor" value="#000000">
+        </div>
+      </div>
+      <div class="preset-row">
+        <button class="preset-chip bw-1" data-bg="#ffffff" data-fg="#000000">b/n</button>
+        <button class="preset-chip bw-2" data-bg="#000000" data-fg="#ffffff">n/b</button>
+        <button class="preset-chip" style="background:#1a1a1a;color:#5a7a3a;" data-bg="#1a1a1a" data-fg="#5a7a3a">verde</button>
+        <button class="preset-chip" style="background:#f5e9d0;color:#1a1a1a;" data-bg="#f5e9d0" data-fg="#1a1a1a">crema</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tipografía -->
+  <div class="section">
+    <div class="section-title">
+      <span>tipografía</span>
+      <button class="section-reset" data-section="typography">reset</button>
+    </div>
+    <div class="section-body">
+
+      <div class="field-stack">
+        <label>familia</label>
+        <select id="fontFamily">
+          <!-- generado -->
+        </select>
+      </div>
+
+      <div class="field">
+        <label>peso</label>
+        <select id="fontWeight">
+          <option value="300">300 light</option>
+          <option value="400" selected>400 regular</option>
+          <option value="500">500 medium</option>
+          <option value="700">700 bold</option>
+          <option value="900">900 black</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>itálica</label>
+        <select id="fontStyle">
+          <option value="normal" selected>normal</option>
+          <option value="italic">italic</option>
+        </select>
+      </div>
+
+      <div class="field-stack">
+        <label class="toggle-inline">
+          <input type="checkbox" id="autoFit" checked>
+          auto-ajustar tamaño al área disponible
+        </label>
+      </div>
+
+      <div class="field">
+        <label>tamaño</label>
+        <div class="range-row">
+          <input type="range" id="fontSize" min="12" max="400" value="68" step="1">
+          <span class="range-val" id="fontSizeVal">68</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>interlineado</label>
+        <div class="range-row">
+          <input type="range" id="lineHeight" min="0.8" max="2.5" value="1.2" step="0.05">
+          <span class="range-val" id="lineHeightVal">1.20</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>tracking</label>
+        <div class="range-row">
+          <input type="range" id="letterSpacing" min="-10" max="40" value="0" step="0.5">
+          <span class="range-val" id="letterSpacingVal">0</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>transform</label>
+        <select id="textTransform">
+          <option value="none" selected>none</option>
+          <option value="uppercase">UPPER</option>
+          <option value="lowercase">lower</option>
+        </select>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Layout -->
+  <div class="section">
+    <div class="section-title">
+      <span>layout</span>
+      <button class="section-reset" data-section="layout">reset</button>
+    </div>
+    <div class="section-body">
+
+      <div class="field-stack">
+        <label>alineación horizontal</label>
+        <div class="segmented" id="alignH">
+          <button class="seg-btn" data-v="left">izq</button>
+          <button class="seg-btn active" data-v="center">centro</button>
+          <button class="seg-btn" data-v="right">der</button>
+          <button class="seg-btn" data-v="justify">just</button>
+        </div>
+      </div>
+
+      <div class="field-stack">
+        <label>alineación vertical</label>
+        <div class="segmented" id="alignV">
+          <button class="seg-btn" data-v="top">arriba</button>
+          <button class="seg-btn active" data-v="middle">centro</button>
+          <button class="seg-btn" data-v="bottom">abajo</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>offset Y</label>
+        <div class="range-row">
+          <input type="range" id="offsetY" min="-500" max="500" value="0" step="1">
+          <span class="range-val" id="offsetYVal">0</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>ancho col %</label>
+        <div class="range-row">
+          <input type="range" id="maxWidthPct" min="20" max="100" value="80" step="1">
+          <span class="range-val" id="maxWidthPctVal">80</span>
+        </div>
+      </div>
+
+      <div class="field-stack">
+        <label>padding (px @1080)</label>
+        <div class="padding-grid">
+          <div class="padding-cell">
+            <label>↑</label>
+            <input type="number" id="padTop" value="80" min="0">
+          </div>
+          <div class="padding-cell">
+            <label>→</label>
+            <input type="number" id="padRight" value="80" min="0">
+          </div>
+          <div class="padding-cell">
+            <label>↓</label>
+            <input type="number" id="padBottom" value="80" min="0">
+          </div>
+          <div class="padding-cell">
+            <label>←</label>
+            <input type="number" id="padLeft" value="80" min="0">
+          </div>
+        </div>
+        <label class="pad-link">
+          <input type="checkbox" id="padLink" checked>
+          igualar lados
+        </label>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Dithering -->
+  <div class="section">
+    <div class="section-title">
+      <span>dithering</span>
+      <button class="section-reset" data-section="dithering">reset</button>
+    </div>
+    <div class="section-body">
+
+      <div class="field-stack">
+        <label>algoritmo</label>
+        <select id="ditherAlgo">
+          <option value="none" selected>off</option>
+          <option value="floyd">floyd-steinberg</option>
+          <option value="atkinson">atkinson</option>
+          <option value="bayer4">bayer 4×4</option>
+          <option value="bayer8">bayer 8×8</option>
+          <option value="noise">ruido aleatorio</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>umbral</label>
+        <div class="range-row">
+          <input type="range" id="ditherThreshold" min="0" max="100" value="50" step="1">
+          <span class="range-val" id="ditherThresholdVal">50</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>spread</label>
+        <div class="range-row">
+          <input type="range" id="ditherSpread" min="0" max="20" value="0" step="0.5">
+          <span class="range-val" id="ditherSpreadVal">0</span>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>escala</label>
+        <div class="range-row">
+          <input type="range" id="ditherScale" min="1" max="8" value="1" step="1">
+          <span class="range-val" id="ditherScaleVal">1</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</aside>
+
+<main>
+  <div class="stage">
+    <div class="canvas-wrap" id="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="stage-meta" id="stageMeta">1080 × 1080 px</div>
+
+  <div class="export-bar">
+    <button class="btn primary" id="exportPng">descargar png</button>
+    <button class="btn primary" id="exportJpg">descargar jpg</button>
+    <select id="jpgQuality" style="width: 80px;">
+      <option value="0.7">jpg 70</option>
+      <option value="0.85">jpg 85</option>
+      <option value="0.92" selected>jpg 92</option>
+      <option value="0.98">jpg 98</option>
+    </select>
+  </div>
+</main>
+
+<div class="loader" id="loader">cargando…</div>
+
+<script>
+'use strict';
+
+// ============================================================
+// FORMATOS
+// ============================================================
+const FORMATS = {
+  square:    { w: 1080, h: 1080, label: 'cuadrado',  ratio: '1:1' },
+  landscape: { w: 1080, h: 566,  label: 'apaisado',  ratio: '1.91:1' },
+  portrait:  { w: 1080, h: 1350, label: 'estirado',  ratio: '4:5' },
+  story:     { w: 1080, h: 1920, label: 'historia',  ratio: '9:16' }
+};
+
+// ============================================================
+// FUENTES (curadas, editoriales)
+// ============================================================
+const FONTS = [
+  // Serif
+  { name: 'Playfair Display',    cat: 'serif' },
+  { name: 'Cormorant Garamond',  cat: 'serif' },
+  { name: 'EB Garamond',         cat: 'serif' },
+  { name: 'Fraunces',            cat: 'serif' },
+  { name: 'Bodoni Moda',         cat: 'serif' },
+  { name: 'DM Serif Display',    cat: 'serif' },
+  { name: 'DM Serif Text',       cat: 'serif' },
+  { name: 'Spectral',            cat: 'serif' },
+  { name: 'Lora',                cat: 'serif' },
+  { name: 'Libre Baskerville',   cat: 'serif' },
+  { name: 'Crimson Pro',         cat: 'serif' },
+  { name: 'Italiana',            cat: 'serif' },
+  { name: 'Cinzel',              cat: 'serif' },
+  { name: 'Yeseva One',          cat: 'serif' },
+
+  // Sans
+  { name: 'Work Sans',           cat: 'sans' },
+  { name: 'Manrope',             cat: 'sans' },
+  { name: 'DM Sans',             cat: 'sans' },
+  { name: 'Archivo',             cat: 'sans' },
+  { name: 'Space Grotesk',       cat: 'sans' },
+  { name: 'IBM Plex Sans',       cat: 'sans' },
+  { name: 'Syne',                cat: 'sans' },
+  { name: 'Outfit',              cat: 'sans' },
+  { name: 'Plus Jakarta Sans',   cat: 'sans' },
+  { name: 'Bricolage Grotesque', cat: 'sans' },
+  { name: 'Instrument Sans',     cat: 'sans' },
+  { name: 'Sora',                cat: 'sans' },
+  { name: 'Public Sans',         cat: 'sans' },
+
+  // Display
+  { name: 'Abril Fatface',       cat: 'display' },
+  { name: 'Anton',               cat: 'display' },
+  { name: 'Big Shoulders Display', cat: 'display' },
+  { name: 'Unbounded',           cat: 'display' },
+  { name: 'Major Mono Display',  cat: 'display' },
+  { name: 'Bungee',              cat: 'display' },
+
+  // Mono
+  { name: 'JetBrains Mono',      cat: 'mono' },
+  { name: 'IBM Plex Mono',       cat: 'mono' },
+  { name: 'Space Mono',          cat: 'mono' },
+  { name: 'Fira Code',           cat: 'mono' },
+  { name: 'DM Mono',             cat: 'mono' },
+
+  // Slab
+  { name: 'Roboto Slab',         cat: 'slab' },
+  { name: 'Zilla Slab',          cat: 'slab' },
+  { name: 'Bitter',              cat: 'slab' }
+];
+
+// ============================================================
+// ESTADO
+// ============================================================
+const DEFAULTS = {
+  format: 'square',
+  text: 'El presente no termina nunca de pasar.',
+  bgColor: '#ffffff',
+  textColor: '#000000',
+  fontFamily: 'EB Garamond',
+  fontWeight: '400',
+  fontStyle: 'normal',
+  fontSize: 68,
+  autoFit: true,
+  lineHeight: 1.2,
+  letterSpacing: 0,
+  textTransform: 'none',
+  alignH: 'center',
+  alignV: 'middle',
+  offsetY: 0,
+  maxWidthPct: 80,
+  padTop: 80,
+  padRight: 80,
+  padBottom: 80,
+  padLeft: 80,
+  padLink: true,
+  ditherAlgo: 'none',
+  ditherThreshold: 50,
+  ditherSpread: 0,
+  ditherScale: 1,
+  jpgQuality: 0.92
+};
+
+let state = { ...DEFAULTS };
+
+// Claves del state agrupadas por sección (para reset granular)
+const SECTION_KEYS = {
+  color: ['bgColor', 'textColor'],
+  typography: ['fontFamily', 'fontWeight', 'fontStyle', 'fontSize', 'autoFit', 'lineHeight', 'letterSpacing', 'textTransform'],
+  layout: ['alignH', 'alignV', 'offsetY', 'maxWidthPct', 'padTop', 'padRight', 'padBottom', 'padLeft', 'padLink'],
+  dithering: ['ditherAlgo', 'ditherThreshold', 'ditherSpread', 'ditherScale']
+};
+
+function resetSection(section) {
+  const keys = SECTION_KEYS[section];
+  if (!keys) return;
+  keys.forEach(k => { state[k] = DEFAULTS[k]; });
+  syncUIFromState();
+  render();
+}
+
+// ============================================================
+// UI: poblar selectores
+// ============================================================
+function buildFormatSelector() {
+  const grid = document.getElementById('formatGrid');
+  const maxW = 50, maxH = 50;
+  Object.entries(FORMATS).forEach(([key, fmt]) => {
+    const ratio = fmt.w / fmt.h;
+    let shapeW, shapeH;
+    if (ratio >= 1) { shapeW = maxW; shapeH = maxW / ratio; }
+    else { shapeH = maxH; shapeW = maxH * ratio; }
+    const btn = document.createElement('button');
+    btn.className = 'format-btn' + (key === state.format ? ' active' : '');
+    btn.dataset.format = key;
+    btn.innerHTML = `
+      <div class="format-shape" style="width:${shapeW}px;height:${shapeH}px;"></div>
+      <span class="format-label">${fmt.label}</span>
+    `;
+    btn.addEventListener('click', () => {
+      state.format = key;
+      document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      render();
+    });
+    grid.appendChild(btn);
+  });
+}
+
+function buildFontSelector() {
+  const sel = document.getElementById('fontFamily');
+  const groups = { serif: 'serif', sans: 'sans', display: 'display', mono: 'mono', slab: 'slab' };
+  Object.keys(groups).forEach(cat => {
+    const og = document.createElement('optgroup');
+    og.label = groups[cat];
+    FONTS.filter(f => f.cat === cat).forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f.name;
+      opt.textContent = f.name;
+      if (f.name === state.fontFamily) opt.selected = true;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+}
+
+// ============================================================
+// CARGA DE FUENTES (Google Fonts on-demand)
+// ============================================================
+const fontCache = new Set();
+function fontKey(name, weight, style) {
+  return `${name}|${weight}|${style}`;
+}
+async function loadFont(family, weight, style) {
+  const key = fontKey(family, weight, style);
+  if (fontCache.has(key)) return;
+  fontCache.add(key);
+
+  const ital = style === 'italic' ? '1' : '0';
+  const familyParam = family.replace(/ /g, '+');
+  // Pedimos rango completo para que browser haga fallback si es necesario
+  const url = `https://fonts.googleapis.com/css2?family=${familyParam}:ital,wght@${ital},${weight}&display=swap`;
+
+  return new Promise((resolve) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    link.onload = async () => {
+      try {
+        await document.fonts.load(`${style} ${weight} 16px "${family}"`);
+        await document.fonts.ready;
+      } catch (e) {}
+      resolve();
+    };
+    link.onerror = () => resolve();
+    document.head.appendChild(link);
+  });
+}
+
+// ============================================================
+// LOADER UI
+// ============================================================
+let loaderTimeout;
+function showLoader(msg = 'cargando fuente…') {
+  const el = document.getElementById('loader');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(loaderTimeout);
+}
+function hideLoader() {
+  loaderTimeout = setTimeout(() => {
+    document.getElementById('loader').classList.remove('show');
+  }, 200);
+}
+
+// ============================================================
+// TEXT WRAPPING & MEDICIÓN
+// ============================================================
+function transformText(s, t) {
+  if (t === 'uppercase') return s.toUpperCase();
+  if (t === 'lowercase') return s.toLowerCase();
+  return s;
+}
+
+// Mide el ancho de una palabra usando el contexto
+function measureRun(ctx, str, letterSpacing) {
+  // letterSpacing en px aplicado entre cada char
+  const m = ctx.measureText(str);
+  const tracking = letterSpacing * Math.max(0, str.length - 1);
+  return m.width + tracking;
+}
+
+// Wrap por palabras respetando saltos manuales (\n)
+function wrapText(ctx, text, maxWidth, letterSpacing) {
+  const paragraphs = text.split('\n');
+  const lines = [];
+  paragraphs.forEach((p, pi) => {
+    if (p.trim() === '') {
+      lines.push({ words: [], hard: true });
+      return;
+    }
+    const words = p.split(/\s+/).filter(w => w.length > 0);
+    let current = [];
+    let currentWidth = 0;
+    const spaceW = ctx.measureText(' ').width + letterSpacing;
+
+    words.forEach((word) => {
+      const wWidth = measureRun(ctx, word, letterSpacing);
+      const tentative = current.length === 0 ? wWidth : currentWidth + spaceW + wWidth;
+      if (tentative > maxWidth && current.length > 0) {
+        lines.push({ words: current, hard: false });
+        current = [word];
+        currentWidth = wWidth;
+      } else {
+        current.push(word);
+        currentWidth = tentative;
+      }
+    });
+    if (current.length > 0) {
+      lines.push({ words: current, hard: pi < paragraphs.length - 1 });
+    }
+  });
+  return lines;
+}
+
+// Dibuja una línea con tracking manual (carácter por carácter)
+function drawLineTracked(ctx, str, x, y, letterSpacing) {
+  if (letterSpacing === 0) {
+    ctx.fillText(str, x, y);
+    return;
+  }
+  let cx = x;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + letterSpacing;
+  }
+}
+
+// Justificación: dibuja una línea distribuyendo el espacio extra
+function drawJustifiedLine(ctx, words, x, y, maxWidth, letterSpacing) {
+  if (words.length === 0) return;
+  if (words.length === 1) {
+    drawLineTracked(ctx, words[0], x, y, letterSpacing);
+    return;
+  }
+  // Calcular ancho total de palabras (con tracking interno)
+  let totalWordsWidth = 0;
+  words.forEach(w => { totalWordsWidth += measureRun(ctx, w, letterSpacing); });
+  const totalSpace = maxWidth - totalWordsWidth;
+  const gap = totalSpace / (words.length - 1);
+
+  let cx = x;
+  words.forEach((w, i) => {
+    drawLineTracked(ctx, w, cx, y, letterSpacing);
+    cx += measureRun(ctx, w, letterSpacing) + gap;
+  });
+}
+
+// ============================================================
+// DITHERING
+// ============================================================
+const BAYER4 = [
+  [ 0,  8,  2, 10],
+  [12,  4, 14,  6],
+  [ 3, 11,  1,  9],
+  [15,  7, 13,  5]
+].map(r => r.map(v => v / 16));
+
+const BAYER8 = [
+  [ 0, 32,  8, 40,  2, 34, 10, 42],
+  [48, 16, 56, 24, 50, 18, 58, 26],
+  [12, 44,  4, 36, 14, 46,  6, 38],
+  [60, 28, 52, 20, 62, 30, 54, 22],
+  [ 3, 35, 11, 43,  1, 33,  9, 41],
+  [51, 19, 59, 27, 49, 17, 57, 25],
+  [15, 47,  7, 39, 13, 45,  5, 37],
+  [63, 31, 55, 23, 61, 29, 53, 21]
+].map(r => r.map(v => v / 64));
+
+function hexToRgb(hex) {
+  const m = hex.replace('#', '');
+  return {
+    r: parseInt(m.substring(0, 2), 16),
+    g: parseInt(m.substring(2, 4), 16),
+    b: parseInt(m.substring(4, 6), 16)
+  };
+}
+
+// Luminancia perceptual [0..1]
+function lumaRgb(r, g, b) {
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+}
+
+/**
+ * Aplica dither cuantizando la imagen a una paleta binaria { bgColor, textColor }
+ * Trabaja sobre la luminancia y mapea a los dos colores.
+ */
+function applyDither(imageData, algo, threshold, bgRgb, fgRgb, scale = 1) {
+  const w = imageData.width;
+  const h = imageData.height;
+  const data = imageData.data;
+  const bgL = lumaRgb(bgRgb.r, bgRgb.g, bgRgb.b);
+  const fgL = lumaRgb(fgRgb.r, fgRgb.g, fgRgb.b);
+
+  // Determinar polaridad: si fg es más oscuro que bg, "0" => fg, "1" => bg.
+  // Trabajamos con luma normalizada y un threshold ajustable.
+  // Normalizamos cada píxel al rango definido por [min(bgL,fgL), max(bgL,fgL)]
+  // para que el dither opere sobre el rango efectivo.
+  const lo = Math.min(bgL, fgL);
+  const hi = Math.max(bgL, fgL);
+  const range = Math.max(hi - lo, 1e-6);
+  const fgIsDark = fgL <= bgL;
+
+  // Pre-compute luma buffer (float)
+  const N = w * h;
+  const buf = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    const k = i * 4;
+    let l = lumaRgb(data[k], data[k+1], data[k+2]);
+    // Normalizar al rango [0..1] dentro de [lo..hi]
+    l = (l - lo) / range;
+    if (l < 0) l = 0;
+    else if (l > 1) l = 1;
+    buf[i] = l;
+  }
+
+  const thr = threshold; // [0..1]
+
+  function setPixel(idx, isLight) {
+    const k = idx * 4;
+    // isLight = true => color "claro" (mayor luma); false => oscuro
+    let r, g, b;
+    if (fgIsDark) {
+      // dark = fg
+      if (isLight) { r = bgRgb.r; g = bgRgb.g; b = bgRgb.b; }
+      else         { r = fgRgb.r; g = fgRgb.g; b = fgRgb.b; }
+    } else {
+      // dark = bg
+      if (isLight) { r = fgRgb.r; g = fgRgb.g; b = fgRgb.b; }
+      else         { r = bgRgb.r; g = bgRgb.g; b = bgRgb.b; }
+    }
+    data[k] = r;
+    data[k+1] = g;
+    data[k+2] = b;
+    data[k+3] = 255;
+  }
+
+  if (algo === 'floyd') {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const old = buf[i];
+        const isLight = old >= thr;
+        const newVal = isLight ? 1 : 0;
+        const err = old - newVal;
+        setPixel(i, isLight);
+        if (x + 1 < w)               buf[i + 1]      += err * 7/16;
+        if (y + 1 < h && x > 0)      buf[i + w - 1]  += err * 3/16;
+        if (y + 1 < h)               buf[i + w]      += err * 5/16;
+        if (y + 1 < h && x + 1 < w)  buf[i + w + 1]  += err * 1/16;
+      }
+    }
+  } else if (algo === 'atkinson') {
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const old = buf[i];
+        const isLight = old >= thr;
+        const newVal = isLight ? 1 : 0;
+        const err = (old - newVal) / 8;
+        setPixel(i, isLight);
+        if (x + 1 < w)               buf[i + 1]      += err;
+        if (x + 2 < w)               buf[i + 2]      += err;
+        if (y + 1 < h && x > 0)      buf[i + w - 1]  += err;
+        if (y + 1 < h)               buf[i + w]      += err;
+        if (y + 1 < h && x + 1 < w)  buf[i + w + 1]  += err;
+        if (y + 2 < h)               buf[i + 2 * w]  += err;
+      }
+    }
+  } else if (algo === 'bayer4' || algo === 'bayer8') {
+    const M = algo === 'bayer4' ? BAYER4 : BAYER8;
+    const ms = M.length;
+    const s = Math.max(1, Math.round(scale));
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const i = y * w + x;
+        const mx = Math.floor(x / s) % ms;
+        const my = Math.floor(y / s) % ms;
+        const t = M[my][mx]; // [0..1)
+        // mezclar con threshold global
+        const eff = thr - 0.5 + t;
+        const isLight = buf[i] >= eff;
+        setPixel(i, isLight);
+      }
+    }
+  } else if (algo === 'noise') {
+    for (let i = 0; i < N; i++) {
+      const t = thr - 0.5 + Math.random();
+      const isLight = buf[i] >= t;
+      setPixel(i, isLight);
+    }
+  }
+
+  return imageData;
+}
+
+// ============================================================
+// AUTO-FIT: búsqueda binaria del tamaño máximo que cabe
+// ============================================================
+function calculateAutoFitSize(measureCtx) {
+  const fmt = FORMATS[state.format];
+  const contentW = fmt.w - state.padLeft - state.padRight;
+  const contentH = fmt.h - state.padTop - state.padBottom;
+  const colW = Math.max(1, contentW * (state.maxWidthPct / 100));
+  const txt = transformText(state.text, state.textTransform);
+
+  if (!txt.trim() || contentW <= 0 || contentH <= 0) return 12;
+
+  // Pre-extraer palabras (incluyendo saltos como separadores) para test de overflow
+  const allWords = txt.split(/\s+/).filter(w => w.length > 0);
+
+  function fits(size) {
+    measureCtx.font = `${state.fontStyle} ${state.fontWeight} ${size}px "${state.fontFamily}", serif`;
+    // Ninguna palabra individual puede exceder colW
+    for (const w of allWords) {
+      if (measureRun(measureCtx, w, state.letterSpacing) > colW) return false;
+    }
+    const lines = wrapText(measureCtx, txt, colW, state.letterSpacing);
+    if (lines.length === 0) return true;
+    const totalH = lines.length * size * state.lineHeight;
+    return totalH <= contentH;
+  }
+
+  let lo = 6;
+  let hi = 600;
+  // Verificar bounds
+  if (!fits(lo)) return lo; // ni el mínimo cabe
+  if (fits(hi)) return hi;  // raro, pero por las dudas
+
+  // Búsqueda binaria con precisión < 0.5 px
+  for (let iter = 0; iter < 22; iter++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) lo = mid;
+    else hi = mid;
+    if (hi - lo < 0.5) break;
+  }
+  return Math.floor(lo);
+}
+
+// ============================================================
+// RENDER PRINCIPAL
+// ============================================================
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+// Off-screen para dither (donde aplicamos blur previo)
+const offCanvas = document.createElement('canvas');
+const offCtx = offCanvas.getContext('2d');
+
+let renderToken = 0;
+
+async function render() {
+  const myToken = ++renderToken;
+  const fmt = FORMATS[state.format];
+
+  // Cargar fuente
+  showLoader('cargando fuente…');
+  await loadFont(state.fontFamily, state.fontWeight, state.fontStyle);
+  hideLoader();
+
+  if (myToken !== renderToken) return; // request más reciente
+
+  // Setup canvas dimensiones
+  canvas.width = fmt.w;
+  canvas.height = fmt.h;
+  document.getElementById('canvasWrap').style.aspectRatio = `${fmt.w} / ${fmt.h}`;
+  document.getElementById('stageMeta').textContent = `${fmt.w} × ${fmt.h} px  ·  ${fmt.ratio}`;
+  fitCanvasToStage(fmt);
+
+  const ditherOn = state.ditherAlgo !== 'none';
+  const useOff = ditherOn;
+  const target = useOff ? offCtx : ctx;
+  if (useOff) {
+    offCanvas.width = fmt.w;
+    offCanvas.height = fmt.h;
+  }
+
+  // Fondo
+  target.fillStyle = state.bgColor;
+  target.fillRect(0, 0, fmt.w, fmt.h);
+
+  // Tipografía
+  let effectiveFontSize = state.fontSize;
+  if (state.autoFit) {
+    effectiveFontSize = calculateAutoFitSize(target);
+    state.fontSize = effectiveFontSize; // mantener state coherente con valor visible
+    const fsEl = document.getElementById('fontSize');
+    const fsVal = document.getElementById('fontSizeVal');
+    if (fsEl && fsVal) {
+      const min = parseInt(fsEl.min);
+      const max = parseInt(fsEl.max);
+      fsEl.value = Math.min(max, Math.max(min, effectiveFontSize));
+      fsVal.textContent = effectiveFontSize + ' auto';
+      fsVal.classList.add('computed');
+    }
+  } else {
+    document.getElementById('fontSizeVal').textContent = state.fontSize;
+    document.getElementById('fontSizeVal').classList.remove('computed');
+  }
+
+  const fontSize = effectiveFontSize;
+  const lineHeightPx = fontSize * state.lineHeight;
+  const fontStr = `${state.fontStyle} ${state.fontWeight} ${fontSize}px "${state.fontFamily}", serif`;
+
+  target.font = fontStr;
+  target.fillStyle = state.textColor;
+  target.textBaseline = 'alphabetic';
+  target.textAlign = 'left';
+  // Spread blur sobre el contexto antes de dibujar texto:
+  // Usaremos `filter` solo si hay dither activo y spread > 0
+  if (useOff && state.ditherSpread > 0) {
+    target.filter = `blur(${state.ditherSpread}px)`;
+  } else {
+    target.filter = 'none';
+  }
+
+  // Caja de contenido
+  const padL = state.padLeft;
+  const padR = state.padRight;
+  const padT = state.padTop;
+  const padB = state.padBottom;
+  const contentW = fmt.w - padL - padR;
+  const contentH = fmt.h - padT - padB;
+
+  // Ancho efectivo de columna
+  const colW = contentW * (state.maxWidthPct / 100);
+  const colX = padL + (contentW - colW) / 2;
+
+  // Texto procesado
+  const txt = transformText(state.text, state.textTransform);
+
+  // Wrap
+  const lines = wrapText(target, txt, colW, state.letterSpacing);
+  const totalH = Math.max(0, lines.length) * lineHeightPx;
+
+  // Posición Y inicial (baseline de primera línea)
+  // Aproximamos baseline = top + fontSize * 0.82 (visualmente centrado)
+  const ascentApprox = fontSize * 0.82;
+
+  let topY;
+  if (state.alignV === 'top') {
+    topY = padT;
+  } else if (state.alignV === 'bottom') {
+    topY = fmt.h - padB - totalH;
+  } else { // middle
+    topY = padT + (contentH - totalH) / 2;
+  }
+  topY += state.offsetY;
+
+  // Dibujar líneas
+  lines.forEach((line, idx) => {
+    if (line.words.length === 0) return;
+    const lineStr = line.words.join(' ');
+    const baseY = topY + idx * lineHeightPx + ascentApprox;
+    const lineWidth = measureRun(target, lineStr, state.letterSpacing);
+
+    let lineX;
+    if (state.alignH === 'left') {
+      lineX = colX;
+    } else if (state.alignH === 'right') {
+      lineX = colX + colW - lineWidth;
+    } else if (state.alignH === 'center') {
+      lineX = colX + (colW - lineWidth) / 2;
+    } else if (state.alignH === 'justify') {
+      // Justificar todas excepto la última de cada párrafo
+      const isLastInParagraph = line.hard || idx === lines.length - 1;
+      if (isLastInParagraph || line.words.length === 1) {
+        lineX = colX;
+        drawLineTracked(target, lineStr, lineX, baseY, state.letterSpacing);
+        return;
+      }
+      drawJustifiedLine(target, line.words, colX, baseY, colW, state.letterSpacing);
+      return;
+    }
+    drawLineTracked(target, lineStr, lineX, baseY, state.letterSpacing);
+  });
+
+  target.filter = 'none';
+
+  // Aplicar dithering
+  if (ditherOn) {
+    const imgData = offCtx.getImageData(0, 0, fmt.w, fmt.h);
+    const bgRgb = hexToRgb(state.bgColor);
+    const fgRgb = hexToRgb(state.textColor);
+    const thrNorm = state.ditherThreshold / 100;
+    applyDither(imgData, state.ditherAlgo, thrNorm, bgRgb, fgRgb, state.ditherScale);
+    ctx.putImageData(imgData, 0, 0);
+  }
+}
+
+// Reescala el canvas-wrap visualmente para caber en el stage
+function fitCanvasToStage(fmt) {
+  const stage = document.querySelector('.stage');
+  const wrap = document.getElementById('canvasWrap');
+  const padding = 24;
+  const availW = stage.clientWidth - padding * 2;
+  const availH = stage.clientHeight - padding * 2;
+  const ratio = fmt.w / fmt.h;
+  let dispW, dispH;
+  if (availW / ratio <= availH) {
+    dispW = availW; dispH = availW / ratio;
+  } else {
+    dispH = availH; dispW = availH * ratio;
+  }
+  wrap.style.width = dispW + 'px';
+  wrap.style.height = dispH + 'px';
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportImage(format) {
+  const fmt = FORMATS[state.format];
+  const filename = `txt-ig_${state.format}_${Date.now()}`;
+  let dataUrl;
+  if (format === 'jpg') {
+    // Forzar fondo (canvas siempre es opaco con fill)
+    dataUrl = canvas.toDataURL('image/jpeg', state.jpgQuality);
+    download(dataUrl, filename + '.jpg');
+  } else {
+    dataUrl = canvas.toDataURL('image/png');
+    download(dataUrl, filename + '.png');
+  }
+}
+function download(dataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// ============================================================
+// PRESET JSON
+// ============================================================
+function savePreset() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `txt-ig_preset_${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function loadPreset() {
+  document.getElementById('presetFile').click();
+}
+function applyPreset(obj) {
+  state = { ...DEFAULTS, ...obj };
+  syncUIFromState();
+  render();
+}
+function resetPreset() {
+  state = { ...DEFAULTS };
+  syncUIFromState();
+  render();
+}
+
+document.getElementById('presetSave').addEventListener('click', savePreset);
+document.getElementById('presetLoad').addEventListener('click', loadPreset);
+document.getElementById('presetReset').addEventListener('click', resetPreset);
+document.getElementById('presetFile').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      applyPreset(obj);
+    } catch (err) {
+      alert('preset inválido');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+// ============================================================
+// SYNC UI ↔ STATE
+// ============================================================
+function bindRange(id, key, formatter = (v) => v) {
+  const el = document.getElementById(id);
+  const valEl = document.getElementById(id + 'Val');
+  const update = () => {
+    const v = parseFloat(el.value);
+    state[key] = v;
+    if (valEl) valEl.textContent = formatter(v);
+
+    // Si el usuario mueve fontSize manualmente, desactivar auto-fit
+    if (id === 'fontSize' && state.autoFit) {
+      state.autoFit = false;
+      document.getElementById('autoFit').checked = false;
+      valEl.classList.remove('computed');
+    }
+
+    render();
+  };
+  el.addEventListener('input', update);
+}
+
+function bindInput(id, key, parser = (v) => v) {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    state[key] = parser(el.value);
+    if (id === 'padTop' || id === 'padRight' || id === 'padBottom' || id === 'padLeft') {
+      if (state.padLink) {
+        const v = parser(el.value);
+        state.padTop = state.padRight = state.padBottom = state.padLeft = v;
+        document.getElementById('padTop').value = v;
+        document.getElementById('padRight').value = v;
+        document.getElementById('padBottom').value = v;
+        document.getElementById('padLeft').value = v;
+      }
+    }
+    render();
+  });
+}
+
+function bindSelect(id, key) {
+  const el = document.getElementById(id);
+  el.addEventListener('change', () => {
+    state[key] = el.value;
+    render();
+  });
+}
+
+function bindSegmented(id, key) {
+  const root = document.getElementById(id);
+  root.querySelectorAll('.seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      root.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state[key] = btn.dataset.v;
+      render();
+    });
+  });
+}
+
+function updateAutoFitUI() {
+  const valEl = document.getElementById('fontSizeVal');
+  if (!state.autoFit) {
+    valEl.classList.remove('computed');
+  }
+}
+
+function syncUIFromState() {
+  document.querySelectorAll('.format-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.format === state.format);
+  });
+  // Texto
+  document.getElementById('text').value = state.text;
+  // Color
+  document.getElementById('bgColor').value = state.bgColor;
+  document.getElementById('textColor').value = state.textColor;
+  // Tipografía
+  document.getElementById('fontFamily').value = state.fontFamily;
+  document.getElementById('fontWeight').value = state.fontWeight;
+  document.getElementById('fontStyle').value = state.fontStyle;
+  document.getElementById('autoFit').checked = state.autoFit;
+  document.getElementById('fontSize').value = state.fontSize;
+  document.getElementById('fontSizeVal').textContent = state.fontSize;
+  document.getElementById('lineHeight').value = state.lineHeight;
+  document.getElementById('lineHeightVal').textContent = state.lineHeight.toFixed(2);
+  document.getElementById('letterSpacing').value = state.letterSpacing;
+  document.getElementById('letterSpacingVal').textContent = state.letterSpacing;
+  document.getElementById('textTransform').value = state.textTransform;
+  updateAutoFitUI();
+  // Layout
+  document.querySelectorAll('#alignH .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.v === state.alignH);
+  });
+  document.querySelectorAll('#alignV .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.v === state.alignV);
+  });
+  document.getElementById('offsetY').value = state.offsetY;
+  document.getElementById('offsetYVal').textContent = state.offsetY;
+  document.getElementById('maxWidthPct').value = state.maxWidthPct;
+  document.getElementById('maxWidthPctVal').textContent = state.maxWidthPct;
+  document.getElementById('padTop').value = state.padTop;
+  document.getElementById('padRight').value = state.padRight;
+  document.getElementById('padBottom').value = state.padBottom;
+  document.getElementById('padLeft').value = state.padLeft;
+  document.getElementById('padLink').checked = state.padLink;
+  // Dither
+  document.getElementById('ditherAlgo').value = state.ditherAlgo;
+  document.getElementById('ditherThreshold').value = state.ditherThreshold;
+  document.getElementById('ditherThresholdVal').textContent = state.ditherThreshold;
+  document.getElementById('ditherSpread').value = state.ditherSpread;
+  document.getElementById('ditherSpreadVal').textContent = state.ditherSpread;
+  document.getElementById('ditherScale').value = state.ditherScale;
+  document.getElementById('ditherScaleVal').textContent = state.ditherScale;
+  // jpg quality
+  document.getElementById('jpgQuality').value = state.jpgQuality;
+}
+
+// ============================================================
+// EVENTOS
+// ============================================================
+function init() {
+  buildFormatSelector();
+  buildFontSelector();
+
+  // Texto
+  document.getElementById('text').addEventListener('input', (e) => {
+    state.text = e.target.value;
+    render();
+  });
+
+  // Color presets
+  document.querySelectorAll('.preset-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      state.bgColor = chip.dataset.bg;
+      state.textColor = chip.dataset.fg;
+      document.getElementById('bgColor').value = state.bgColor;
+      document.getElementById('textColor').value = state.textColor;
+      render();
+    });
+  });
+
+  // Color pickers
+  document.getElementById('bgColor').addEventListener('input', (e) => {
+    state.bgColor = e.target.value; render();
+  });
+  document.getElementById('textColor').addEventListener('input', (e) => {
+    state.textColor = e.target.value; render();
+  });
+
+  // Tipografía
+  bindSelect('fontFamily', 'fontFamily');
+  bindSelect('fontWeight', 'fontWeight');
+  bindSelect('fontStyle', 'fontStyle');
+  bindRange('fontSize', 'fontSize', v => Math.round(v));
+  bindRange('lineHeight', 'lineHeight', v => v.toFixed(2));
+  bindRange('letterSpacing', 'letterSpacing', v => v);
+  bindSelect('textTransform', 'textTransform');
+
+  // Auto-fit toggle
+  const autoFitEl = document.getElementById('autoFit');
+  autoFitEl.addEventListener('change', () => {
+    state.autoFit = autoFitEl.checked;
+    updateAutoFitUI();
+    render();
+  });
+
+  // Layout
+  bindSegmented('alignH', 'alignH');
+  bindSegmented('alignV', 'alignV');
+  bindRange('offsetY', 'offsetY', v => Math.round(v));
+  bindRange('maxWidthPct', 'maxWidthPct', v => Math.round(v));
+  bindInput('padTop', 'padTop', v => parseInt(v) || 0);
+  bindInput('padRight', 'padRight', v => parseInt(v) || 0);
+  bindInput('padBottom', 'padBottom', v => parseInt(v) || 0);
+  bindInput('padLeft', 'padLeft', v => parseInt(v) || 0);
+  document.getElementById('padLink').addEventListener('change', (e) => {
+    state.padLink = e.target.checked;
+    if (state.padLink) {
+      const v = state.padTop;
+      state.padRight = state.padBottom = state.padLeft = v;
+      document.getElementById('padRight').value = v;
+      document.getElementById('padBottom').value = v;
+      document.getElementById('padLeft').value = v;
+      render();
+    }
+  });
+
+  // Dither
+  bindSelect('ditherAlgo', 'ditherAlgo');
+  bindRange('ditherThreshold', 'ditherThreshold', v => Math.round(v));
+  bindRange('ditherSpread', 'ditherSpread', v => v);
+  bindRange('ditherScale', 'ditherScale', v => Math.round(v));
+
+  // Export
+  document.getElementById('exportPng').addEventListener('click', () => exportImage('png'));
+  document.getElementById('exportJpg').addEventListener('click', () => exportImage('jpg'));
+  document.getElementById('jpgQuality').addEventListener('change', (e) => {
+    state.jpgQuality = parseFloat(e.target.value);
+  });
+
+  // Resize
+  window.addEventListener('resize', () => {
+    const fmt = FORMATS[state.format];
+    fitCanvasToStage(fmt);
+  });
+
+  // Section reset buttons
+  document.querySelectorAll('.section-reset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      resetSection(btn.dataset.section);
+    });
+  });
+
+  updateAutoFitUI();
+  render();
+}
+
+// Boot
+window.addEventListener('DOMContentLoaded', () => {
+  // Defer hasta que el layout esté listo
+  requestAnimationFrame(() => requestAnimationFrame(init));
+});
+</script>
+
+</body>
+</html>
