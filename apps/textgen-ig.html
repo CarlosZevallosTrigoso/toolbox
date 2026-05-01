@@ -490,21 +490,146 @@
     background: var(--ink-soft);
   }
 
-  /* Responsive */
-  @media (max-width: 900px) {
+  /* Responsive: móvil */
+  @media (max-width: 900px), (pointer: coarse) {
     body {
-      grid-template-columns: 1fr;
-      grid-template-rows: 44px auto 1fr;
-      grid-template-areas:
-        "header"
-        "main"
-        "sidebar";
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      font-size: 13px;
+      grid-template-columns: none;
+      grid-template-rows: none;
+      grid-template-areas: none;
     }
+
+    header {
+      flex: 0 0 auto;
+      padding: 0 12px;
+      height: 48px;
+    }
+    header h1 { font-size: 13px; }
+    header h1 .meta { display: none; }
+    header .actions { gap: 6px; }
+
+    main {
+      flex: 0 0 auto;
+      padding: 12px;
+      max-height: 38vh;
+      min-height: 200px;
+    }
+    .stage { padding: 0; }
+    .canvas-wrap { max-height: 100%; }
+    .stage-meta {
+      margin-top: 6px;
+      font-size: 9.5px;
+    }
+    .export-bar {
+      margin-top: 8px;
+      gap: 6px;
+    }
+
     aside {
-      max-height: 50vh;
+      flex: 1 1 auto;
+      min-height: 0;
       border-right: none;
       border-top: 1px solid var(--line);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
     }
+
+    /* Acordeón */
+    .section-title {
+      cursor: pointer;
+      padding: 14px 16px;
+      font-size: 11px;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .section-title > span:first-child {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title > span:first-child::before {
+      content: '−';
+      display: inline-block;
+      width: 14px;
+      text-align: center;
+      font-weight: 600;
+      color: var(--accent);
+      font-size: 13px;
+    }
+    .section.collapsed .section-title > span:first-child::before {
+      content: '+';
+    }
+    .section.collapsed .section-body { display: none; }
+    .section-body { padding: 4px 16px 18px; }
+
+    /* Tap targets ≥44px */
+    .seg-btn {
+      padding: 12px 6px;
+      font-size: 12px;
+      min-height: 44px;
+    }
+    .preset-chip {
+      padding: 12px 6px;
+      font-size: 11px;
+      min-height: 40px;
+    }
+    .format-btn {
+      padding: 12px 4px;
+      min-height: 80px;
+    }
+    .format-label { font-size: 10.5px; }
+    input[type="text"],
+    input[type="number"],
+    select {
+      padding: 10px 10px;
+      font-size: 14px;
+      min-height: 44px;
+    }
+    textarea {
+      padding: 10px 10px;
+      font-size: 14px;
+      min-height: 100px;
+    }
+    input[type="range"] { height: 4px; }
+    input[type="range"]::-webkit-slider-thumb {
+      width: 24px; height: 24px;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 24px; height: 24px;
+    }
+    input[type="color"] { height: 44px; }
+    .btn {
+      padding: 12px 16px;
+      font-size: 12px;
+      min-height: 44px;
+    }
+    .toggle-inline {
+      font-size: 12px;
+      padding: 6px 0;
+      min-height: 36px;
+    }
+    .toggle-inline input { width: 18px; height: 18px; }
+    .pad-link { padding: 8px 0; min-height: 32px; }
+    .pad-link input { width: 18px; height: 18px; }
+    .section-reset {
+      padding: 8px 6px;
+      font-size: 10px;
+      min-height: 36px;
+    }
+    .field {
+      grid-template-columns: 100px 1fr;
+      margin-bottom: 10px;
+    }
+    .field-stack { margin-bottom: 12px; }
+    .field label, .field-stack label, .color-cell label, .padding-cell label {
+      font-size: 11.5px;
+    }
+    .range-val { font-size: 11.5px; }
   }
 </style>
 </head>
@@ -791,6 +916,39 @@
 'use strict';
 
 // ============================================================
+// DETECCIÓN MÓVIL (reactiva a resize y orientación)
+// ============================================================
+const mobileMQ = window.matchMedia('(max-width: 900px), (pointer: coarse)');
+let isMobile = mobileMQ.matches;
+
+function applyMobileMode() {
+  isMobile = mobileMQ.matches;
+  document.body.classList.toggle('is-mobile', isMobile);
+  setupAccordion();
+}
+
+mobileMQ.addEventListener('change', () => {
+  applyMobileMode();
+  // re-fit al cambiar layout
+  const fmt = FORMATS[state.format];
+  if (fmt) fitCanvasToStage(fmt);
+  scheduleRender();
+});
+
+// ============================================================
+// RENDER CONSOLIDATOR (RAF para drag suave)
+// ============================================================
+let renderQueued = false;
+function scheduleRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    render();
+  });
+}
+
+// ============================================================
 // FORMATOS
 // ============================================================
 const FORMATS = {
@@ -903,7 +1061,7 @@ function resetSection(section) {
   if (!keys) return;
   keys.forEach(k => { state[k] = DEFAULTS[k]; });
   syncUIFromState();
-  render();
+  scheduleRender();
 }
 
 // ============================================================
@@ -928,7 +1086,7 @@ function buildFormatSelector() {
       state.format = key;
       document.querySelectorAll('.format-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
-      render();
+      scheduleRender();
     });
     grid.appendChild(btn);
   });
@@ -1490,12 +1648,12 @@ function loadPreset() {
 function applyPreset(obj) {
   state = { ...DEFAULTS, ...obj };
   syncUIFromState();
-  render();
+  scheduleRender();
 }
 function resetPreset() {
   state = { ...DEFAULTS };
   syncUIFromState();
-  render();
+  scheduleRender();
 }
 
 document.getElementById('presetSave').addEventListener('click', savePreset);
@@ -1535,7 +1693,7 @@ function bindRange(id, key, formatter = (v) => v) {
       valEl.classList.remove('computed');
     }
 
-    render();
+    scheduleRender();
   };
   el.addEventListener('input', update);
 }
@@ -1554,7 +1712,7 @@ function bindInput(id, key, parser = (v) => v) {
         document.getElementById('padLeft').value = v;
       }
     }
-    render();
+    scheduleRender();
   });
 }
 
@@ -1562,7 +1720,7 @@ function bindSelect(id, key) {
   const el = document.getElementById(id);
   el.addEventListener('change', () => {
     state[key] = el.value;
-    render();
+    scheduleRender();
   });
 }
 
@@ -1573,9 +1731,36 @@ function bindSegmented(id, key) {
       root.querySelectorAll('.seg-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state[key] = btn.dataset.v;
-      render();
+      scheduleRender();
     });
   });
+}
+
+// ============================================================
+// ACORDEÓN MÓVIL
+// ============================================================
+let accordionInitialized = false;
+function setupAccordion() {
+  const sections = document.querySelectorAll('.section');
+  if (isMobile) {
+    if (!accordionInitialized) {
+      sections.forEach((sec, i) => {
+        const title = sec.querySelector('.section-title');
+        if (!title) return;
+        // Por defecto: solo formato (i=0) y texto (i=1) abiertos
+        if (i > 1) sec.classList.add('collapsed');
+        title.addEventListener('click', (e) => {
+          // Ignorar clicks en el botón reset
+          if (e.target.classList.contains('section-reset')) return;
+          sec.classList.toggle('collapsed');
+        });
+      });
+      accordionInitialized = true;
+    }
+  } else {
+    // Desktop: expandir todo
+    sections.forEach(sec => sec.classList.remove('collapsed'));
+  }
 }
 
 function updateAutoFitUI() {
@@ -1645,7 +1830,7 @@ function init() {
   // Texto
   document.getElementById('text').addEventListener('input', (e) => {
     state.text = e.target.value;
-    render();
+    scheduleRender();
   });
 
   // Color presets
@@ -1655,16 +1840,16 @@ function init() {
       state.textColor = chip.dataset.fg;
       document.getElementById('bgColor').value = state.bgColor;
       document.getElementById('textColor').value = state.textColor;
-      render();
+      scheduleRender();
     });
   });
 
   // Color pickers
   document.getElementById('bgColor').addEventListener('input', (e) => {
-    state.bgColor = e.target.value; render();
+    state.bgColor = e.target.value; scheduleRender();
   });
   document.getElementById('textColor').addEventListener('input', (e) => {
-    state.textColor = e.target.value; render();
+    state.textColor = e.target.value; scheduleRender();
   });
 
   // Tipografía
@@ -1681,7 +1866,7 @@ function init() {
   autoFitEl.addEventListener('change', () => {
     state.autoFit = autoFitEl.checked;
     updateAutoFitUI();
-    render();
+    scheduleRender();
   });
 
   // Layout
@@ -1701,7 +1886,7 @@ function init() {
       document.getElementById('padRight').value = v;
       document.getElementById('padBottom').value = v;
       document.getElementById('padLeft').value = v;
-      render();
+      scheduleRender();
     }
   });
 
@@ -1731,6 +1916,7 @@ function init() {
     });
   });
 
+  applyMobileMode();
   updateAutoFitUI();
   render();
 }
