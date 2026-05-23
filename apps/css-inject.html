@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>css inject — toolbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --muted: #666666;
+    --accent: #5a7a3a;
+    --border: #e5e5e5;
+    --code-bg: #f7f7f5;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Fira Code', ui-monospace, Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 2rem 1.5rem 4rem;
+    max-width: 760px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.2rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .back {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .back:hover { color: var(--accent); }
+
+  h1 {
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin: 1rem 0 0.4rem;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  section { margin: 2rem 0; }
+
+  h2 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 0.9rem;
+    letter-spacing: 0.05em;
+  }
+
+  .drag-area {
+    border: 1px dashed var(--border);
+    padding: 1.8rem 1.2rem;
+    text-align: center;
+    border-radius: 2px;
+  }
+
+  .bookmarklet {
+    display: inline-block;
+    padding: 0.7rem 1.4rem;
+    background: var(--accent);
+    color: #ffffff !important;
+    border-radius: 2px;
+    cursor: grab;
+    font-weight: 500;
+    font-size: 13px;
+    user-select: none;
+  }
+  .bookmarklet:hover {
+    text-decoration: none;
+    opacity: 0.92;
+  }
+  .bookmarklet:active { cursor: grabbing; }
+
+  .hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1rem;
+    line-height: 1.5;
+  }
+
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    padding: 1rem;
+    font-family: 'Fira Code', ui-monospace, monospace;
+    font-size: 10.5px;
+    line-height: 1.55;
+    overflow-x: auto;
+    border-radius: 2px;
+    max-height: 220px;
+    margin: 0;
+    white-space: pre;
+  }
+
+  button.copy {
+    background: none;
+    border: 1px solid var(--border);
+    padding: 0.45rem 0.9rem;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--fg);
+    margin-top: 0.6rem;
+    border-radius: 2px;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  button.copy:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  ol { padding-left: 1.3rem; margin: 0; }
+  ol li { margin-bottom: 0.5rem; font-size: 13px; }
+
+  p { font-size: 13px; line-height: 1.55; }
+
+  code {
+    background: var(--code-bg);
+    padding: 1px 6px;
+    font-size: 0.9em;
+    border-radius: 2px;
+    font-family: inherit;
+  }
+
+  .note {
+    border-left: 2px solid var(--accent);
+    padding: 0.2rem 0 0.2rem 1rem;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+    margin: 1.2rem 0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a href="../" class="back">← toolbox/</a>
+  <h1>css inject</h1>
+  <div class="subtitle">inyecta css personalizado en cualquier página — fondo blanco, texto a la izquierda, fuente y márgenes ajustables en vivo.</div>
+</header>
+
+<section>
+  <h2>1. bookmarklet</h2>
+  <div class="drag-area">
+    <a id="bm" class="bookmarklet" href="#">css inject</a>
+    <div class="hint">arrastrá este botón a tu barra de favoritos. en la página que quieras modificar, hacé click. volver a hacer click desactiva.</div>
+  </div>
+</section>
+
+<section>
+  <h2>2. devtools console</h2>
+  <p>en una computadora sin tu barra sincronizada: abrí <code>devtools → console (F12)</code> en la página objetivo y pegá:</p>
+  <pre id="code"></pre>
+  <button class="copy" onclick="copyCode()">copiar código</button>
+</section>
+
+<section>
+  <h2>uso</h2>
+  <ol>
+    <li>activá el bookmarklet (o pegá en consola)</li>
+    <li>aparece un panel flotante abajo-derecha con sliders de tamaño de fuente y margen</li>
+    <li>los valores quedan guardados por dominio en localStorage</li>
+    <li>volver a hacer click en el bookmarklet desactiva la inyección</li>
+  </ol>
+
+  <div class="note">sitios con csp estricta (github, x.com, gmail) bloquean tanto bookmarklets como paste-en-consola. ahí solo funciona una extensión. claude.ai, medios, blogs, sustack, wikipedia, y la mayoría de cms deberían funcionar.</div>
+</section>
+
+<script>
+const code = `(function(){var s=document.getElementById('czt-inject-style'),p=document.getElementById('czt-inject-panel');if(s)s.remove();if(p){p.remove();document.documentElement.style.colorScheme='';return;}document.documentElement.style.colorScheme='light';document.documentElement.classList.remove('dark');document.documentElement.classList.add('light');var h=location.hostname,fs=localStorage.getItem('czt-inject-fs-'+h)||'17',pad=localStorage.getItem('czt-inject-pad-'+h)||'4';var st=document.createElement('style');st.id='czt-inject-style';document.head.appendChild(st);function apply(){st.textContent='html,body{background:#fff!important;color:#1a1a1a!important;}[class*="bg-"],[class*="bg_"]{background-color:transparent!important;}body,body>div,main,article,section,header,footer,aside,nav{background-color:#fff!important;}p,span,h1,h2,h3,h4,h5,h6,li,td,th,label,blockquote,figcaption,div{color:#1a1a1a!important;}p,li,span,blockquote{font-size:'+fs+'px!important;line-height:1.6!important;}a,button{color:#5a7a3a!important;}[class*="prose"],[class*="message"],[class*="content"],main>div,article{max-width:none!important;text-align:left!important;margin-left:'+pad+'rem!important;margin-right:'+pad+'rem!important;}input,textarea{background:#fff!important;color:#1a1a1a!important;border:1px solid #ddd!important;}';}apply();var pa=document.createElement('div');pa.id='czt-inject-panel';pa.innerHTML='<div style="font-weight:600;color:#5a7a3a;margin-bottom:10px;letter-spacing:0.05em;">css inject</div><label style="display:block;margin-bottom:4px;color:#1a1a1a;">tamaño <span id="czt-fs-v">'+fs+'</span>px</label><input type="range" id="czt-fs-r" min="12" max="32" value="'+fs+'" style="width:160px;display:block;margin-bottom:10px;"><label style="display:block;margin-bottom:4px;color:#1a1a1a;">margen <span id="czt-pad-v">'+pad+'</span>rem</label><input type="range" id="czt-pad-r" min="0" max="20" step="0.5" value="'+pad+'" style="width:160px;display:block;margin-bottom:10px;"><button id="czt-close" style="background:none;border:1px solid #ccc;padding:4px 10px;cursor:pointer;font-family:inherit;font-size:11px;color:#1a1a1a;">cerrar</button>';pa.style.cssText='position:fixed;bottom:20px;right:20px;z-index:2147483647;background:#fff;border:1px solid #5a7a3a;padding:14px;font-family:ui-monospace,Menlo,monospace;font-size:11px;box-shadow:0 4px 16px rgba(0,0,0,0.12);border-radius:2px;';document.body.appendChild(pa);document.getElementById('czt-fs-r').addEventListener('input',function(e){fs=e.target.value;document.getElementById('czt-fs-v').textContent=fs;localStorage.setItem('czt-inject-fs-'+h,fs);apply();});document.getElementById('czt-pad-r').addEventListener('input',function(e){pad=e.target.value;document.getElementById('czt-pad-v').textContent=pad;localStorage.setItem('czt-inject-pad-'+h,pad);apply();});document.getElementById('czt-close').addEventListener('click',function(){document.getElementById('czt-inject-style').remove();pa.remove();document.documentElement.style.colorScheme='';});})();`;
+
+document.getElementById('code').textContent = code;
+document.getElementById('bm').href = 'javascript:' + encodeURIComponent(code);
+
+function copyCode() {
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('button.copy');
+    const old = btn.textContent;
+    btn.textContent = 'copiado ✓';
+    setTimeout(() => btn.textContent = old, 1500);
+  });
+}
+</script>
+
+</body>
+</html>
