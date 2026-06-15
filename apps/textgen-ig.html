@@ -476,8 +476,75 @@
   }
   .loader.show { opacity: 1; }
 
+  /* Botón de expandir (preview a pantalla completa) */
+  .expand-btn {
+    position: absolute;
+    top: 8px; right: 8px;
+    width: 32px; height: 32px;
+    border: 1px solid var(--line);
+    background: rgba(255,255,255,0.9);
+    color: var(--ink-soft);
+    cursor: pointer;
+    display: none;            /* se muestra solo en móvil vía JS/media */
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    z-index: 10;
+    transition: all 120ms;
+  }
+  .expand-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .expand-btn svg { width: 16px; height: 16px; display: block; }
+
+  /* Overlay fullscreen */
+  .fs-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(20,20,20,0.92);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    padding: 16px;
+  }
+  .fs-overlay.show { display: flex; }
+  .fs-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fs-stage .canvas-wrap {
+    background: white;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+  }
+  .fs-bar {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    align-items: center;
+    padding-top: 14px;
+  }
+  .fs-bar .btn {
+    background: var(--panel);
+  }
+  .fs-meta {
+    flex: 0 0 auto;
+    text-align: center;
+    color: rgba(255,255,255,0.6);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    padding-bottom: 8px;
+  }
+
   /* Hidden */
   .hidden { display: none !important; }
+
+  /* Sección archivo: solo existe como categoría móvil. En desktop,
+     sus acciones viven en el header, así que se oculta allí. */
+  @media (min-width: 901px) and (pointer: fine) {
+    #sectionArchivo { display: none; }
+  }
 
   /* Scrollbar */
   aside::-webkit-scrollbar, main::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -490,11 +557,12 @@
     background: var(--ink-soft);
   }
 
-  /* Responsive: móvil */
+  /* ============================================================
+     MÓVIL: canvas a pantalla completa + nav inferior + bottom sheet
+     ============================================================ */
   @media (max-width: 900px), (pointer: coarse) {
     body {
-      display: flex;
-      flex-direction: column;
+      display: block;
       height: 100vh;
       height: 100dvh;
       overflow: hidden;
@@ -504,132 +572,179 @@
       grid-template-areas: none;
     }
 
+    /* Header flotante mínimo (solo logo) */
     header {
-      flex: 0 0 auto;
-      padding: 0 12px;
-      height: 48px;
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 44px;
+      padding: 0 14px;
+      background: rgba(255,255,255,0.82);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--line-soft);
+      z-index: 30;
     }
     header h1 { font-size: 13px; }
     header h1 .meta { display: none; }
-    header .actions { gap: 6px; }
+    header .actions { display: none; }   /* save/load/reset → categoría "archivo" */
 
+    /* Canvas: ocupa toda la pantalla, detrás del header y la nav */
     main {
-      flex: 0 0 auto;
-      padding: 12px;
-      max-height: 38vh;
-      min-height: 200px;
+      position: fixed;
+      inset: 0;
+      padding: 56px 16px 76px;   /* deja aire para header (top) y nav (bottom) */
+      max-height: none;
+      min-height: 0;
+      background:
+        radial-gradient(circle at 1px 1px, #d8d8d8 1px, transparent 0) 0 0/16px 16px,
+        var(--bg);
+      z-index: 1;
     }
     .stage { padding: 0; }
     .canvas-wrap { max-height: 100%; }
     .stage-meta {
-      margin-top: 6px;
+      position: fixed;
+      bottom: 64px; left: 0; right: 0;
+      text-align: center;
+      margin: 0;
       font-size: 9.5px;
+      color: var(--ink-soft);
+      pointer-events: none;
+      z-index: 5;
     }
-    .export-bar {
-      margin-top: 8px;
-      gap: 6px;
-    }
+    .export-bar { display: none; }   /* exportar vive en su categoría */
+    .expand-btn { display: none; }   /* el canvas ya es full-screen */
 
-    aside {
-      flex: 1 1 auto;
-      min-height: 0;
-      border-right: none;
+    /* Barra de navegación inferior fija */
+    .mobile-nav {
+      display: flex;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 60px;
+      padding-bottom: env(safe-area-inset-bottom, 0);
+      background: var(--panel);
       border-top: 1px solid var(--line);
-      overflow-y: auto;
+      z-index: 47;
+      overflow-x: auto;
+      overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
     }
-
-    /* Acordeón */
-    .section-title {
+    .mobile-nav::-webkit-scrollbar { display: none; }
+    .nav-btn {
+      flex: 1 0 auto;
+      min-width: 64px;
+      border: none;
+      background: none;
+      color: var(--ink-soft);
+      font-family: var(--mono);
+      font-size: 10.5px;
+      text-transform: lowercase;
+      letter-spacing: 0.04em;
       cursor: pointer;
-      padding: 14px 16px;
-      font-size: 11px;
-      user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .section-title > span:first-child {
       display: flex;
       align-items: center;
-      gap: 10px;
+      justify-content: center;
+      padding: 0 8px;
+      border-top: 2px solid transparent;
+      -webkit-tap-highlight-color: transparent;
+      transition: color 120ms, border-color 120ms;
     }
-    .section-title > span:first-child::before {
-      content: '−';
-      display: inline-block;
-      width: 14px;
-      text-align: center;
-      font-weight: 600;
+    .nav-btn.active {
       color: var(--accent);
-      font-size: 13px;
+      border-top-color: var(--accent);
     }
-    .section.collapsed .section-title > span:first-child::before {
-      content: '+';
+
+    /* Backdrop del sheet */
+    .sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(20,20,20,0.35);
+      z-index: 45;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms;
     }
-    .section.collapsed .section-body { display: none; }
-    .section-body { padding: 4px 16px 18px; }
+    .sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+
+    /* En móvil el ASIDE se convierte en el cuerpo del bottom sheet.
+       No se mueven nodos: el sheet contiene las secciones siempre y
+       el JS solo cambia cuál sección está visible. Sin races. */
+    aside {
+      position: fixed;
+      left: 0; right: 0;
+      bottom: 60px;            /* descansa sobre la nav */
+      top: auto;
+      width: auto;
+      background: var(--panel);
+      border-right: none;
+      border-top: 1px solid var(--line);
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.12);
+      z-index: 46;
+      transform: translateY(120%);
+      transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+      max-height: 60vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      display: block;
+    }
+    aside.sheet-open { transform: translateY(0); }
+
+    /* Solo la sección de la categoría activa se ve dentro del sheet */
+    .section { border-bottom: none; display: none; }
+    .section.sheet-active { display: block; }
+    /* El título de sección hace de cabecera del sheet (con su reset) */
+    .section-title {
+      position: sticky;
+      top: 0;
+      background: var(--panel);
+      padding: 14px 16px 10px;
+      font-size: 11px;
+      border-bottom: 1px solid var(--line-soft);
+      z-index: 2;
+    }
+    .section-body {
+      padding: 12px 16px calc(18px + env(safe-area-inset-bottom, 0));
+    }
 
     /* Tap targets ≥44px */
-    .seg-btn {
-      padding: 12px 6px;
-      font-size: 12px;
-      min-height: 44px;
-    }
-    .preset-chip {
-      padding: 12px 6px;
-      font-size: 11px;
-      min-height: 40px;
-    }
-    .format-btn {
-      padding: 12px 4px;
-      min-height: 80px;
-    }
+    .seg-btn { padding: 12px 6px; font-size: 12px; min-height: 44px; }
+    .preset-chip { padding: 12px 6px; font-size: 11px; min-height: 40px; }
+    .format-btn { padding: 12px 4px; min-height: 80px; }
     .format-label { font-size: 10.5px; }
     input[type="text"],
     input[type="number"],
-    select {
-      padding: 10px 10px;
-      font-size: 14px;
-      min-height: 44px;
-    }
-    textarea {
-      padding: 10px 10px;
-      font-size: 14px;
-      min-height: 100px;
-    }
+    select { padding: 10px 10px; font-size: 14px; min-height: 44px; }
+    textarea { padding: 10px 10px; font-size: 14px; min-height: 100px; }
     input[type="range"] { height: 4px; }
-    input[type="range"]::-webkit-slider-thumb {
-      width: 24px; height: 24px;
-    }
-    input[type="range"]::-moz-range-thumb {
-      width: 24px; height: 24px;
-    }
+    input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+    input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; }
     input[type="color"] { height: 44px; }
-    .btn {
-      padding: 12px 16px;
-      font-size: 12px;
-      min-height: 44px;
-    }
-    .toggle-inline {
-      font-size: 12px;
-      padding: 6px 0;
-      min-height: 36px;
-    }
+    .btn { padding: 12px 16px; font-size: 12px; min-height: 44px; }
+    .toggle-inline { font-size: 12px; padding: 6px 0; min-height: 36px; }
     .toggle-inline input { width: 18px; height: 18px; }
     .pad-link { padding: 8px 0; min-height: 32px; }
     .pad-link input { width: 18px; height: 18px; }
-    .section-reset {
-      padding: 8px 6px;
-      font-size: 10px;
-      min-height: 36px;
-    }
-    .field {
-      grid-template-columns: 100px 1fr;
-      margin-bottom: 10px;
-    }
+    .field { grid-template-columns: 100px 1fr; margin-bottom: 10px; }
     .field-stack { margin-bottom: 12px; }
     .field label, .field-stack label, .color-cell label, .padding-cell label {
       font-size: 11.5px;
     }
     .range-val { font-size: 11.5px; }
+
+    /* Categoría "archivo": botones de preset dentro del sheet */
+    .sheet-file-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
+
+  /* Elementos solo-móvil: ocultos en desktop por defecto */
+  .mobile-nav, .sheet-backdrop { display: none; }
+  @media (max-width: 900px), (pointer: coarse) {
+    .mobile-nav { display: flex; }
+    .sheet-backdrop { display: block; }
   }
 </style>
 </head>
@@ -645,10 +760,10 @@
   </div>
 </header>
 
-<aside>
+<aside id="aside">
 
   <!-- Formato -->
-  <div class="section">
+  <div class="section" data-section-id="formato">
     <div class="section-title">formato</div>
     <div class="section-body">
       <div class="format-grid" id="formatGrid">
@@ -658,7 +773,7 @@
   </div>
 
   <!-- Contenido -->
-  <div class="section">
+  <div class="section" data-section-id="texto">
     <div class="section-title">texto</div>
     <div class="section-body">
       <textarea id="text" placeholder="escribe aquí…">El presente no termina nunca de pasar.</textarea>
@@ -666,7 +781,7 @@
   </div>
 
   <!-- Color -->
-  <div class="section">
+  <div class="section" data-section-id="color">
     <div class="section-title">
       <span>color</span>
       <button class="section-reset" data-section="color">reset</button>
@@ -692,7 +807,7 @@
   </div>
 
   <!-- Tipografía -->
-  <div class="section">
+  <div class="section" data-section-id="tipografia">
     <div class="section-title">
       <span>tipografía</span>
       <button class="section-reset" data-section="typography">reset</button>
@@ -769,7 +884,7 @@
   </div>
 
   <!-- Layout -->
-  <div class="section">
+  <div class="section" data-section-id="layout">
     <div class="section-title">
       <span>layout</span>
       <button class="section-reset" data-section="layout">reset</button>
@@ -793,6 +908,21 @@
           <button class="seg-btn active" data-v="middle">centro</button>
           <button class="seg-btn" data-v="bottom">abajo</button>
         </div>
+      </div>
+
+      <div class="field-stack">
+        <label>composición de líneas</label>
+        <div class="segmented" id="wrapMode">
+          <button class="seg-btn active" data-v="greedy">normal</button>
+          <button class="seg-btn" data-v="balance">balanceado</button>
+        </div>
+      </div>
+
+      <div class="field-stack">
+        <label class="toggle-inline">
+          <input type="checkbox" id="avoidWidows" checked>
+          evitar líneas huérfanas (una sola palabra)
+        </label>
       </div>
 
       <div class="field">
@@ -840,50 +970,26 @@
     </div>
   </div>
 
-  <!-- Dithering -->
-  <div class="section">
-    <div class="section-title">
-      <span>dithering</span>
-      <button class="section-reset" data-section="dithering">reset</button>
-    </div>
+  <!-- Categoría "archivo" (acciones de preset + export), dentro del aside -->
+  <div class="section" data-section-id="archivo" id="sectionArchivo">
+    <div class="section-title"><span>archivo</span></div>
     <div class="section-body">
-
-      <div class="field-stack">
-        <label>algoritmo</label>
-        <select id="ditherAlgo">
-          <option value="none" selected>off</option>
-          <option value="floyd">floyd-steinberg</option>
-          <option value="atkinson">atkinson</option>
-          <option value="bayer4">bayer 4×4</option>
-          <option value="bayer8">bayer 8×8</option>
-          <option value="noise">ruido aleatorio</option>
-        </select>
-      </div>
-
-      <div class="field">
-        <label>umbral</label>
-        <div class="range-row">
-          <input type="range" id="ditherThreshold" min="0" max="100" value="50" step="1">
-          <span class="range-val" id="ditherThresholdVal">50</span>
+      <div class="sheet-file-actions">
+        <button class="btn" id="mPresetSave">guardar preset (json)</button>
+        <button class="btn" id="mPresetLoad">cargar preset (json)</button>
+        <button class="btn primary" id="mExportPng">descargar png</button>
+        <button class="btn primary" id="mExportJpg">descargar jpg</button>
+        <div class="field">
+          <label>calidad jpg</label>
+          <select id="mJpgQuality">
+            <option value="0.7">jpg 70</option>
+            <option value="0.85">jpg 85</option>
+            <option value="0.92" selected>jpg 92</option>
+            <option value="0.98">jpg 98</option>
+          </select>
         </div>
+        <button class="btn" id="mPresetReset">restablecer todo</button>
       </div>
-
-      <div class="field">
-        <label>spread</label>
-        <div class="range-row">
-          <input type="range" id="ditherSpread" min="0" max="20" value="0" step="0.5">
-          <span class="range-val" id="ditherSpreadVal">0</span>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>escala</label>
-        <div class="range-row">
-          <input type="range" id="ditherScale" min="1" max="8" value="1" step="1">
-          <span class="range-val" id="ditherScaleVal">1</span>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -910,6 +1016,19 @@
   </div>
 </main>
 
+<!-- Barra de navegación inferior (móvil) -->
+<nav class="mobile-nav" id="mobileNav">
+  <button class="nav-btn" data-cat="formato">formato</button>
+  <button class="nav-btn" data-cat="texto">texto</button>
+  <button class="nav-btn" data-cat="color">color</button>
+  <button class="nav-btn" data-cat="tipografia">tipo</button>
+  <button class="nav-btn" data-cat="layout">layout</button>
+  <button class="nav-btn" data-cat="archivo">archivo</button>
+</nav>
+
+<!-- Backdrop del sheet (el aside es el panel) -->
+<div class="sheet-backdrop" id="sheetBackdrop"></div>
+
 <div class="loader" id="loader">cargando…</div>
 
 <script>
@@ -924,12 +1043,13 @@ let isMobile = mobileMQ.matches;
 function applyMobileMode() {
   isMobile = mobileMQ.matches;
   document.body.classList.toggle('is-mobile', isMobile);
-  setupAccordion();
+  // Al pasar a desktop, cerrar el sheet (las clases solo-móvil son inertes
+  // en desktop, pero cerramos para dejar el estado limpio)
+  if (!isMobile) closeSheet();
 }
 
 mobileMQ.addEventListener('change', () => {
   applyMobileMode();
-  // re-fit al cambiar layout
   const fmt = FORMATS[state.format];
   if (fmt) fitCanvasToStage(fmt);
   scheduleRender();
@@ -962,7 +1082,6 @@ const FORMATS = {
 // FUENTES (curadas, editoriales)
 // ============================================================
 const FONTS = [
-  // Serif
   { name: 'Playfair Display',    cat: 'serif' },
   { name: 'Cormorant Garamond',  cat: 'serif' },
   { name: 'EB Garamond',         cat: 'serif' },
@@ -977,8 +1096,6 @@ const FONTS = [
   { name: 'Italiana',            cat: 'serif' },
   { name: 'Cinzel',              cat: 'serif' },
   { name: 'Yeseva One',          cat: 'serif' },
-
-  // Sans
   { name: 'Work Sans',           cat: 'sans' },
   { name: 'Manrope',             cat: 'sans' },
   { name: 'DM Sans',             cat: 'sans' },
@@ -992,23 +1109,17 @@ const FONTS = [
   { name: 'Instrument Sans',     cat: 'sans' },
   { name: 'Sora',                cat: 'sans' },
   { name: 'Public Sans',         cat: 'sans' },
-
-  // Display
   { name: 'Abril Fatface',       cat: 'display' },
   { name: 'Anton',               cat: 'display' },
   { name: 'Big Shoulders Display', cat: 'display' },
   { name: 'Unbounded',           cat: 'display' },
   { name: 'Major Mono Display',  cat: 'display' },
   { name: 'Bungee',              cat: 'display' },
-
-  // Mono
   { name: 'JetBrains Mono',      cat: 'mono' },
   { name: 'IBM Plex Mono',       cat: 'mono' },
   { name: 'Space Mono',          cat: 'mono' },
   { name: 'Fira Code',           cat: 'mono' },
   { name: 'DM Mono',             cat: 'mono' },
-
-  // Slab
   { name: 'Roboto Slab',         cat: 'slab' },
   { name: 'Zilla Slab',          cat: 'slab' },
   { name: 'Bitter',              cat: 'slab' }
@@ -1032,6 +1143,8 @@ const DEFAULTS = {
   textTransform: 'none',
   alignH: 'center',
   alignV: 'middle',
+  wrapMode: 'greedy',     // greedy | balance
+  avoidWidows: true,
   offsetY: 0,
   maxWidthPct: 80,
   padTop: 80,
@@ -1039,21 +1152,18 @@ const DEFAULTS = {
   padBottom: 80,
   padLeft: 80,
   padLink: true,
-  ditherAlgo: 'none',
-  ditherThreshold: 50,
-  ditherSpread: 0,
-  ditherScale: 1,
   jpgQuality: 0.92
 };
 
 let state = { ...DEFAULTS };
 
-// Claves del state agrupadas por sección (para reset granular)
+// fontSize calculado por auto-fit (NO contamina state.fontSize manual)
+let computedFontSize = null;
+
 const SECTION_KEYS = {
   color: ['bgColor', 'textColor'],
   typography: ['fontFamily', 'fontWeight', 'fontStyle', 'fontSize', 'autoFit', 'lineHeight', 'letterSpacing', 'textTransform'],
-  layout: ['alignH', 'alignV', 'offsetY', 'maxWidthPct', 'padTop', 'padRight', 'padBottom', 'padLeft', 'padLink'],
-  dithering: ['ditherAlgo', 'ditherThreshold', 'ditherSpread', 'ditherScale']
+  layout: ['alignH', 'alignV', 'wrapMode', 'avoidWidows', 'offsetY', 'maxWidthPct', 'padTop', 'padRight', 'padBottom', 'padLeft', 'padLink']
 };
 
 function resetSection(section) {
@@ -1123,7 +1233,6 @@ async function loadFont(family, weight, style) {
 
   const ital = style === 'italic' ? '1' : '0';
   const familyParam = family.replace(/ /g, '+');
-  // Pedimos rango completo para que browser haga fallback si es necesario
   const url = `https://fonts.googleapis.com/css2?family=${familyParam}:ital,wght@${ital},${weight}&display=swap`;
 
   return new Promise((resolve) => {
@@ -1159,7 +1268,7 @@ function hideLoader() {
 }
 
 // ============================================================
-// TEXT WRAPPING & MEDICIÓN
+// TEXTO: transform y medición
 // ============================================================
 function transformText(s, t) {
   if (t === 'uppercase') return s.toUpperCase();
@@ -1167,16 +1276,19 @@ function transformText(s, t) {
   return s;
 }
 
-// Mide el ancho de una palabra usando el contexto
+// Ancho de un string con tracking entre caracteres
 function measureRun(ctx, str, letterSpacing) {
-  // letterSpacing en px aplicado entre cada char
   const m = ctx.measureText(str);
   const tracking = letterSpacing * Math.max(0, str.length - 1);
   return m.width + tracking;
 }
 
-// Wrap por palabras respetando saltos manuales (\n)
-function wrapText(ctx, text, maxWidth, letterSpacing) {
+// ------------------------------------------------------------
+// WRAP GREEDY: rellena cada línea hasta el ancho máximo.
+// Respeta saltos manuales (\n) como límites de párrafo.
+// Devuelve [{ words:[], hard:bool }]  (hard = última línea de su párrafo)
+// ------------------------------------------------------------
+function wrapGreedy(ctx, text, maxWidth, letterSpacing) {
   const paragraphs = text.split('\n');
   const lines = [];
   paragraphs.forEach((p, pi) => {
@@ -1202,13 +1314,117 @@ function wrapText(ctx, text, maxWidth, letterSpacing) {
       }
     });
     if (current.length > 0) {
-      lines.push({ words: current, hard: pi < paragraphs.length - 1 });
+      lines.push({ words: current, hard: true });
     }
   });
   return lines;
 }
 
-// Dibuja una línea con tracking manual (carácter por carácter)
+// Nº de líneas que produce un ancho dado (solo para balanceo, por párrafo)
+function countLinesForWidth(ctx, words, maxWidth, letterSpacing) {
+  let count = 1;
+  let currentWidth = 0;
+  const spaceW = ctx.measureText(' ').width + letterSpacing;
+  for (const word of words) {
+    const wWidth = measureRun(ctx, word, letterSpacing);
+    const tentative = currentWidth === 0 ? wWidth : currentWidth + spaceW + wWidth;
+    if (tentative > maxWidth && currentWidth > 0) {
+      count++;
+      currentWidth = wWidth;
+    } else {
+      currentWidth = tentative;
+    }
+  }
+  return count;
+}
+
+// ------------------------------------------------------------
+// WRAP BALANCEADO: por cada párrafo, busca el ancho efectivo
+// más angosto que mantenga el MISMO número de líneas que el
+// greedy. Eso reparte las palabras de forma pareja (igual que
+// CSS text-wrap: balance, hecho a mano sobre canvas).
+// No cambia el número de líneas → compatible con auto-fit.
+// ------------------------------------------------------------
+function wrapBalanced(ctx, text, maxWidth, letterSpacing) {
+  const paragraphs = text.split('\n');
+  const out = [];
+  paragraphs.forEach((p) => {
+    if (p.trim() === '') {
+      out.push({ words: [], hard: true });
+      return;
+    }
+    const words = p.split(/\s+/).filter(w => w.length > 0);
+    const targetLines = countLinesForWidth(ctx, words, maxWidth, letterSpacing);
+
+    if (targetLines <= 1) {
+      out.push({ words, hard: true });
+      return;
+    }
+
+    // Búsqueda binaria del ancho mínimo que aún da targetLines
+    let lo = 1, hi = maxWidth, best = maxWidth;
+    for (let iter = 0; iter < 24; iter++) {
+      const mid = (lo + hi) / 2;
+      if (countLinesForWidth(ctx, words, mid, letterSpacing) <= targetLines) {
+        best = mid; hi = mid;
+      } else {
+        lo = mid;
+      }
+      if (hi - lo < 0.5) break;
+    }
+    // Reconstruir líneas con el ancho balanceado
+    const lines = wrapGreedy(ctx, p, best, letterSpacing);
+    lines.forEach(l => out.push(l));
+  });
+  return out;
+}
+
+// ------------------------------------------------------------
+// EVITAR HUÉRFANAS: si la última línea de un párrafo es una sola
+// palabra y la anterior tiene ≥2, baja una palabra para que la
+// última quede con dos. Trabaja sobre el array ya partido.
+// Reagrupa por párrafo usando el flag `hard`.
+// ------------------------------------------------------------
+function fixWidows(lines) {
+  // Agrupar líneas en párrafos
+  const paragraphs = [];
+  let cur = [];
+  lines.forEach(l => {
+    cur.push(l);
+    if (l.hard) { paragraphs.push(cur); cur = []; }
+  });
+  if (cur.length) paragraphs.push(cur);
+
+  const result = [];
+  paragraphs.forEach(par => {
+    if (par.length >= 2) {
+      const last = par[par.length - 1];
+      const prev = par[par.length - 2];
+      if (last.words.length === 1 && prev.words.length >= 2) {
+        // mover la última palabra de prev al inicio de last
+        const moved = prev.words.pop();
+        last.words.unshift(moved);
+      }
+    }
+    par.forEach(l => result.push(l));
+  });
+  return result;
+}
+
+// Punto de entrada del layout de líneas
+function layoutLines(ctx, text, maxWidth, letterSpacing) {
+  let lines = state.wrapMode === 'balance'
+    ? wrapBalanced(ctx, text, maxWidth, letterSpacing)
+    : wrapGreedy(ctx, text, maxWidth, letterSpacing);
+  if (state.avoidWidows && state.alignH !== 'justify') {
+    lines = fixWidows(lines);
+  }
+  return lines;
+}
+
+// ============================================================
+// DIBUJO de líneas
+// ============================================================
 function drawLineTracked(ctx, str, x, y, letterSpacing) {
   if (letterSpacing === 0) {
     ctx.fillText(str, x, y);
@@ -1222,172 +1438,55 @@ function drawLineTracked(ctx, str, x, y, letterSpacing) {
   }
 }
 
-// Justificación: dibuja una línea distribuyendo el espacio extra
 function drawJustifiedLine(ctx, words, x, y, maxWidth, letterSpacing) {
   if (words.length === 0) return;
   if (words.length === 1) {
     drawLineTracked(ctx, words[0], x, y, letterSpacing);
     return;
   }
-  // Calcular ancho total de palabras (con tracking interno)
   let totalWordsWidth = 0;
   words.forEach(w => { totalWordsWidth += measureRun(ctx, w, letterSpacing); });
   const totalSpace = maxWidth - totalWordsWidth;
   const gap = totalSpace / (words.length - 1);
 
   let cx = x;
-  words.forEach((w, i) => {
+  words.forEach((w) => {
     drawLineTracked(ctx, w, cx, y, letterSpacing);
     cx += measureRun(ctx, w, letterSpacing) + gap;
   });
 }
 
 // ============================================================
-// DITHERING
+// MÉTRICAS VERTICALES REALES
+// Calcula ascent de la 1ª línea y descent de la última usando
+// actualBoundingBox*, con fallback a aproximación si el navegador
+// no los reporta. Devuelve { firstAscent, lastDescent }.
 // ============================================================
-const BAYER4 = [
-  [ 0,  8,  2, 10],
-  [12,  4, 14,  6],
-  [ 3, 11,  1,  9],
-  [15,  7, 13,  5]
-].map(r => r.map(v => v / 16));
+function blockVerticalMetrics(ctx, lines, fontSize) {
+  const fallbackAscent = fontSize * 0.82;
+  const fallbackDescent = fontSize * 0.20;
 
-const BAYER8 = [
-  [ 0, 32,  8, 40,  2, 34, 10, 42],
-  [48, 16, 56, 24, 50, 18, 58, 26],
-  [12, 44,  4, 36, 14, 46,  6, 38],
-  [60, 28, 52, 20, 62, 30, 54, 22],
-  [ 3, 35, 11, 43,  1, 33,  9, 41],
-  [51, 19, 59, 27, 49, 17, 57, 25],
-  [15, 47,  7, 39, 13, 45,  5, 37],
-  [63, 31, 55, 23, 61, 29, 53, 21]
-].map(r => r.map(v => v / 64));
+  function lineStr(l) { return l.words.join(' '); }
 
-function hexToRgb(hex) {
-  const m = hex.replace('#', '');
-  return {
-    r: parseInt(m.substring(0, 2), 16),
-    g: parseInt(m.substring(2, 4), 16),
-    b: parseInt(m.substring(4, 6), 16)
-  };
-}
+  let firstAscent = fallbackAscent;
+  let lastDescent = fallbackDescent;
 
-// Luminancia perceptual [0..1]
-function lumaRgb(r, g, b) {
-  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
-}
+  const firstNonEmpty = lines.find(l => l.words.length > 0);
+  const lastNonEmpty = [...lines].reverse().find(l => l.words.length > 0);
 
-/**
- * Aplica dither cuantizando la imagen a una paleta binaria { bgColor, textColor }
- * Trabaja sobre la luminancia y mapea a los dos colores.
- */
-function applyDither(imageData, algo, threshold, bgRgb, fgRgb, scale = 1) {
-  const w = imageData.width;
-  const h = imageData.height;
-  const data = imageData.data;
-  const bgL = lumaRgb(bgRgb.r, bgRgb.g, bgRgb.b);
-  const fgL = lumaRgb(fgRgb.r, fgRgb.g, fgRgb.b);
-
-  // Determinar polaridad: si fg es más oscuro que bg, "0" => fg, "1" => bg.
-  // Trabajamos con luma normalizada y un threshold ajustable.
-  // Normalizamos cada píxel al rango definido por [min(bgL,fgL), max(bgL,fgL)]
-  // para que el dither opere sobre el rango efectivo.
-  const lo = Math.min(bgL, fgL);
-  const hi = Math.max(bgL, fgL);
-  const range = Math.max(hi - lo, 1e-6);
-  const fgIsDark = fgL <= bgL;
-
-  // Pre-compute luma buffer (float)
-  const N = w * h;
-  const buf = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    const k = i * 4;
-    let l = lumaRgb(data[k], data[k+1], data[k+2]);
-    // Normalizar al rango [0..1] dentro de [lo..hi]
-    l = (l - lo) / range;
-    if (l < 0) l = 0;
-    else if (l > 1) l = 1;
-    buf[i] = l;
-  }
-
-  const thr = threshold; // [0..1]
-
-  function setPixel(idx, isLight) {
-    const k = idx * 4;
-    // isLight = true => color "claro" (mayor luma); false => oscuro
-    let r, g, b;
-    if (fgIsDark) {
-      // dark = fg
-      if (isLight) { r = bgRgb.r; g = bgRgb.g; b = bgRgb.b; }
-      else         { r = fgRgb.r; g = fgRgb.g; b = fgRgb.b; }
-    } else {
-      // dark = bg
-      if (isLight) { r = fgRgb.r; g = fgRgb.g; b = fgRgb.b; }
-      else         { r = bgRgb.r; g = bgRgb.g; b = bgRgb.b; }
-    }
-    data[k] = r;
-    data[k+1] = g;
-    data[k+2] = b;
-    data[k+3] = 255;
-  }
-
-  if (algo === 'floyd') {
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        const old = buf[i];
-        const isLight = old >= thr;
-        const newVal = isLight ? 1 : 0;
-        const err = old - newVal;
-        setPixel(i, isLight);
-        if (x + 1 < w)               buf[i + 1]      += err * 7/16;
-        if (y + 1 < h && x > 0)      buf[i + w - 1]  += err * 3/16;
-        if (y + 1 < h)               buf[i + w]      += err * 5/16;
-        if (y + 1 < h && x + 1 < w)  buf[i + w + 1]  += err * 1/16;
-      }
-    }
-  } else if (algo === 'atkinson') {
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        const old = buf[i];
-        const isLight = old >= thr;
-        const newVal = isLight ? 1 : 0;
-        const err = (old - newVal) / 8;
-        setPixel(i, isLight);
-        if (x + 1 < w)               buf[i + 1]      += err;
-        if (x + 2 < w)               buf[i + 2]      += err;
-        if (y + 1 < h && x > 0)      buf[i + w - 1]  += err;
-        if (y + 1 < h)               buf[i + w]      += err;
-        if (y + 1 < h && x + 1 < w)  buf[i + w + 1]  += err;
-        if (y + 2 < h)               buf[i + 2 * w]  += err;
-      }
-    }
-  } else if (algo === 'bayer4' || algo === 'bayer8') {
-    const M = algo === 'bayer4' ? BAYER4 : BAYER8;
-    const ms = M.length;
-    const s = Math.max(1, Math.round(scale));
-    for (let y = 0; y < h; y++) {
-      for (let x = 0; x < w; x++) {
-        const i = y * w + x;
-        const mx = Math.floor(x / s) % ms;
-        const my = Math.floor(y / s) % ms;
-        const t = M[my][mx]; // [0..1)
-        // mezclar con threshold global
-        const eff = thr - 0.5 + t;
-        const isLight = buf[i] >= eff;
-        setPixel(i, isLight);
-      }
-    }
-  } else if (algo === 'noise') {
-    for (let i = 0; i < N; i++) {
-      const t = thr - 0.5 + Math.random();
-      const isLight = buf[i] >= t;
-      setPixel(i, isLight);
+  if (firstNonEmpty) {
+    const m = ctx.measureText(lineStr(firstNonEmpty));
+    if (typeof m.actualBoundingBoxAscent === 'number' && m.actualBoundingBoxAscent > 0) {
+      firstAscent = m.actualBoundingBoxAscent;
     }
   }
-
-  return imageData;
+  if (lastNonEmpty) {
+    const m = ctx.measureText(lineStr(lastNonEmpty));
+    if (typeof m.actualBoundingBoxDescent === 'number' && m.actualBoundingBoxDescent >= 0) {
+      lastDescent = m.actualBoundingBoxDescent;
+    }
+  }
+  return { firstAscent, lastDescent, fallbackAscent };
 }
 
 // ============================================================
@@ -1402,28 +1501,30 @@ function calculateAutoFitSize(measureCtx) {
 
   if (!txt.trim() || contentW <= 0 || contentH <= 0) return 12;
 
-  // Pre-extraer palabras (incluyendo saltos como separadores) para test de overflow
   const allWords = txt.split(/\s+/).filter(w => w.length > 0);
 
   function fits(size) {
     measureCtx.font = `${state.fontStyle} ${state.fontWeight} ${size}px "${state.fontFamily}", serif`;
-    // Ninguna palabra individual puede exceder colW
     for (const w of allWords) {
       if (measureRun(measureCtx, w, state.letterSpacing) > colW) return false;
     }
-    const lines = wrapText(measureCtx, txt, colW, state.letterSpacing);
+    // auto-fit mide con greedy (cota superior de nº de líneas);
+    // balanceo y huérfanas no aumentan el nº de líneas, salvo el caso
+    // raro de huérfana que crea línea nueva, cubierto por el margen.
+    const lines = wrapGreedy(measureCtx, txt, colW, state.letterSpacing);
     if (lines.length === 0) return true;
-    const totalH = lines.length * size * state.lineHeight;
+    const lineHeightPx = size * state.lineHeight;
+    const { firstAscent, lastDescent } = blockVerticalMetrics(measureCtx, lines, size);
+    // alto óptico = ascent 1ª + interlineados intermedios + descent última
+    const totalH = firstAscent + (lines.length - 1) * lineHeightPx + lastDescent;
     return totalH <= contentH;
   }
 
   let lo = 6;
   let hi = 600;
-  // Verificar bounds
-  if (!fits(lo)) return lo; // ni el mínimo cabe
-  if (fits(hi)) return hi;  // raro, pero por las dudas
+  if (!fits(lo)) return lo;
+  if (fits(hi)) return hi;
 
-  // Búsqueda binaria con precisión < 0.5 px
   for (let iter = 0; iter < 22; iter++) {
     const mid = (lo + hi) / 2;
     if (fits(mid)) lo = mid;
@@ -1439,116 +1540,88 @@ function calculateAutoFitSize(measureCtx) {
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-// Off-screen para dither (donde aplicamos blur previo)
-const offCanvas = document.createElement('canvas');
-const offCtx = offCanvas.getContext('2d');
-
 let renderToken = 0;
 
 async function render() {
   const myToken = ++renderToken;
   const fmt = FORMATS[state.format];
 
-  // Cargar fuente
   showLoader('cargando fuente…');
   await loadFont(state.fontFamily, state.fontWeight, state.fontStyle);
   hideLoader();
 
-  if (myToken !== renderToken) return; // request más reciente
+  if (myToken !== renderToken) return;
 
-  // Setup canvas dimensiones
   canvas.width = fmt.w;
   canvas.height = fmt.h;
   document.getElementById('canvasWrap').style.aspectRatio = `${fmt.w} / ${fmt.h}`;
   document.getElementById('stageMeta').textContent = `${fmt.w} × ${fmt.h} px  ·  ${fmt.ratio}`;
   fitCanvasToStage(fmt);
 
-  const ditherOn = state.ditherAlgo !== 'none';
-  const useOff = ditherOn;
-  const target = useOff ? offCtx : ctx;
-  if (useOff) {
-    offCanvas.width = fmt.w;
-    offCanvas.height = fmt.h;
-  }
-
   // Fondo
-  target.fillStyle = state.bgColor;
-  target.fillRect(0, 0, fmt.w, fmt.h);
+  ctx.fillStyle = state.bgColor;
+  ctx.fillRect(0, 0, fmt.w, fmt.h);
 
-  // Tipografía
-  let effectiveFontSize = state.fontSize;
+  // Tamaño de fuente: auto-fit calcula en computedFontSize (no pisa el manual)
+  let fontSize;
   if (state.autoFit) {
-    effectiveFontSize = calculateAutoFitSize(target);
-    state.fontSize = effectiveFontSize; // mantener state coherente con valor visible
+    computedFontSize = calculateAutoFitSize(ctx);
+    fontSize = computedFontSize;
     const fsEl = document.getElementById('fontSize');
     const fsVal = document.getElementById('fontSizeVal');
     if (fsEl && fsVal) {
       const min = parseInt(fsEl.min);
       const max = parseInt(fsEl.max);
-      fsEl.value = Math.min(max, Math.max(min, effectiveFontSize));
-      fsVal.textContent = effectiveFontSize + ' auto';
+      fsEl.value = Math.min(max, Math.max(min, fontSize));
+      fsVal.textContent = fontSize + ' auto';
       fsVal.classList.add('computed');
     }
   } else {
+    computedFontSize = null;
+    fontSize = state.fontSize;
     document.getElementById('fontSizeVal').textContent = state.fontSize;
     document.getElementById('fontSizeVal').classList.remove('computed');
   }
 
-  const fontSize = effectiveFontSize;
   const lineHeightPx = fontSize * state.lineHeight;
   const fontStr = `${state.fontStyle} ${state.fontWeight} ${fontSize}px "${state.fontFamily}", serif`;
 
-  target.font = fontStr;
-  target.fillStyle = state.textColor;
-  target.textBaseline = 'alphabetic';
-  target.textAlign = 'left';
-  // Spread blur sobre el contexto antes de dibujar texto:
-  // Usaremos `filter` solo si hay dither activo y spread > 0
-  if (useOff && state.ditherSpread > 0) {
-    target.filter = `blur(${state.ditherSpread}px)`;
-  } else {
-    target.filter = 'none';
-  }
+  ctx.font = fontStr;
+  ctx.fillStyle = state.textColor;
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
 
-  // Caja de contenido
-  const padL = state.padLeft;
-  const padR = state.padRight;
-  const padT = state.padTop;
-  const padB = state.padBottom;
+  const padL = state.padLeft, padR = state.padRight;
+  const padT = state.padTop, padB = state.padBottom;
   const contentW = fmt.w - padL - padR;
   const contentH = fmt.h - padT - padB;
 
-  // Ancho efectivo de columna
   const colW = contentW * (state.maxWidthPct / 100);
   const colX = padL + (contentW - colW) / 2;
 
-  // Texto procesado
   const txt = transformText(state.text, state.textTransform);
+  const lines = layoutLines(ctx, txt, colW, state.letterSpacing);
 
-  // Wrap
-  const lines = wrapText(target, txt, colW, state.letterSpacing);
-  const totalH = Math.max(0, lines.length) * lineHeightPx;
+  // Alto óptico real del bloque
+  const { firstAscent, lastDescent } = blockVerticalMetrics(ctx, lines, fontSize);
+  const blockH = firstAscent + Math.max(0, lines.length - 1) * lineHeightPx + lastDescent;
 
-  // Posición Y inicial (baseline de primera línea)
-  // Aproximamos baseline = top + fontSize * 0.82 (visualmente centrado)
-  const ascentApprox = fontSize * 0.82;
-
+  // topY = posición Y de la PRIMERA baseline
   let topY;
   if (state.alignV === 'top') {
-    topY = padT;
+    topY = padT + firstAscent;
   } else if (state.alignV === 'bottom') {
-    topY = fmt.h - padB - totalH;
-  } else { // middle
-    topY = padT + (contentH - totalH) / 2;
+    topY = fmt.h - padB - blockH + firstAscent;
+  } else { // middle: centra el bloque óptico dentro del área de contenido
+    topY = padT + (contentH - blockH) / 2 + firstAscent;
   }
   topY += state.offsetY;
 
-  // Dibujar líneas
   lines.forEach((line, idx) => {
     if (line.words.length === 0) return;
     const lineStr = line.words.join(' ');
-    const baseY = topY + idx * lineHeightPx + ascentApprox;
-    const lineWidth = measureRun(target, lineStr, state.letterSpacing);
+    const baseY = topY + idx * lineHeightPx;
+    const lineWidth = measureRun(ctx, lineStr, state.letterSpacing);
 
     let lineX;
     if (state.alignH === 'left') {
@@ -1558,39 +1631,34 @@ async function render() {
     } else if (state.alignH === 'center') {
       lineX = colX + (colW - lineWidth) / 2;
     } else if (state.alignH === 'justify') {
-      // Justificar todas excepto la última de cada párrafo
       const isLastInParagraph = line.hard || idx === lines.length - 1;
       if (isLastInParagraph || line.words.length === 1) {
-        lineX = colX;
-        drawLineTracked(target, lineStr, lineX, baseY, state.letterSpacing);
+        drawLineTracked(ctx, lineStr, colX, baseY, state.letterSpacing);
         return;
       }
-      drawJustifiedLine(target, line.words, colX, baseY, colW, state.letterSpacing);
+      drawJustifiedLine(ctx, line.words, colX, baseY, colW, state.letterSpacing);
       return;
     }
-    drawLineTracked(target, lineStr, lineX, baseY, state.letterSpacing);
+    drawLineTracked(ctx, lineStr, lineX, baseY, state.letterSpacing);
   });
-
-  target.filter = 'none';
-
-  // Aplicar dithering
-  if (ditherOn) {
-    const imgData = offCtx.getImageData(0, 0, fmt.w, fmt.h);
-    const bgRgb = hexToRgb(state.bgColor);
-    const fgRgb = hexToRgb(state.textColor);
-    const thrNorm = state.ditherThreshold / 100;
-    applyDither(imgData, state.ditherAlgo, thrNorm, bgRgb, fgRgb, state.ditherScale);
-    ctx.putImageData(imgData, 0, 0);
-  }
 }
 
-// Reescala el canvas-wrap visualmente para caber en el stage
+// Reescala el canvas-wrap visualmente para caber en su contenedor actual
+// (el .stage normal, o el .fs-stage del overlay fullscreen).
+// Guarda contra dimensiones ≤0 (layout no resuelto): reintenta.
 function fitCanvasToStage(fmt) {
-  const stage = document.querySelector('.stage');
   const wrap = document.getElementById('canvasWrap');
+  const container = wrap.parentElement; // .stage o .fs-stage
+  if (!container) return;
   const padding = 24;
-  const availW = stage.clientWidth - padding * 2;
-  const availH = stage.clientHeight - padding * 2;
+  const availW = container.clientWidth - padding * 2;
+  const availH = container.clientHeight - padding * 2;
+
+  if (availW <= 0 || availH <= 0) {
+    requestAnimationFrame(() => fitCanvasToStage(fmt));
+    return;
+  }
+
   const ratio = fmt.w / fmt.h;
   let dispW, dispH;
   if (availW / ratio <= availH) {
@@ -1603,25 +1671,31 @@ function fitCanvasToStage(fmt) {
 }
 
 // ============================================================
-// EXPORT
+// EXPORT  (toBlob + objectURL: robusto en iOS Safari)
 // ============================================================
 function exportImage(format) {
-  const fmt = FORMATS[state.format];
   const filename = `txt-ig_${state.format}_${Date.now()}`;
-  let dataUrl;
-  if (format === 'jpg') {
-    // Forzar fondo (canvas siempre es opaco con fill)
-    dataUrl = canvas.toDataURL('image/jpeg', state.jpgQuality);
-    download(dataUrl, filename + '.jpg');
-  } else {
-    dataUrl = canvas.toDataURL('image/png');
-    download(dataUrl, filename + '.png');
-  }
+  const type = format === 'jpg' ? 'image/jpeg' : 'image/png';
+  const quality = format === 'jpg' ? state.jpgQuality : undefined;
+  const ext = format === 'jpg' ? '.jpg' : '.png';
+
+  canvas.toBlob((blob) => {
+    if (!blob) {
+      // Fallback a dataURL si toBlob falla
+      const dataUrl = canvas.toDataURL(type, quality);
+      downloadUrl(dataUrl, filename + ext);
+      return;
+    }
+    const url = URL.createObjectURL(blob);
+    downloadUrl(url, filename + ext);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }, type, quality);
 }
-function download(dataUrl, filename) {
+function downloadUrl(url, filename) {
   const a = document.createElement('a');
-  a.href = dataUrl;
+  a.href = url;
   a.download = filename;
+  a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1634,19 +1708,18 @@ function savePreset() {
   const json = JSON.stringify(state, null, 2);
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `txt-ig_preset_${Date.now()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadUrl(url, `txt-ig_preset_${Date.now()}.json`);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function loadPreset() {
   document.getElementById('presetFile').click();
 }
 function applyPreset(obj) {
   state = { ...DEFAULTS, ...obj };
+  // descartar claves obsoletas (p.ej. dithering de presets viejos)
+  Object.keys(state).forEach(k => {
+    if (!(k in DEFAULTS)) delete state[k];
+  });
   syncUIFromState();
   scheduleRender();
 }
@@ -1686,13 +1759,12 @@ function bindRange(id, key, formatter = (v) => v) {
     state[key] = v;
     if (valEl) valEl.textContent = formatter(v);
 
-    // Si el usuario mueve fontSize manualmente, desactivar auto-fit
+    // Mover fontSize manualmente desactiva auto-fit
     if (id === 'fontSize' && state.autoFit) {
       state.autoFit = false;
       document.getElementById('autoFit').checked = false;
       valEl.classList.remove('computed');
     }
-
     scheduleRender();
   };
   el.addEventListener('input', update);
@@ -1737,49 +1809,93 @@ function bindSegmented(id, key) {
 }
 
 // ============================================================
-// ACORDEÓN MÓVIL
+// BOTTOM SHEET MÓVIL
+// La barra inferior abre un sheet con los controles de cada
+// categoría. Se reutilizan las secciones reales del aside:
+// se mueve la .section-body al sheet y se devuelve al cerrar,
+// manteniendo los bindings intactos (no se recrean controles).
 // ============================================================
-let accordionInitialized = false;
-function setupAccordion() {
-  const sections = document.querySelectorAll('.section');
-  if (isMobile) {
-    if (!accordionInitialized) {
-      sections.forEach((sec, i) => {
-        const title = sec.querySelector('.section-title');
-        if (!title) return;
-        // Por defecto: solo formato (i=0) y texto (i=1) abiertos
-        if (i > 1) sec.classList.add('collapsed');
-        title.addEventListener('click', (e) => {
-          // Ignorar clicks en el botón reset
-          if (e.target.classList.contains('section-reset')) return;
-          sec.classList.toggle('collapsed');
-        });
-      });
-      accordionInitialized = true;
-    }
-  } else {
-    // Desktop: expandir todo
-    sections.forEach(sec => sec.classList.remove('collapsed'));
-  }
+const CAT_TITLES = {
+  formato: 'formato',
+  texto: 'texto',
+  color: 'color',
+  tipografia: 'tipografía',
+  layout: 'layout',
+  archivo: 'archivo'
+};
+
+// Modelo sin movimiento de nodos: el aside ES el sheet. Cada categoría
+// corresponde a una .section[data-section-id] que ya vive en el aside con
+// sus bindings intactos. Abrir = marcar esa sección como activa (visible) y
+// subir el aside. Cerrar = bajar el aside. Sin placeholders, sin timeouts,
+// sin races.
+let activeCat = null;
+
+function showCategory(cat) {
+  const sec = document.querySelector(`.section[data-section-id="${cat}"]`);
+  if (!sec) return;
+  document.querySelectorAll('.section').forEach(s => {
+    s.classList.toggle('sheet-active', s === sec);
+  });
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.cat === cat);
+  });
+  document.getElementById('aside').scrollTop = 0;
+}
+
+function openSheet(cat) {
+  if (activeCat === cat) { closeSheet(); return; }  // re-tap cierra
+  showCategory(cat);
+  document.getElementById('aside').classList.add('sheet-open');
+  document.getElementById('sheetBackdrop').classList.add('show');
+  activeCat = cat;
+}
+
+function closeSheet() {
+  document.getElementById('aside').classList.remove('sheet-open');
+  document.getElementById('sheetBackdrop').classList.remove('show');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  activeCat = null;
+}
+
+function setupMobileSheet() {
+  document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', () => openSheet(btn.dataset.cat));
+  });
+  document.getElementById('sheetBackdrop').addEventListener('click', closeSheet);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && activeCat) closeSheet();
+  });
+
+  // Acciones de archivo (móvil) → reusan los handlers existentes
+  document.getElementById('mPresetSave').addEventListener('click', savePreset);
+  document.getElementById('mPresetLoad').addEventListener('click', loadPreset);
+  document.getElementById('mPresetReset').addEventListener('click', resetPreset);
+  document.getElementById('mExportPng').addEventListener('click', () => exportImage('png'));
+  document.getElementById('mExportJpg').addEventListener('click', () => exportImage('jpg'));
+  document.getElementById('mJpgQuality').addEventListener('change', (e) => {
+    state.jpgQuality = parseFloat(e.target.value);
+    document.getElementById('jpgQuality').value = state.jpgQuality;
+  });
+
+  // Mostrar una categoría por defecto (no abre el sheet, solo prepara cuál
+  // se verá al abrirlo la primera vez)
+  showCategory('texto');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 }
 
 function updateAutoFitUI() {
   const valEl = document.getElementById('fontSizeVal');
-  if (!state.autoFit) {
-    valEl.classList.remove('computed');
-  }
+  if (!state.autoFit) valEl.classList.remove('computed');
 }
 
 function syncUIFromState() {
   document.querySelectorAll('.format-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.format === state.format);
   });
-  // Texto
   document.getElementById('text').value = state.text;
-  // Color
   document.getElementById('bgColor').value = state.bgColor;
   document.getElementById('textColor').value = state.textColor;
-  // Tipografía
   document.getElementById('fontFamily').value = state.fontFamily;
   document.getElementById('fontWeight').value = state.fontWeight;
   document.getElementById('fontStyle').value = state.fontStyle;
@@ -1787,18 +1903,21 @@ function syncUIFromState() {
   document.getElementById('fontSize').value = state.fontSize;
   document.getElementById('fontSizeVal').textContent = state.fontSize;
   document.getElementById('lineHeight').value = state.lineHeight;
-  document.getElementById('lineHeightVal').textContent = state.lineHeight.toFixed(2);
+  document.getElementById('lineHeightVal').textContent = Number(state.lineHeight).toFixed(2);
   document.getElementById('letterSpacing').value = state.letterSpacing;
   document.getElementById('letterSpacingVal').textContent = state.letterSpacing;
   document.getElementById('textTransform').value = state.textTransform;
   updateAutoFitUI();
-  // Layout
   document.querySelectorAll('#alignH .seg-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.v === state.alignH);
   });
   document.querySelectorAll('#alignV .seg-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.v === state.alignV);
   });
+  document.querySelectorAll('#wrapMode .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.v === state.wrapMode);
+  });
+  document.getElementById('avoidWidows').checked = state.avoidWidows;
   document.getElementById('offsetY').value = state.offsetY;
   document.getElementById('offsetYVal').textContent = state.offsetY;
   document.getElementById('maxWidthPct').value = state.maxWidthPct;
@@ -1808,32 +1927,21 @@ function syncUIFromState() {
   document.getElementById('padBottom').value = state.padBottom;
   document.getElementById('padLeft').value = state.padLeft;
   document.getElementById('padLink').checked = state.padLink;
-  // Dither
-  document.getElementById('ditherAlgo').value = state.ditherAlgo;
-  document.getElementById('ditherThreshold').value = state.ditherThreshold;
-  document.getElementById('ditherThresholdVal').textContent = state.ditherThreshold;
-  document.getElementById('ditherSpread').value = state.ditherSpread;
-  document.getElementById('ditherSpreadVal').textContent = state.ditherSpread;
-  document.getElementById('ditherScale').value = state.ditherScale;
-  document.getElementById('ditherScaleVal').textContent = state.ditherScale;
-  // jpg quality
   document.getElementById('jpgQuality').value = state.jpgQuality;
 }
 
 // ============================================================
-// EVENTOS
+// INIT
 // ============================================================
 function init() {
   buildFormatSelector();
   buildFontSelector();
 
-  // Texto
   document.getElementById('text').addEventListener('input', (e) => {
     state.text = e.target.value;
     scheduleRender();
   });
 
-  // Color presets
   document.querySelectorAll('.preset-chip').forEach(chip => {
     chip.addEventListener('click', () => {
       state.bgColor = chip.dataset.bg;
@@ -1844,7 +1952,6 @@ function init() {
     });
   });
 
-  // Color pickers
   document.getElementById('bgColor').addEventListener('input', (e) => {
     state.bgColor = e.target.value; scheduleRender();
   });
@@ -1852,7 +1959,6 @@ function init() {
     state.textColor = e.target.value; scheduleRender();
   });
 
-  // Tipografía
   bindSelect('fontFamily', 'fontFamily');
   bindSelect('fontWeight', 'fontWeight');
   bindSelect('fontStyle', 'fontStyle');
@@ -1861,17 +1967,28 @@ function init() {
   bindRange('letterSpacing', 'letterSpacing', v => v);
   bindSelect('textTransform', 'textTransform');
 
-  // Auto-fit toggle
   const autoFitEl = document.getElementById('autoFit');
   autoFitEl.addEventListener('change', () => {
     state.autoFit = autoFitEl.checked;
+    // Al apagar auto-fit, fijar el slider en el último tamaño calculado
+    if (!state.autoFit && computedFontSize != null) {
+      const fsEl = document.getElementById('fontSize');
+      const min = parseInt(fsEl.min), max = parseInt(fsEl.max);
+      state.fontSize = Math.min(max, Math.max(min, computedFontSize));
+      fsEl.value = state.fontSize;
+      document.getElementById('fontSizeVal').textContent = state.fontSize;
+    }
     updateAutoFitUI();
     scheduleRender();
   });
 
-  // Layout
   bindSegmented('alignH', 'alignH');
   bindSegmented('alignV', 'alignV');
+  bindSegmented('wrapMode', 'wrapMode');
+  document.getElementById('avoidWidows').addEventListener('change', (e) => {
+    state.avoidWidows = e.target.checked;
+    scheduleRender();
+  });
   bindRange('offsetY', 'offsetY', v => Math.round(v));
   bindRange('maxWidthPct', 'maxWidthPct', v => Math.round(v));
   bindInput('padTop', 'padTop', v => parseInt(v) || 0);
@@ -1890,40 +2007,40 @@ function init() {
     }
   });
 
-  // Dither
-  bindSelect('ditherAlgo', 'ditherAlgo');
-  bindRange('ditherThreshold', 'ditherThreshold', v => Math.round(v));
-  bindRange('ditherSpread', 'ditherSpread', v => v);
-  bindRange('ditherScale', 'ditherScale', v => Math.round(v));
-
-  // Export
   document.getElementById('exportPng').addEventListener('click', () => exportImage('png'));
   document.getElementById('exportJpg').addEventListener('click', () => exportImage('jpg'));
   document.getElementById('jpgQuality').addEventListener('change', (e) => {
     state.jpgQuality = parseFloat(e.target.value);
   });
 
-  // Resize
   window.addEventListener('resize', () => {
     const fmt = FORMATS[state.format];
     fitCanvasToStage(fmt);
   });
 
-  // Section reset buttons
   document.querySelectorAll('.section-reset').forEach(btn => {
-    btn.addEventListener('click', () => {
-      resetSection(btn.dataset.section);
-    });
+    btn.addEventListener('click', () => resetSection(btn.dataset.section));
   });
+
+  // ResizeObserver: refit del canvas cuando el contenedor cambia de tamaño.
+  // Cubre el momento en que el layout resuelve el alto en móvil (causa del
+  // canvas diminuto) y los cambios de viewport (rotación, teclado virtual).
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => {
+      const fmt = FORMATS[state.format];
+      if (fmt) fitCanvasToStage(fmt);
+    });
+    ro.observe(document.querySelector('.stage'));
+  }
+
+  setupMobileSheet();
 
   applyMobileMode();
   updateAutoFitUI();
   render();
 }
 
-// Boot
 window.addEventListener('DOMContentLoaded', () => {
-  // Defer hasta que el layout esté listo
   requestAnimationFrame(() => requestAnimationFrame(init));
 });
 </script>
