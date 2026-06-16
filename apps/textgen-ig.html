@@ -110,6 +110,49 @@
     height: 100%;
   }
 
+  /* ============================================================
+     CAJA DE TEXTO — capa de interacción (DOM, no toca el canvas,
+     así la exportación sale 100% limpia sin esfuerzo).
+     El overlay cubre el wrap; sus hijos posicionan en % (0–1),
+     por lo que escalan solos con el formato y el resize.
+     ============================================================ */
+  .box-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;   /* solo el rect y las asas capturan */
+    z-index: 5;
+  }
+  .box-overlay.hidden-guides .box-rect { display: none; }
+  .box-rect {
+    position: absolute;
+    box-sizing: border-box;
+    border: 1.5px solid var(--accent);
+    background: rgba(90, 122, 58, 0.04);
+    outline: 1px solid rgba(255, 255, 255, 0.45);
+    pointer-events: auto;
+    cursor: move;
+    touch-action: none;     /* el dedo arrastra, no hace scroll/zoom */
+  }
+  .box-handle {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border: 1.5px solid #fff;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.18);
+    border-radius: 2px;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    touch-action: none;
+  }
+  .box-handle[data-h="nw"] { left: 0;    top: 0;    cursor: nwse-resize; }
+  .box-handle[data-h="n"]  { left: 50%;  top: 0;    cursor: ns-resize;   }
+  .box-handle[data-h="ne"] { left: 100%; top: 0;    cursor: nesw-resize; }
+  .box-handle[data-h="e"]  { left: 100%; top: 50%;  cursor: ew-resize;   }
+  .box-handle[data-h="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+  .box-handle[data-h="s"]  { left: 50%;  top: 100%; cursor: ns-resize;   }
+  .box-handle[data-h="sw"] { left: 0;    top: 100%; cursor: nesw-resize; }
+  .box-handle[data-h="w"]  { left: 0;    top: 50%;  cursor: ew-resize;   }
+
   .stage-meta {
     margin-top: 12px;
     font-size: 10px;
@@ -732,6 +775,14 @@
     }
     .range-val { font-size: 11.5px; }
 
+    /* Asas de la caja: área táctil ampliada (invisible) ≥44px */
+    .box-handle { width: 16px; height: 16px; }
+    .box-handle::before {
+      content: '';
+      position: absolute;
+      inset: -16px;
+    }
+
     /* Categoría "archivo": botones de preset dentro del sheet */
     .sheet-file-actions {
       display: flex;
@@ -925,46 +976,12 @@
         </label>
       </div>
 
-      <div class="field">
-        <label>offset Y</label>
-        <div class="range-row">
-          <input type="range" id="offsetY" min="-500" max="500" value="0" step="1">
-          <span class="range-val" id="offsetYVal">0</span>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>ancho col %</label>
-        <div class="range-row">
-          <input type="range" id="maxWidthPct" min="20" max="100" value="80" step="1">
-          <span class="range-val" id="maxWidthPctVal">80</span>
-        </div>
-      </div>
-
       <div class="field-stack">
-        <label>padding (px @1080)</label>
-        <div class="padding-grid">
-          <div class="padding-cell">
-            <label>↑</label>
-            <input type="number" id="padTop" value="80" min="0">
-          </div>
-          <div class="padding-cell">
-            <label>→</label>
-            <input type="number" id="padRight" value="80" min="0">
-          </div>
-          <div class="padding-cell">
-            <label>↓</label>
-            <input type="number" id="padBottom" value="80" min="0">
-          </div>
-          <div class="padding-cell">
-            <label>←</label>
-            <input type="number" id="padLeft" value="80" min="0">
-          </div>
+        <label>caja de texto</label>
+        <div style="font-size:9.5px;color:var(--ink-soft);line-height:1.5;margin-bottom:8px;">
+          arrastra la caja sobre el lienzo para moverla; tira de las asas para redimensionar. el texto se ajusta dentro.
         </div>
-        <label class="pad-link">
-          <input type="checkbox" id="padLink" checked>
-          igualar lados
-        </label>
+        <button class="btn" id="boxReset" style="width:100%;">restablecer caja</button>
       </div>
 
     </div>
@@ -999,6 +1016,18 @@
   <div class="stage">
     <div class="canvas-wrap" id="canvasWrap">
       <canvas id="canvas"></canvas>
+      <div class="box-overlay" id="boxOverlay">
+        <div class="box-rect" id="boxRect">
+          <div class="box-handle" data-h="nw"></div>
+          <div class="box-handle" data-h="n"></div>
+          <div class="box-handle" data-h="ne"></div>
+          <div class="box-handle" data-h="e"></div>
+          <div class="box-handle" data-h="se"></div>
+          <div class="box-handle" data-h="s"></div>
+          <div class="box-handle" data-h="sw"></div>
+          <div class="box-handle" data-h="w"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1145,17 +1174,35 @@ const DEFAULTS = {
   alignV: 'middle',
   wrapMode: 'greedy',     // greedy | balance
   avoidWidows: true,
-  offsetY: 0,
-  maxWidthPct: 80,
-  padTop: 80,
-  padRight: 80,
-  padBottom: 80,
-  padLeft: 80,
-  padLink: true,
+  // Caja de texto en coordenadas normalizadas (0–1) relativas al lienzo.
+  // Normalizado a propósito: se mantiene proporcional al cambiar de formato.
+  // Default = margen de 80px sobre 1080 (≈ área de contenido completa).
+  box: { x: 80/1080, y: 80/1080, w: 920/1080, h: 920/1080 },
   jpgQuality: 0.92
 };
 
-let state = { ...DEFAULTS };
+// Caja mínima (5% del lienzo) para no degenerar el rectángulo.
+const MIN_BOX = 0.05;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const numOr = (v, d) => (typeof v === 'number' && isFinite(v)) ? v : d;
+
+// Clona DEFAULTS con una copia FRESCA de box (objeto mutable: nunca
+// compartir la referencia de DEFAULTS.box o el arrastre lo mutaría).
+function freshDefaults() {
+  return { ...DEFAULTS, box: { ...DEFAULTS.box } };
+}
+
+// Sanea una caja: tipos válidos, tamaño ≥ MIN_BOX, dentro de [0,1].
+function sanitizeBox(b) {
+  const d = DEFAULTS.box;
+  if (!b || typeof b !== 'object') return { ...d };
+  let x = numOr(b.x, d.x), y = numOr(b.y, d.y), w = numOr(b.w, d.w), h = numOr(b.h, d.h);
+  w = clamp(w, MIN_BOX, 1); x = clamp(x, 0, 1 - w);
+  h = clamp(h, MIN_BOX, 1); y = clamp(y, 0, 1 - h);
+  return { x, y, w, h };
+}
+
+let state = freshDefaults();
 
 // fontSize calculado por auto-fit (NO contamina state.fontSize manual)
 let computedFontSize = null;
@@ -1163,13 +1210,16 @@ let computedFontSize = null;
 const SECTION_KEYS = {
   color: ['bgColor', 'textColor'],
   typography: ['fontFamily', 'fontWeight', 'fontStyle', 'fontSize', 'autoFit', 'lineHeight', 'letterSpacing', 'textTransform'],
-  layout: ['alignH', 'alignV', 'wrapMode', 'avoidWidows', 'offsetY', 'maxWidthPct', 'padTop', 'padRight', 'padBottom', 'padLeft', 'padLink']
+  layout: ['alignH', 'alignV', 'wrapMode', 'avoidWidows', 'box']
 };
 
 function resetSection(section) {
   const keys = SECTION_KEYS[section];
   if (!keys) return;
-  keys.forEach(k => { state[k] = DEFAULTS[k]; });
+  keys.forEach(k => {
+    const dv = DEFAULTS[k];
+    state[k] = (dv && typeof dv === 'object') ? { ...dv } : dv;
+  });
   syncUIFromState();
   scheduleRender();
 }
@@ -1494,12 +1544,11 @@ function blockVerticalMetrics(ctx, lines, fontSize) {
 // ============================================================
 function calculateAutoFitSize(measureCtx) {
   const fmt = FORMATS[state.format];
-  const contentW = fmt.w - state.padLeft - state.padRight;
-  const contentH = fmt.h - state.padTop - state.padBottom;
-  const colW = Math.max(1, contentW * (state.maxWidthPct / 100));
+  const colW = Math.max(1, state.box.w * fmt.w);
+  const contentH = Math.max(1, state.box.h * fmt.h);
   const txt = transformText(state.text, state.textTransform);
 
-  if (!txt.trim() || contentW <= 0 || contentH <= 0) return 12;
+  if (!txt.trim() || colW <= 0 || contentH <= 0) return 12;
 
   const allWords = txt.split(/\s+/).filter(w => w.length > 0);
 
@@ -1555,7 +1604,8 @@ async function render() {
   canvas.width = fmt.w;
   canvas.height = fmt.h;
   document.getElementById('canvasWrap').style.aspectRatio = `${fmt.w} / ${fmt.h}`;
-  document.getElementById('stageMeta').textContent = `${fmt.w} × ${fmt.h} px  ·  ${fmt.ratio}`;
+  document.getElementById('stageMeta').textContent =
+    `${fmt.w} × ${fmt.h} px  ·  ${fmt.ratio}  ·  caja ${Math.round(state.box.w * fmt.w)}×${Math.round(state.box.h * fmt.h)}`;
   fitCanvasToStage(fmt);
 
   // Fondo
@@ -1591,13 +1641,11 @@ async function render() {
   ctx.textBaseline = 'alphabetic';
   ctx.textAlign = 'left';
 
-  const padL = state.padLeft, padR = state.padRight;
-  const padT = state.padTop, padB = state.padBottom;
-  const contentW = fmt.w - padL - padR;
-  const contentH = fmt.h - padT - padB;
-
-  const colW = contentW * (state.maxWidthPct / 100);
-  const colX = padL + (contentW - colW) / 2;
+  const boxX = state.box.x * fmt.w;
+  const boxY = state.box.y * fmt.h;
+  const colW = state.box.w * fmt.w;
+  const boxH = state.box.h * fmt.h;
+  const colX = boxX;
 
   const txt = transformText(state.text, state.textTransform);
   const lines = layoutLines(ctx, txt, colW, state.letterSpacing);
@@ -1606,16 +1654,15 @@ async function render() {
   const { firstAscent, lastDescent } = blockVerticalMetrics(ctx, lines, fontSize);
   const blockH = firstAscent + Math.max(0, lines.length - 1) * lineHeightPx + lastDescent;
 
-  // topY = posición Y de la PRIMERA baseline
+  // topY = posición Y de la PRIMERA baseline, alineada dentro de la caja
   let topY;
   if (state.alignV === 'top') {
-    topY = padT + firstAscent;
+    topY = boxY + firstAscent;
   } else if (state.alignV === 'bottom') {
-    topY = fmt.h - padB - blockH + firstAscent;
-  } else { // middle: centra el bloque óptico dentro del área de contenido
-    topY = padT + (contentH - blockH) / 2 + firstAscent;
+    topY = boxY + boxH - blockH + firstAscent;
+  } else { // middle: centra el bloque óptico dentro de la caja
+    topY = boxY + (boxH - blockH) / 2 + firstAscent;
   }
-  topY += state.offsetY;
 
   lines.forEach((line, idx) => {
     if (line.words.length === 0) return;
@@ -1641,6 +1688,9 @@ async function render() {
     }
     drawLineTracked(ctx, lineStr, lineX, baseY, state.letterSpacing);
   });
+
+  // Mantener el rect del overlay alineado con state.box (formato, presets…)
+  syncBoxOverlay();
 }
 
 // Reescala el canvas-wrap visualmente para caber en su contenedor actual
@@ -1714,9 +1764,32 @@ function savePreset() {
 function loadPreset() {
   document.getElementById('presetFile').click();
 }
+// Reconstruye una caja normalizada desde los campos legacy de un preset
+// viejo (padding absoluto + ancho col% + offsetY). Best-effort: el padding
+// viejo era px absolutos; aquí se normaliza contra el formato del preset.
+function migrateLegacyBox(obj) {
+  const fmt = FORMATS[obj.format] || FORMATS.square;
+  const padT = numOr(obj.padTop, 80), padR = numOr(obj.padRight, 80);
+  const padB = numOr(obj.padBottom, 80), padL = numOr(obj.padLeft, 80);
+  const mwp = numOr(obj.maxWidthPct, 80), offY = numOr(obj.offsetY, 0);
+  const contentW = Math.max(1, fmt.w - padL - padR);
+  const contentH = Math.max(1, fmt.h - padT - padB);
+  const colW = contentW * (mwp / 100);
+  const colX = padL + (contentW - colW) / 2;
+  return sanitizeBox({
+    x: colX / fmt.w, w: colW / fmt.w,
+    y: (padT + offY) / fmt.h, h: contentH / fmt.h
+  });
+}
+
 function applyPreset(obj) {
-  state = { ...DEFAULTS, ...obj };
-  // descartar claves obsoletas (p.ej. dithering de presets viejos)
+  // Preset legacy (sin box pero con campos de posición viejos) → reconstruir.
+  if (obj && !obj.box && (obj.padTop != null || obj.maxWidthPct != null || obj.offsetY != null)) {
+    obj = { ...obj, box: migrateLegacyBox(obj) };
+  }
+  state = { ...freshDefaults(), ...obj };
+  state.box = sanitizeBox(state.box);
+  // descartar claves obsoletas (padding/col%/offset de presets viejos, etc.)
   Object.keys(state).forEach(k => {
     if (!(k in DEFAULTS)) delete state[k];
   });
@@ -1724,7 +1797,7 @@ function applyPreset(obj) {
   scheduleRender();
 }
 function resetPreset() {
-  state = { ...DEFAULTS };
+  state = freshDefaults();
   syncUIFromState();
   scheduleRender();
 }
@@ -1768,24 +1841,6 @@ function bindRange(id, key, formatter = (v) => v) {
     scheduleRender();
   };
   el.addEventListener('input', update);
-}
-
-function bindInput(id, key, parser = (v) => v) {
-  const el = document.getElementById(id);
-  el.addEventListener('input', () => {
-    state[key] = parser(el.value);
-    if (id === 'padTop' || id === 'padRight' || id === 'padBottom' || id === 'padLeft') {
-      if (state.padLink) {
-        const v = parser(el.value);
-        state.padTop = state.padRight = state.padBottom = state.padLeft = v;
-        document.getElementById('padTop').value = v;
-        document.getElementById('padRight').value = v;
-        document.getElementById('padBottom').value = v;
-        document.getElementById('padLeft').value = v;
-      }
-    }
-    scheduleRender();
-  });
 }
 
 function bindSelect(id, key) {
@@ -1918,16 +1973,93 @@ function syncUIFromState() {
     b.classList.toggle('active', b.dataset.v === state.wrapMode);
   });
   document.getElementById('avoidWidows').checked = state.avoidWidows;
-  document.getElementById('offsetY').value = state.offsetY;
-  document.getElementById('offsetYVal').textContent = state.offsetY;
-  document.getElementById('maxWidthPct').value = state.maxWidthPct;
-  document.getElementById('maxWidthPctVal').textContent = state.maxWidthPct;
-  document.getElementById('padTop').value = state.padTop;
-  document.getElementById('padRight').value = state.padRight;
-  document.getElementById('padBottom').value = state.padBottom;
-  document.getElementById('padLeft').value = state.padLeft;
-  document.getElementById('padLink').checked = state.padLink;
   document.getElementById('jpgQuality').value = state.jpgQuality;
+  syncBoxOverlay();
+}
+
+// ============================================================
+// CAJA DE TEXTO — overlay interactivo (Pointer Events)
+// Coordenadas normalizadas (0–1). El rect y las asas se posicionan
+// en % del wrap, así escalan solos con el formato y el resize. El
+// delta del puntero en px de pantalla se divide por el tamaño visible
+// del wrap para pasarlo a normalizado. Patrón window-listener (sin
+// setPointerCapture): simple y fiable en ratón y táctil; touch-action:
+// none en CSS evita que el dedo haga scroll/zoom encima.
+// La matemática de applyBoxDrag está verificada en box_logic_test.js.
+// ============================================================
+function syncBoxOverlay() {
+  const rect = document.getElementById('boxRect');
+  if (!rect) return;
+  const b = state.box;
+  rect.style.left = (b.x * 100) + '%';
+  rect.style.top = (b.y * 100) + '%';
+  rect.style.width = (b.w * 100) + '%';
+  rect.style.height = (b.h * 100) + '%';
+}
+
+let boxDrag = null;
+
+function applyBoxDrag(box0, mode, dxN, dyN) {
+  let { x, y, w, h } = box0;
+  if (mode === 'move') {
+    x = clamp(x + dxN, 0, 1 - w);
+    y = clamp(y + dyN, 0, 1 - h);
+  } else {
+    if (mode.includes('w')) { const nx = clamp(x + dxN, 0, x + w - MIN_BOX); w = w + (x - nx); x = nx; }
+    if (mode.includes('e')) { w = clamp(w + dxN, MIN_BOX, 1 - x); }
+    if (mode.includes('n')) { const ny = clamp(y + dyN, 0, y + h - MIN_BOX); h = h + (y - ny); y = ny; }
+    if (mode.includes('s')) { h = clamp(h + dyN, MIN_BOX, 1 - y); }
+  }
+  return { x, y, w, h };
+}
+
+function onBoxPointerMove(e) {
+  if (!boxDrag) return;
+  const dxN = (e.clientX - boxDrag.startX) / boxDrag.wrapW;
+  const dyN = (e.clientY - boxDrag.startY) / boxDrag.wrapH;
+  state.box = applyBoxDrag(boxDrag.box0, boxDrag.mode, dxN, dyN);
+  syncBoxOverlay();
+  scheduleRender();
+}
+
+function endBoxDrag() {
+  boxDrag = null;
+  window.removeEventListener('pointermove', onBoxPointerMove);
+  window.removeEventListener('pointerup', endBoxDrag);
+  window.removeEventListener('pointercancel', endBoxDrag);
+}
+
+function startBoxDrag(e, mode) {
+  e.preventDefault();
+  e.stopPropagation();
+  const wrap = document.getElementById('canvasWrap');
+  boxDrag = {
+    mode,
+    startX: e.clientX,
+    startY: e.clientY,
+    box0: { ...state.box },
+    wrapW: wrap.clientWidth || 1,
+    wrapH: wrap.clientHeight || 1
+  };
+  window.addEventListener('pointermove', onBoxPointerMove);
+  window.addEventListener('pointerup', endBoxDrag);
+  window.addEventListener('pointercancel', endBoxDrag);
+}
+
+function setupBoxOverlay() {
+  const rect = document.getElementById('boxRect');
+  if (!rect) return;
+  // Cuerpo del rect = mover (las asas detienen la propagación, así que
+  // este listener solo se dispara al arrastrar el interior).
+  rect.addEventListener('pointerdown', (e) => {
+    if (e.target.classList.contains('box-handle')) return;
+    startBoxDrag(e, 'move');
+  });
+  // Cada asa redimensiona anclando el lado/esquina opuesto.
+  rect.querySelectorAll('.box-handle').forEach(handle => {
+    handle.addEventListener('pointerdown', (e) => startBoxDrag(e, handle.dataset.h));
+  });
+  syncBoxOverlay();
 }
 
 // ============================================================
@@ -1989,22 +2121,13 @@ function init() {
     state.avoidWidows = e.target.checked;
     scheduleRender();
   });
-  bindRange('offsetY', 'offsetY', v => Math.round(v));
-  bindRange('maxWidthPct', 'maxWidthPct', v => Math.round(v));
-  bindInput('padTop', 'padTop', v => parseInt(v) || 0);
-  bindInput('padRight', 'padRight', v => parseInt(v) || 0);
-  bindInput('padBottom', 'padBottom', v => parseInt(v) || 0);
-  bindInput('padLeft', 'padLeft', v => parseInt(v) || 0);
-  document.getElementById('padLink').addEventListener('change', (e) => {
-    state.padLink = e.target.checked;
-    if (state.padLink) {
-      const v = state.padTop;
-      state.padRight = state.padBottom = state.padLeft = v;
-      document.getElementById('padRight').value = v;
-      document.getElementById('padBottom').value = v;
-      document.getElementById('padLeft').value = v;
-      scheduleRender();
-    }
+
+  // Caja de texto: arrastre directo sobre el lienzo + botón de reset
+  setupBoxOverlay();
+  document.getElementById('boxReset').addEventListener('click', () => {
+    state.box = { ...DEFAULTS.box };
+    syncBoxOverlay();
+    scheduleRender();
   });
 
   document.getElementById('exportPng').addEventListener('click', () => exportImage('png'));
