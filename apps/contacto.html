@@ -95,6 +95,16 @@ button.act:disabled{opacity:.4; cursor:not-allowed}
 .ptext{font-family:var(--mono); font-size:12px; color:var(--ink-dim); margin-top:8px}
 
 .sheet-wrap{margin-top:8px; background:var(--bg-2); border:1px solid var(--line); border-radius:var(--r); padding:14px; overflow:auto; max-height:70vh}
+.gallery-bar{display:flex; align-items:center; gap:14px; margin-top:8px}
+.gallery-bar .gcount{font-family:var(--mono); font-size:12px; color:var(--ink-dim)}
+.gallery{display:grid; gap:6px; margin-top:10px; max-height:74vh; overflow:auto; padding-right:2px}
+.cell{position:relative; background:#000; border:1px solid var(--line); border-radius:4px; overflow:hidden; line-height:0}
+.cell canvas{display:block; width:100%; height:auto}
+.cell.gray canvas{filter:grayscale(1)}
+.cell .tc{position:absolute; left:0; right:0; bottom:0; font-family:var(--mono); font-size:10px; line-height:1.4; color:#fff; background:rgba(0,0,0,.6); padding:2px 5px; letter-spacing:.04em}
+.cell .del{position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:4px; border:0; background:rgba(0,0,0,.65); color:#fff; cursor:pointer; opacity:0; transition:opacity .1s ease; font-size:15px; display:grid; place-items:center; padding:0}
+.cell:hover .del,.cell:focus-within .del{opacity:1}
+.cell .del:hover,.cell .del:focus-visible{background:#fff; color:#000; outline:none}
 #sheet{display:block; max-width:100%; height:auto; background:#000}
 .export-bar{display:flex; gap:12px; flex-wrap:wrap; align-items:center; margin-top:16px}
 .export-bar .lbl{font-family:var(--mono); font-size:11px; text-transform:uppercase; letter-spacing:.12em; color:var(--ink-faint); margin-right:2px}
@@ -199,7 +209,12 @@ footer{margin-top:48px; padding-top:18px; border-top:1px solid var(--line); font
   <!-- 4 -->
   <section class="step" id="step4" hidden>
     <div class="step-h"><span class="step-n">4</span><h2>Hoja de contactos</h2><span class="hint" id="sheetHint"></span></div>
-    <div class="sheet-wrap"><canvas id="sheet"></canvas></div>
+    <div class="gallery-bar">
+      <button class="act ghost" id="undo" type="button" disabled>Deshacer</button>
+      <span class="gcount" id="gcount"></span>
+    </div>
+    <div class="gallery" id="gallery" aria-label="Fotogramas extraídos; pasa el cursor sobre uno para eliminarlo"></div>
+    <canvas id="sheet" hidden></canvas>
     <div class="export-bar">
       <span class="lbl">Descargar</span>
       <button class="act ghost" id="dlJpg" type="button">JPG</button>
@@ -233,14 +248,14 @@ footer{margin-top:48px; padding-top:18px; border-top:1px solid var(--line); font
 //  Acabado ~50: errores cubiertos en cada frontera. Entrega ~50: comentarios.
 // ============================================================================
 
-const S = { file:null, url:null, meta:null, frames:[], lastExtract:null, aspect:16/9 };
+const S = { file:null, url:null, meta:null, frames:[], deleted:[], lastExtract:null, aspect:16/9 };
 
 const $ = id => document.getElementById(id);
 const els = {};
 ["file","gate","loadErr","step2","step3","step4","led","verdict","verdictSub",
  "readHint","specs","interval","customWrap","customVal","customUnit","matrixType",
  "cols","thumbW","colorFrames","estimate","generate","progress","fill","ptext",
- "sheet","sheetHint","dlJpg","dlPng","dlPdf","pdfOrient","pdfBlack","exportNote"].forEach(k=>els[k]=$(k));
+ "sheet","sheetHint","gallery","undo","gcount","dlJpg","dlPng","dlPdf","pdfOrient","pdfBlack","exportNote"].forEach(k=>els[k]=$(k));
 
 const video = document.createElement("video");
 video.muted = true; video.playsInline = true; video.preload = "auto";
@@ -460,7 +475,7 @@ async function extract(){
   const thumbH = Math.round(thumbW / S.aspect);
   els.generate.disabled = true;
   els.progress.hidden = false; setProgress(0, times.length);
-  S.frames = [];
+  S.frames = []; S.deleted = [];
   try{
     if(video.readyState < 2){ try{ await onceEvent(video,"loadeddata",12000); }catch{} }
     for(let i=0;i<times.length;i++){
@@ -471,7 +486,7 @@ async function extract(){
       setProgress(i+1, times.length);
     }
     S.lastExtract = {interval:currentInterval(), thumbW};
-    renderSheet();
+    renderGallery();
     els.step4.hidden = false;
     els.step4.scrollIntoView({behavior:"smooth", block:"start"});
   }catch(e){ addExportNote("err","Falló la extracción: "+e.message); }
@@ -482,28 +497,57 @@ function setProgress(done, total){
   els.ptext.textContent = `Extrayendo ${done} / ${total} fotogramas…` + (done===total?" listo.":"");
 }
 
-// ---- Composición de la hoja (canvas para JPG/PNG) ----
-function renderSheet(){
-  if(!S.frames.length) return;
+// ---- Rejilla interactiva (vista previa + curación) ----
+function renderGallery(){
+  const cols = Math.max(1, +els.cols.value||1);
+  const gray = !els.colorFrames.checked;
+  els.gallery.style.gridTemplateColumns = `repeat(${cols},1fr)`;
+  els.gallery.innerHTML = "";
+  S.frames.forEach(f=>{
+    const cell = document.createElement("div"); cell.className = "cell" + (gray?" gray":"");
+    cell.appendChild(f.canvas);             // el canvas vive aquí y sigue siendo fuente al exportar
+    const tc = document.createElement("div"); tc.className = "tc"; tc.textContent = fmtClock(f.t);
+    const del = document.createElement("button"); del.className = "del"; del.type = "button";
+    del.textContent = "×"; del.setAttribute("aria-label", "Eliminar fotograma en "+fmtClock(f.t));
+    del.addEventListener("click", ()=>removeFrame(f));
+    cell.appendChild(tc); cell.appendChild(del);
+    els.gallery.appendChild(cell);
+  });
+  const n = S.frames.length, d = S.deleted.length;
+  els.gcount.textContent = `${n} fotograma${n!==1?"s":""}` + (d?` · ${d} eliminado${d!==1?"s":""}`:"");
+  els.undo.disabled = d===0;
+  const none = n===0;
+  els.dlJpg.disabled = els.dlPng.disabled = els.dlPdf.disabled = none;
+  els.exportNote.hidden = true;
+}
+function removeFrame(f){
+  const idx = S.frames.indexOf(f);
+  if(idx<0) return;
+  S.deleted.push({frame:f, idx});           // recordamos posición original para deshacer
+  S.frames.splice(idx,1);
+  renderGallery();
+}
+function undoDelete(){
+  const last = S.deleted.pop();
+  if(!last) return;
+  S.frames.splice(Math.min(last.idx, S.frames.length), 0, last.frame); // reinsertar en su lugar
+  renderGallery();
+}
+
+// ---- Composición de la hoja en canvas (para JPG/PNG). Devuelve true si excede el límite. ----
+function composeSheet(){
+  if(!S.frames.length) return false;
   const cols = Math.max(1, +els.cols.value||1);
   const data = withData();
   const thumbW = S.frames[0].canvas.width, thumbH = S.frames[0].canvas.height;
   const g = gridDims(S.frames.length, cols, thumbW, data);
-  const over = g.W>MAX_SIDE || g.H>MAX_SIDE || g.W*g.H>MAX_AREA;
+  if(g.W>MAX_SIDE || g.H>MAX_SIDE || g.W*g.H>MAX_AREA) return true;
 
-  const cv = els.sheet;
-  els.dlJpg.disabled = els.dlPng.disabled = over;
-  if(over){
-    cv.width=10; cv.height=10;
-    els.sheetHint.textContent = `${S.frames.length} fotogramas · imagen única no disponible (excede el límite)`;
-    addExportNote("info","La matriz excede el tamaño máximo de canvas, así que JPG/PNG están desactivados. Usa PDF, que pagina automáticamente.");
-    return;
-  }
-  cv.width = g.W; cv.height = g.H;
+  const cv = els.sheet; cv.width = g.W; cv.height = g.H;
   const ctx = cv.getContext("2d");
   ctx.fillStyle = "#000"; ctx.fillRect(0,0,g.W,g.H);
 
-  if(data){ // cabecera tipo slate, blanco sobre negro
+  if(data){
     ctx.fillStyle = "#fff"; ctx.font = "600 18px 'Space Grotesk',sans-serif"; ctx.textBaseline="middle";
     ctx.fillText("contacto", g.pad, g.pad+14);
     ctx.fillStyle = "#bdbdbd"; ctx.font = "13px 'JetBrains Mono',monospace";
@@ -518,14 +562,13 @@ function renderSheet(){
     const x = g.pad + c*(g.thumbW+g.gap);
     const y = startY + r*(g.thumbH+g.labelH+g.gap);
     ctx.drawImage(frameSource(f), x, y, g.thumbW, g.thumbH);
-    if(data){ // número de fotograma en mono blanco sobre margen negro
+    if(data){
       ctx.fillStyle = "#000"; ctx.fillRect(x, y+g.thumbH, g.thumbW, g.labelH);
       ctx.fillStyle = "#fff"; ctx.font = "500 12px 'JetBrains Mono',monospace"; ctx.textBaseline="middle";
       ctx.fillText(fmtClock(f.t), x+6, y+g.thumbH+g.labelH/2);
     }
   });
-  els.sheetHint.textContent = `${S.frames.length} fotogramas · ${data?"con datos":"sin datos"} · ${g.W}×${g.H}px`;
-  els.exportNote.hidden = true;
+  return false;
 }
 
 // ---- Exportación ----
@@ -535,6 +578,11 @@ function download(blob, name){
 }
 function baseName(){ return (S.meta.name.replace(/\.[^.]+$/,"")||"contacto") + "_hoja_" + (withData()?"datos":"limpia"); }
 function exportImage(type, ext, q){
+  if(!S.frames.length) return;
+  if(composeSheet()){
+    addExportNote("info","La matriz excede el tamaño máximo de imagen única del navegador. Usa PDF, que pagina sin ese límite — o reduce el ancho de fotograma o elimina algunos.");
+    return;
+  }
   els.sheet.toBlob(b=>{ if(b) download(b, baseName()+"."+ext); else addExportNote("err","No se pudo generar la imagen."); }, type, q);
 }
 function exportPdf(){
@@ -593,7 +641,7 @@ async function handleFile(file){
     els.loadErr.textContent = "Eso no parece un archivo de video."; els.loadErr.hidden=false; return;
   }
   if(S.url) URL.revokeObjectURL(S.url);
-  S.file=file; S.url=URL.createObjectURL(file); S.frames=[]; S.lastExtract=null;
+  S.file=file; S.url=URL.createObjectURL(file); S.frames=[]; S.deleted=[]; S.lastExtract=null;
   els.step2.hidden=false; els.step3.hidden=true; els.step4.hidden=true;
   els.readHint.textContent = file.name;
   await detect(file);
@@ -613,9 +661,12 @@ els.interval.addEventListener("change", ()=>{
 });
 [els.customVal, els.customUnit, els.thumbW].forEach(el=>el.addEventListener("input", updateEstimate));
 // composición instantánea (sin re-extraer): columnas, tipo de matriz, color
-els.cols.addEventListener("input", ()=>{ updateEstimate(); if(S.frames.length) renderSheet(); });
-els.matrixType.addEventListener("change", ()=>{ updateEstimate(); if(S.frames.length) renderSheet(); });
-els.colorFrames.addEventListener("change", ()=>{ if(S.frames.length) renderSheet(); });
+// composición instantánea (sin re-extraer): columnas y color recomponen la rejilla;
+// el tipo de matriz (con/sin datos) solo afecta a la hoja exportada y a la estimación.
+els.cols.addEventListener("input", ()=>{ updateEstimate(); if(S.frames.length) renderGallery(); });
+els.matrixType.addEventListener("change", updateEstimate);
+els.colorFrames.addEventListener("change", ()=>{ if(S.frames.length) renderGallery(); });
+els.undo.addEventListener("click", undoDelete);
 
 els.generate.addEventListener("click", extract);
 els.dlJpg.addEventListener("click", ()=>exportImage("image/jpeg","jpg",0.85));
