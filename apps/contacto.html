@@ -161,6 +161,16 @@ footer{margin-top:48px; padding-top:18px; border-top:1px solid var(--line); font
       <div class="field">
         <label for="interval">Un fotograma cada</label>
         <select id="interval">
+          <option value="0.5">0,5 segundos</option>
+          <option value="1">1 segundo</option>
+          <option value="2">2 segundos</option>
+          <option value="3">3 segundos</option>
+          <option value="4">4 segundos</option>
+          <option value="5">5 segundos</option>
+          <option value="6">6 segundos</option>
+          <option value="7">7 segundos</option>
+          <option value="8">8 segundos</option>
+          <option value="9">9 segundos</option>
           <option value="10">10 segundos</option>
           <option value="30" selected>30 segundos</option>
           <option value="60">1 minuto</option>
@@ -269,10 +279,13 @@ const MAX_SIDE = 16384, MAX_AREA = 268435456; // límites aprox. de canvas (Chro
 
 // ---- Utilidades ----
 function fmtClock(sec){
-  sec = Math.max(0, Math.floor(sec));
-  const h = Math.floor(sec/3600), m = Math.floor(sec%3600/60), s = sec%60;
+  const tenths = Math.round(Math.max(0, sec) * 10);   // trabajar en décimas evita bordes de redondeo
+  const whole = Math.floor(tenths / 10);
+  const d = tenths % 10;                               // 0..9
+  const h = Math.floor(whole/3600), m = Math.floor(whole%3600/60), s = whole%60;
   const p = n => String(n).padStart(2,"0");
-  return h>0 ? `${h}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+  const dec = d > 0 ? "," + d : "";                    // decimal solo si hay fracción (muestreo sub-segundo)
+  return h>0 ? `${h}:${p(m)}:${p(s)}${dec}` : `${p(m)}:${p(s)}${dec}`;
 }
 function fmtBytes(b){
   if(b<1024) return b+" B";
