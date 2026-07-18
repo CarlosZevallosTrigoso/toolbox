@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FORJA · anotador</title>
+<!-- marked@18 (verificado 18.0.6). Si el CDN no carga, se degrada a texto plano y todo sigue funcionando. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@18/lib/marked.umd.js"></script>
+<style>
+  :root{
+    --paper:#efe9db;        /* papel cálido, eco czt-bosque en claro */
+    --panel:#e7e0cf;
+    --line:#d6ccb4;
+    --ink:#2b2c22;          /* tinta carbón */
+    --ink-dim:#6f6f5c;
+    --moss:#586a45;         /* acento primario */
+    --steel:#4f6b82;
+    --warm:#b06a36;
+    --mono: "Fira Code", ui-monospace, "SF Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif;
+    --r:2px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:var(--mono); font-size:12px; line-height:1.5;
+    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+
+  /* ---- cabecera ---- */
+  header{
+    display:flex; align-items:center; gap:16px;
+    padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel);
+    flex:none;
+  }
+  #marca{
+    margin:0; font-size:12px; font-weight:600; letter-spacing:.18em; color:var(--ink);
+    cursor:pointer; user-select:none; white-space:nowrap;
+  }
+  #marca:hover{color:var(--moss)}
+  #docname{color:var(--ink-dim); font-size:11px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1}
+  .acciones{display:flex; gap:8px; flex:none}
+  button{
+    font-family:var(--mono); font-size:11px; letter-spacing:.03em; cursor:pointer;
+    border-radius:var(--r); padding:6px 10px; border:1px solid var(--line);
+    background:var(--paper); color:var(--ink); transition:border-color .12s, color .12s;
+  }
+  button:hover:not(:disabled){border-color:var(--moss); color:var(--moss)}
+  button:disabled{opacity:.4; cursor:default}
+  #contador{color:var(--ink-dim); font-size:10px; font-variant-numeric:tabular-nums; flex:none; min-width:9ch; text-align:right}
+
+  /* ---- cuerpo: lectura + panel ---- */
+  main{display:flex; flex:1; min-height:0}
+  #read{
+    flex:1; min-width:0; overflow-y:auto; position:relative;
+    padding:32px 40px 120px;
+  }
+  #doc{
+    max-width:68ch; margin:0 auto;
+    font-family:var(--serif); font-size:17px; line-height:1.75; color:var(--ink);
+  }
+  #doc.plano{font-family:var(--mono); font-size:13px; line-height:1.6; white-space:pre-wrap}
+  #doc h1{font-size:1.7em; line-height:1.2; margin:0 0 .6em}
+  #doc h2{font-size:1.35em; margin:1.6em 0 .5em}
+  #doc h3{font-size:1.12em; margin:1.4em 0 .4em}
+  #doc p{margin:0 0 1.05em; text-align:justify; hyphens:auto}
+  #doc em{font-style:italic}
+  #doc strong{font-weight:600}
+  #doc a{color:var(--steel)}
+  #doc blockquote{border-left:2px solid var(--moss); margin:1em 0; padding:.2em 0 .2em 1em; color:var(--ink-dim)}
+  #doc code{font-family:var(--mono); font-size:.85em; background:#0000000d; padding:.1em .3em; border-radius:var(--r)}
+  #doc ul,#doc ol{padding-left:1.4em; margin:0 0 1.05em}
+  #doc li{margin:.2em 0}
+
+  /* resaltado sin mutar el DOM (offsets intactos) */
+  ::highlight(forja-nota){ background:rgba(88,106,69,.20); }
+  ::highlight(forja-activa){ background:rgba(176,106,54,.34); }
+
+  /* ---- estado vacío ---- */
+  #empty{
+    max-width:64ch; margin:8vh auto 0; text-align:center; color:var(--ink-dim);
+  }
+  #drop{
+    border:1px dashed var(--line); border-radius:var(--r);
+    padding:36px 24px; cursor:pointer; transition:border-color .15s, color .15s;
+  }
+  #drop.hot{border-color:var(--moss); color:var(--ink)}
+  #drop b{display:block; color:var(--ink); font-size:13px; letter-spacing:.02em; margin-bottom:6px}
+  #paste{
+    width:100%; margin-top:14px; min-height:90px; resize:vertical;
+    background:var(--panel); color:var(--ink); border:1px solid var(--line);
+    border-radius:var(--r); padding:8px 10px; font-family:var(--mono); font-size:12px;
+  }
+  #paste:focus{outline:1px solid var(--moss); border-color:var(--moss)}
+  #cargarPaste{margin-top:8px}
+
+  /* ---- panel de notas ---- */
+  #panel{
+    width:340px; flex:none; background:var(--panel); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; min-height:0;
+  }
+  #panel h2{
+    margin:0; padding:12px 14px; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--ink-dim); border-bottom:1px solid var(--line); font-weight:600;
+  }
+  #list{overflow-y:auto; padding:6px; flex:1}
+  .vacio{color:var(--ink-dim); font-size:11px; padding:16px 10px; line-height:1.5}
+  .nota{
+    border:1px solid var(--line); border-radius:var(--r); background:var(--paper);
+    padding:8px 9px; margin-bottom:8px; transition:border-color .12s;
+  }
+  .nota.activa{border-color:var(--warm)}
+  .quote{
+    font-family:var(--serif); font-size:12.5px; line-height:1.4; color:var(--ink);
+    border-left:2px solid var(--moss); padding-left:8px; margin-bottom:6px; cursor:pointer;
+  }
+  .nota.activa .quote{border-left-color:var(--warm)}
+  .quote:hover{color:var(--moss)}
+  .coments{margin:2px 0 4px}
+  .coment{border-left:2px solid var(--line); padding:3px 0 3px 8px; margin:4px 0}
+  .coment-tx{font-family:var(--mono); font-size:11.5px; line-height:1.45; color:var(--ink); white-space:pre-wrap; word-break:break-word}
+  .coment-meta{display:flex; align-items:center; justify-content:space-between; margin-top:2px; color:var(--ink-dim); font-size:9.5px}
+  .cdel{padding:0 5px; font-size:13px; line-height:1; border-color:transparent; background:transparent; color:var(--ink-dim)}
+  .cdel:hover{border-color:var(--warm); color:var(--warm)}
+  .add{display:flex; gap:6px; margin-top:4px}
+  .add-in{flex:1; resize:none; overflow:hidden; min-height:30px; background:transparent; color:var(--ink); border:1px solid var(--line); border-radius:var(--r); padding:5px 6px; font-family:var(--mono); font-size:11.5px; line-height:1.45}
+  .add-in:focus{outline:1px solid var(--moss); border-color:var(--moss)}
+  .add-btn{flex:none; padding:4px 9px; font-size:10px; align-self:flex-start}
+  .fila{display:flex; align-items:center; justify-content:space-between; margin-top:5px; gap:8px}
+  .pos{color:var(--ink-dim); font-size:9.5px; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .del{padding:2px 7px; font-size:10px; flex:none}
+  .del:hover{border-color:var(--warm); color:var(--warm)}
+
+  /* ---- botón flotante de selección ---- */
+  #fab{
+    position:fixed; z-index:50; display:none;
+    background:var(--moss); color:#f3efe3; border-color:var(--moss); font-weight:600;
+    box-shadow:0 2px 8px #0003; padding:6px 12px;
+  }
+  #fab.on{display:block}
+  #fab:hover{background:var(--warm); border-color:var(--warm); color:#f3efe3}
+
+  .hide{display:none !important}
+
+  /* ---- modal de subida ---- */
+  #modal{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:#0000005c}
+  .modal-box{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; width:min(430px,92%)}
+  .modal-box h3{margin:0 0 10px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); font-weight:600}
+  .modal-box label{display:block; margin:8px 0; color:var(--ink-dim); font-size:11px}
+  .modal-box input{width:100%; margin-top:3px; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:var(--r); padding:6px 8px; font-family:var(--mono); font-size:12px}
+  .modal-box input:focus{outline:1px solid var(--moss); border-color:var(--moss)}
+  .modal-acc{display:flex; gap:8px; margin-top:12px}
+  .modal-acc button{flex:1}
+  #estado{margin-top:10px; font-size:11px; color:var(--ink-dim); min-height:16px; line-height:1.4}
+  .nota.huerfana{opacity:.72; border-style:dashed}
+  .nota.huerfana .quote{border-left-color:var(--ink-dim)}
+</style>
+</head>
+<body>
+  <header>
+    <h1 id="marca">FORJA · anotador</h1>
+    <div id="docname"></div>
+    <div class="acciones">
+      <button id="cargar">cargar .md</button>
+      <button id="cargarJson">cargar .json</button>
+      <button id="subir" disabled>subir</button>
+      <button id="export" disabled>exportar .json</button>
+    </div>
+    <div id="contador"></div>
+  </header>
+
+  <main>
+    <section id="read">
+      <div id="empty">
+        <div id="drop" tabindex="0" role="button" aria-label="Cargar markdown">
+          <b>Suelta un archivo .md o haz clic para elegirlo</b>
+          <small>Se lee y anota en tu navegador; nada sale de tu equipo.</small>
+        </div>
+        <textarea id="paste" placeholder="…o pega aquí el markdown y pulsa «cargar texto»"></textarea>
+        <div><button id="cargarPaste">cargar texto</button></div>
+      </div>
+      <article id="doc"></article>
+    </section>
+
+    <aside id="panel">
+      <h2>Anotaciones</h2>
+      <div id="list"><p class="vacio">Sin anotaciones todavía.</p></div>
+    </aside>
+  </main>
+
+  <button id="fab" title="Crear anotación">＋ anotar</button>
+  <input type="file" id="file" accept=".md,.markdown,text/markdown,text/plain" class="hide">
+  <input type="file" id="fileJson" accept=".json,application/json" class="hide">
+
+  <div id="modal" class="hide">
+    <div class="modal-box">
+      <h3>Subir anotaciones</h3>
+      <label>Endpoint (POST)
+        <input id="url" type="url" placeholder="https://tu-plataforma.ejemplo/api/anotaciones" autocomplete="off">
+      </label>
+      <label>Cabecera Authorization (opcional)
+        <input id="tok" type="text" placeholder="Bearer …" autocomplete="off">
+      </label>
+      <div class="modal-acc">
+        <button id="enviar">enviar</button>
+        <button id="cerrar">cerrar</button>
+      </div>
+      <div id="estado"></div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const docEl = $('doc'), read = $('read'), empty = $('empty');
+  const list = $('list'), fab = $('fab'), fileInput = $('file');
+  const CTX = 32; // caracteres de contexto para prefix/suffix
+
+  let rawMd = '', docText = '', docName = '';
+  let annos = [];        // {id, nota, creado, exact, prefix, suffix, start, end, mdStart, mdEnd, mdUnico, range}
+  let pending = null;    // captura de la selección en curso
+  let activeId = null;
+
+  // ===== render =====
+  function render(md, name){
+    rawMd = md; docName = name || 'documento.md';
+    annos = []; pending = null; activeId = null;
+    if (window.marked && typeof marked.parse === 'function'){
+      docEl.innerHTML = marked.parse(md);
+      docEl.classList.remove('plano');
+    } else {
+      docEl.textContent = md;                 // degradación honesta: sin CDN, texto crudo (igual anotable)
+      docEl.classList.add('plano');
+    }
+    // texto plano canónico del documento: base de todos los offsets
+    const r = document.createRange();
+    r.selectNodeContents(docEl);
+    docText = r.toString();
+    empty.classList.add('hide');
+    docEl.style.display = 'block';
+    $('docname').textContent = docName;
+    refreshHighlights(); renderList(); updateChrome();
+  }
+
+  // offset de un punto (nodo, offset) dentro de docEl, medido en el mismo espacio que docText
+  function pointOffset(node, offset){
+    const r = document.createRange();
+    r.selectNodeContents(docEl);
+    try { r.setEnd(node, offset); } catch(e){ return null; }
+    return r.toString().length;
+  }
+
+  // ===== captura de selección =====
+  function captureSelection(){
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) return null;
+    const range = sel.getRangeAt(0);
+    if (range.collapsed) return null;
+    if (!docEl.contains(range.commonAncestorContainer)) return null; // solo dentro del texto
+    const start = pointOffset(range.startContainer, range.startOffset);
+    const end   = pointOffset(range.endContainer, range.endOffset);
+    if (start == null || end == null || end <= start) return null;
+    const exact = docText.slice(start, end);
+    if (!exact.trim()) return null;
+    const prefix = docText.slice(Math.max(0, start - CTX), start);
+    const suffix = docText.slice(end, end + CTX);
+    const md = mdOffset(exact);
+    return {
+      range: range.cloneRange(), exact, prefix, suffix, start, end,
+      mdStart: md.start, mdEnd: md.end, mdUnico: md.unico
+    };
+  }
+
+  // offset best-effort en el .md crudo: sirve si la selección aparece verbatim en la fuente
+  function mdOffset(exact){
+    const first = rawMd.indexOf(exact);
+    if (first === -1) return { start:null, end:null, unico:false };
+    const second = rawMd.indexOf(exact, first + 1);
+    return { start:first, end:first + exact.length, unico: second === -1 };
+  }
+
+  // ===== re-anclaje (para importar .json) =====
+  // mapa inverso: offset en docText -> punto (nodo de texto, offset) del DOM
+  function pointFromOffset(target){
+    target = Math.max(0, Math.min(target, docText.length));
+    const walker = document.createTreeWalker(docEl, NodeFilter.SHOW_TEXT, null);
+    let acc = 0, node, last = null;
+    while ((node = walker.nextNode())){
+      const len = node.nodeValue.length;
+      if (acc + len >= target) return { node, offset: target - acc };
+      acc += len; last = node;
+    }
+    return last ? { node: last, offset: last.nodeValue.length } : null;
+  }
+  function makeRange(start, end){
+    const a = pointFromOffset(start), b = pointFromOffset(end);
+    if (!a || !b) return null;
+    const r = document.createRange();
+    try { r.setStart(a.node, a.offset); r.setEnd(b.node, b.offset); } catch(e){ return null; }
+    return { range: r, start, end };
+  }
+  function commonSuffixLen(a, b){ let i=0; while(i<a.length && i<b.length && a[a.length-1-i]===b[b.length-1-i]) i++; return i; }
+  function commonPrefixLen(a, b){ let i=0; while(i<a.length && i<b.length && a[i]===b[i]) i++; return i; }
+  // localiza el pasaje por su cita; si aparece varias veces, desambigua por contexto
+  function findByQuote(exact, prefix, suffix){
+    const hits = []; let i = docText.indexOf(exact);
+    while (i !== -1){ hits.push(i); i = docText.indexOf(exact, i + 1); }
+    if (!hits.length) return null;
+    if (hits.length === 1) return { start: hits[0], end: hits[0] + exact.length };
+    let best = hits[0], score = -1;
+    for (const s of hits){
+      const pre = docText.slice(Math.max(0, s - prefix.length), s);
+      const suf = docText.slice(s + exact.length, s + exact.length + suffix.length);
+      const sc = commonSuffixLen(pre, prefix) + commonPrefixLen(suf, suffix);
+      if (sc > score){ score = sc; best = s; }
+    }
+    return { start: best, end: best + exact.length };
+  }
+  // resuelve el ancla de una anotación importada contra el documento actual
+  function resolveAnchor(obj){
+    const exact = obj.exact || '';
+    const tp = obj.textoPlano || {};
+    // 1) posición directa si el texto en esa posición coincide
+    if (exact && Number.isInteger(tp.start) && Number.isInteger(tp.end) && docText.slice(tp.start, tp.end) === exact)
+      return makeRange(tp.start, tp.end);
+    // 2) por cita + contexto
+    if (exact){ const h = findByQuote(exact, obj.prefix || '', obj.suffix || ''); if (h) return makeRange(h.start, h.end); }
+    // 3) posición cruda como último recurso (rango válido aunque el texto haya cambiado)
+    if (Number.isInteger(tp.start) && Number.isInteger(tp.end) && tp.end > tp.start && tp.end <= docText.length)
+      return makeRange(tp.start, tp.end);
+    return null;
+  }
+
+  // ===== importar .json =====
+  function importJSON(text, fname){
+    let data;
+    try { data = JSON.parse(text); } catch(e){ alert('JSON inválido: ' + e.message); return; }
+    const items = Array.isArray(data) ? data : (data.anotaciones || []);
+    if (!items.length){ alert('El .json no contiene anotaciones reconocibles.'); return; }
+    if (!rawMd){ alert('Carga primero el documento .md correspondiente: las anotaciones se anclan sobre su texto.'); return; }
+    if (data.documento && data.documento.hashMd && data.documento.hashMd !== hash32(rawMd)){
+      if (!confirm('El .json se generó sobre otro documento (hash distinto). Intento relocalizar por contexto de todos modos. ¿Continuar?')) return;
+    }
+    let ok = 0, huerf = 0, dup = 0;
+    for (const it of items){
+      const obj = it.objetivo || it;
+      const id = it.id || ('a' + Date.now().toString(36) + Math.random().toString(36).slice(2,6));
+      if (annos.some(a => a.id === id)){ dup++; continue; }
+      const anc = resolveAnchor(obj);
+      const tp = obj.textoPlano || {};
+      // retrocompatibilidad: acepta lista de comentarios nueva o el campo "nota" antiguo
+      let coments = [];
+      if (Array.isArray(it.comentarios))
+        coments = it.comentarios.filter(c => c && typeof c.texto === 'string' && c.texto.trim())
+                                .map(c => ({ texto: c.texto, creado: c.creado || new Date().toISOString() }));
+      else if (typeof it.nota === 'string' && it.nota.trim())
+        coments = [{ texto: it.nota, creado: it.creado || new Date().toISOString() }];
+      const a = {
+        id, comentarios: coments, creado: it.creado || new Date().toISOString(),
+        exact: obj.exact || '', prefix: obj.prefix || '', suffix: obj.suffix || '',
+        start: anc ? anc.start : (Number.isInteger(tp.start) ? tp.start : null),
+        end:   anc ? anc.end   : (Number.isInteger(tp.end)   ? tp.end   : null),
+        range: anc ? anc.range : null,
+        huerfana: !anc
+      };
+      const md = a.exact ? mdOffset(a.exact) : { start:null, end:null, unico:false };
+      a.mdStart = md.start; a.mdEnd = md.end; a.mdUnico = md.unico;
+      annos.push(a); anc ? ok++ : huerf++;
+    }
+    annos.sort((x,y)=> (x.start == null ? 1e15 : x.start) - (y.start == null ? 1e15 : y.start));
+    refreshHighlights(); renderList(); updateChrome();
+    if (huerf || dup)
+      alert(ok + ' ancladas' + (huerf ? ', ' + huerf + ' sin anclar (huérfanas)' : '') + (dup ? ', ' + dup + ' duplicadas omitidas' : '') + '.');
+  }
+  function readJsonFile(file){
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = ()=> importJSON(String(fr.result), file.name);
+    fr.onerror = ()=> alert('No se pudo leer el .json.');
+    fr.readAsText(file);
+  }
+
+  // ===== resaltado (CSS Custom Highlight API — no muta el DOM) =====
+  const canHL = ('highlights' in CSS) && (typeof Highlight === 'function');
+  function refreshHighlights(){
+    if (!canHL) return;
+    const base = new Highlight(), act = new Highlight();
+    for (const a of annos){
+      if (!a.range) continue;
+      (a.id === activeId ? act : base).add(a.range);
+    }
+    CSS.highlights.set('forja-nota', base);
+    CSS.highlights.set('forja-activa', act);
+  }
+
+  // ===== crear anotación desde la captura pendiente =====
+  function addAnno(){
+    if (!pending) return;
+    const a = Object.assign({
+      id: 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+      comentarios: [], creado: new Date().toISOString()
+    }, pending);
+    annos.push(a);
+    annos.sort((x,y)=> x.start - y.start);   // orden de lectura
+    activeId = a.id; pending = null;
+    hideFab();
+    const sel = window.getSelection(); if (sel) sel.removeAllRanges();
+    refreshHighlights(); renderList(true); updateChrome();
+  }
+
+  function removeAnno(id){
+    annos = annos.filter(a=> a.id !== id);
+    if (activeId === id) activeId = null;
+    refreshHighlights(); renderList(); updateChrome();
+  }
+
+  function setActive(id){
+    activeId = id;
+    list.querySelectorAll('.nota').forEach(n=> n.classList.toggle('activa', n.dataset.id === id));
+    refreshHighlights();
+  }
+
+  function gotoAnno(id){
+    setActive(id);
+    const a = annos.find(x=> x.id === id);
+    if (a && a.range){
+      const rc = a.range.getBoundingClientRect();
+      const cc = read.getBoundingClientRect();
+      read.scrollTop += (rc.top - cc.top) - 100;
+    }
+  }
+
+  // ===== lista lateral =====
+  function autoGrow(ta){ ta.style.height='auto'; ta.style.height = ta.scrollHeight + 'px'; }
+  function fmtFecha(iso){
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    try { return d.toLocaleString('es', { dateStyle:'short', timeStyle:'short' }); }
+    catch(e){ return d.toISOString().slice(0,16).replace('T',' '); }
+  }
+
+  // un comentario ya existente (texto + fecha + borrar). Borra por referencia, no por índice.
+  function commentNode(a, c){
+    const row = document.createElement('div');
+    row.className = 'coment';
+    const tx = document.createElement('div');
+    tx.className = 'coment-tx';
+    tx.textContent = c.texto;
+    const meta = document.createElement('div');
+    meta.className = 'coment-meta';
+    const when = document.createElement('span');
+    when.textContent = fmtFecha(c.creado);
+    const x = document.createElement('button');
+    x.className = 'cdel'; x.textContent = '×'; x.title = 'Borrar comentario';
+    x.addEventListener('click', ()=>{ a.comentarios = a.comentarios.filter(k=> k !== c); renderList(); updateChrome(); });
+    meta.append(when, x);
+    row.append(tx, meta);
+    return row;
+  }
+
+  function renderList(focusNew){
+    list.innerHTML = '';
+    if (!annos.length){
+      list.innerHTML = '<p class="vacio">Selecciona texto y pulsa «anotar» para empezar.</p>';
+      return;
+    }
+    for (const a of annos){
+      const item = document.createElement('div');
+      item.className = 'nota' + (a.id === activeId ? ' activa' : '') + (a.huerfana ? ' huerfana' : '');
+      item.dataset.id = a.id;
+
+      const q = document.createElement('div');
+      q.className = 'quote';
+      q.textContent = a.exact.length > 160 ? a.exact.slice(0,160) + '…' : a.exact;
+      q.title = 'Ir al pasaje';
+      q.addEventListener('click', ()=> gotoAnno(a.id));
+
+      // comentarios acumulados
+      const coments = document.createElement('div');
+      coments.className = 'coments';
+      for (const c of a.comentarios) coments.appendChild(commentNode(a, c));
+
+      // campo para añadir uno nuevo (Cmd/Ctrl+Enter o botón)
+      const add = document.createElement('div');
+      add.className = 'add';
+      const ta = document.createElement('textarea');
+      ta.className = 'add-in';
+      ta.placeholder = 'Añadir comentario…';
+      ta.addEventListener('input', ()=> autoGrow(ta));
+      ta.addEventListener('focus', ()=> setActive(a.id));
+      const doAdd = ()=>{
+        const t = ta.value.trim(); if (!t) return;
+        const c = { texto: t, creado: new Date().toISOString() };
+        a.comentarios.push(c);
+        coments.appendChild(commentNode(a, c));
+        ta.value = ''; autoGrow(ta); ta.focus();
+        updateChrome();
+      };
+      ta.addEventListener('keydown', e=>{ if ((e.metaKey || e.ctrlKey) && e.key === 'Enter'){ e.preventDefault(); doAdd(); } });
+      const btn = document.createElement('button');
+      btn.className = 'add-btn'; btn.textContent = 'añadir';
+      btn.addEventListener('click', doAdd);
+      add.append(ta, btn);
+
+      const fila = document.createElement('div');
+      fila.className = 'fila';
+      const pos = document.createElement('span');
+      pos.className = 'pos';
+      pos.textContent = (a.huerfana || a.start == null)
+        ? 'sin anclar en este documento'
+        : ('plano ' + a.start + '–' + a.end +
+           (a.mdStart != null ? ' · md ' + a.mdStart + '–' + a.mdEnd + (a.mdUnico ? '' : ' (múltiple)') : ' · md n/d'));
+      const del = document.createElement('button');
+      del.className = 'del'; del.textContent = 'eliminar';
+      del.addEventListener('click', ()=> removeAnno(a.id));
+      fila.append(pos, del);
+
+      item.append(q, coments, add, fila);
+      list.appendChild(item);
+      autoGrow(ta);
+      if (focusNew && a.id === activeId) ta.focus();
+    }
+  }
+
+  function updateChrome(){
+    const vacio = annos.length === 0;
+    $('export').disabled = vacio;
+    $('subir').disabled = vacio;
+    $('contador').textContent = annos.length ? (annos.length + (annos.length === 1 ? ' anotación' : ' anotaciones')) : '';
+  }
+
+  // ===== botón flotante =====
+  function showFab(range){
+    const rects = range.getClientRects();
+    const r = rects.length ? rects[rects.length - 1] : range.getBoundingClientRect();
+    fab.style.left = Math.min(r.right, window.innerWidth - 90) + 'px';
+    fab.style.top  = (r.bottom + 6) + 'px';
+    fab.classList.add('on');
+  }
+  function hideFab(){ fab.classList.remove('on'); }
+
+  read.addEventListener('mouseup', ()=>{
+    const cap = captureSelection();
+    if (!cap){ hideFab(); pending = null; return; }
+    pending = cap; showFab(cap.range);
+  });
+  fab.addEventListener('mousedown', e=> e.preventDefault()); // no perder la captura al hacer clic
+  fab.addEventListener('click', addAnno);
+  document.addEventListener('mousedown', e=>{ if (!fab.contains(e.target)) hideFab(); });
+  read.addEventListener('scroll', hideFab);
+
+  // ===== exportar =====
+  function hash32(s){ let h = 5381; for (let i=0;i<s.length;i++) h = ((h<<5) + h + s.charCodeAt(i)) | 0; return (h>>>0).toString(16); }
+
+  // Modelo W3C Web Annotation (subconjunto): exact + prefix/suffix (TextQuoteSelector)
+  // y start/end sobre el texto plano (TextPositionSelector). fuenteMd es cortesía adicional.
+  function buildPayload(){
+    return {
+      forjaAnotador: '1',
+      generado: new Date().toISOString(),
+      documento: {
+        nombre: docName,
+        hashMd: hash32(rawMd),          // para que la plataforma confirme mismo documento
+        longitudMd: rawMd.length,
+        longitudPlano: docText.length
+      },
+      anotaciones: annos.map(a=>({
+        id: a.id,
+        creado: a.creado,
+        objetivo: {
+          exact: a.exact,
+          prefix: a.prefix,
+          suffix: a.suffix,
+          textoPlano: (a.start != null && a.end != null) ? { start: a.start, end: a.end } : null,
+          fuenteMd: a.mdStart == null ? null : { start: a.mdStart, end: a.mdEnd, unico: a.mdUnico }
+        },
+        comentarios: a.comentarios.map(c=>({ texto: c.texto, creado: c.creado }))
+      }))
+    };
+  }
+
+  function exportar(){
+    if (!annos.length) return;
+    const blob = new Blob([JSON.stringify(buildPayload(), null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement('a');
+    el.href = url;
+    el.download = docName.replace(/\.(md|markdown|txt)$/i, '') + '.anotaciones.json';
+    el.click();
+    URL.revokeObjectURL(url);
+  }
+  $('export').addEventListener('click', exportar);
+
+  // ===== carga de documento =====
+  function maybeRender(text, name){
+    if (annos.length && !confirm('Cargar otro documento descartará las anotaciones actuales sin exportar. ¿Continuar?')) return;
+    render(text, name);
+  }
+  function readFile(file){
+    if (!file) return;
+    const fr = new FileReader();
+    fr.onload = ()=> maybeRender(String(fr.result), file.name);
+    fr.onerror = ()=> alert('No se pudo leer el archivo.');
+    fr.readAsText(file);
+  }
+
+  const esJson = (f)=> /\.json$/i.test(f.name) || (f.type || '').includes('json');
+
+  $('drop').addEventListener('click', ()=> fileInput.click());
+  $('drop').addEventListener('keydown', e=>{ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fileInput.click(); } });
+  fileInput.addEventListener('change', e=> readFile(e.target.files[0]));
+  $('cargar').addEventListener('click', ()=> fileInput.click());
+  $('cargarJson').addEventListener('click', ()=> $('fileJson').click());
+  $('fileJson').addEventListener('change', e=>{ readJsonFile(e.target.files[0]); e.target.value = ''; });
+  $('cargarPaste').addEventListener('click', ()=>{
+    const t = $('paste').value;
+    if (t.trim()) maybeRender(t, 'pegado.md');
+  });
+
+  ;['dragenter','dragover'].forEach(ev=> read.addEventListener(ev, e=>{ e.preventDefault(); $('drop').classList.add('hot'); }));
+  ;['dragleave','drop'].forEach(ev=> read.addEventListener(ev, e=>{
+    e.preventDefault(); $('drop').classList.remove('hot');
+    if (ev === 'drop' && e.dataTransfer.files[0]){
+      const f = e.dataTransfer.files[0];
+      esJson(f) ? readJsonFile(f) : readFile(f);
+    }
+  }));
+
+  // ---- subida configurable ----
+  function estado(msg){ $('estado').textContent = msg; }
+  $('subir').addEventListener('click', ()=>{ if (annos.length){ estado(''); $('modal').classList.remove('hide'); $('url').focus(); } });
+  $('cerrar').addEventListener('click', ()=> $('modal').classList.add('hide'));
+  $('modal').addEventListener('mousedown', e=>{ if (e.target === $('modal')) $('modal').classList.add('hide'); });
+  $('enviar').addEventListener('click', async ()=>{
+    const url = $('url').value.trim();
+    if (!url){ estado('Indica un endpoint.'); return; }
+    const headers = { 'Content-Type': 'application/json' };
+    const tok = $('tok').value.trim(); if (tok) headers['Authorization'] = tok;
+    estado('Enviando…');
+    try {
+      const res = await fetch(url, { method:'POST', headers, body: JSON.stringify(buildPayload()) });
+      estado(res.ok ? ('✓ Enviado (' + res.status + ').') : ('El servidor respondió ' + res.status + ' ' + res.statusText + '.'));
+    } catch(e){
+      estado('No se pudo enviar: ' + e.message + ' — suele ser CORS: el endpoint debe permitir POST desde este origen.');
+    }
+  });
+
+  // convención FORJA: clic en el título recarga
+  $('marca').addEventListener('click', ()=> location.reload());
+
+  if (!canHL){
+    // aviso discreto si el navegador no soporta resaltado nativo (todo lo demás funciona)
+    $('contador').title = 'Este navegador no resalta en pantalla, pero las anotaciones y el export funcionan.';
+  }
+})();
+</script>
+</body>
+</html>
