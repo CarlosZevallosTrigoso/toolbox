@@ -169,8 +169,11 @@
   }
 
   /* ---- modo edición ---- */
+  /* mientras se edita, el panel de anotaciones se retira y el editor toma el ancho */
+  body.editando #panel{display:none}
+  body.editando #stats{right:12px}
   #editor{
-    display:block; width:100%; max-width:76ch; margin:0 auto;
+    display:block; width:100%; max-width:120ch; margin:0 auto;
     height:calc(100vh - 130px); resize:none;
     background:var(--panel); color:var(--ink); border:1px solid var(--line);
     border-radius:var(--r); padding:16px 18px;
@@ -442,6 +445,7 @@
 
   function setEdicion(on){
     editando = on;
+    document.body.classList.toggle('editando', on);
     editor.classList.toggle('hide', !on);
     docEl.style.display = on ? 'none' : 'block';
     $('editar').textContent = on ? 'volver a lectura' : 'editar';
