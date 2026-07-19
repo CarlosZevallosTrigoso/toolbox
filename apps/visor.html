@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FORJA · visualizador de corpus</title>
+<style>
+  :root{
+    --bg:#16170f;
+    --panel:#1f2017;
+    --line:#33352a;
+    --ink:#d8d6c4;
+    --ink-dim:#8a8c78;
+    --accent:#8fa676;
+    --accent-dim:#5c6b4b;
+    --warn:#c08a5a;
+    --paper:#ece6d4;
+    --mono: "Fira Code", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--mono); font-size:12px; line-height:1.5;
+    display:flex; min-height:100vh;
+  }
+
+  /* ---- escenario ---- */
+  #stage{
+    flex:1; min-width:0; padding:24px; overflow:auto; position:relative;
+    display:flex; align-items:flex-start; justify-content:center;
+    background:repeating-linear-gradient(45deg, #00000000 0 12px, #ffffff05 12px 13px);
+  }
+  #stage.paper #grid{background:var(--paper)}
+  #stage.dark #grid{background:var(--bg)}
+  #drop{
+    border:1px dashed var(--line); border-radius:2px; align-self:center;
+    width:min(560px,90%); aspect-ratio:4/3;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:10px; color:var(--ink-dim); cursor:pointer; text-align:center; padding:24px;
+    transition:border-color .15s, color .15s;
+  }
+  #drop.hot{border-color:var(--accent); color:var(--ink)}
+  #drop b{color:var(--ink); font-weight:600; letter-spacing:.02em}
+  #drop small{max-width:36ch}
+  #grid{
+    display:none; grid-template-columns:repeat(4,1fr); gap:8px;
+    width:100%; max-width:1400px; padding:12px; border-radius:2px;
+    box-shadow:0 1px 0 #0006, 0 8px 30px #0008;
+  }
+  #grid.on{display:grid}
+  .cell{display:flex; flex-direction:column; min-width:0}
+  .cell .ph{
+    width:100%; aspect-ratio:var(--ar,1); overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .cell img{width:100%; height:100%; object-fit:contain; display:block}
+  #grid.cover .cell img{object-fit:cover}
+  .cell figcaption{
+    display:none; font-size:10px; text-align:center; padding:2px 2px 0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  #grid.labels .cell figcaption{display:block}
+  #stage.paper figcaption{color:#3a3a30}
+  #stage.dark figcaption{color:var(--ink-dim)}
+  figure{margin:0}
+  #busy{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    background:#16170fcc; color:var(--accent); letter-spacing:.08em; text-transform:uppercase;
+    font-size:11px; z-index:10;
+  }
+  #busy.on{display:flex}
+
+  /* ---- panel ---- */
+  #panel{
+    width:300px; flex:none; background:var(--panel); border-left:1px solid var(--line);
+    display:flex; flex-direction:column; height:100vh; position:sticky; top:0;
+  }
+  #panel header{padding:14px 16px 10px; border-bottom:1px solid var(--line)}
+  #panel header h1{
+    margin:0; font-size:12px; font-weight:600; letter-spacing:.18em; color:var(--ink); cursor:pointer;
+  }
+  #panel header h1:hover{color:var(--accent)}
+  #panel header p{margin:4px 0 0; color:var(--ink-dim); font-size:11px}
+  .scroll{overflow-y:auto; padding:6px 0 16px; flex:1}
+
+  .stage-block{border-bottom:1px solid var(--line); padding:12px 16px}
+  .stage-num{display:flex; align-items:baseline; gap:8px; margin-bottom:8px; color:var(--ink-dim)}
+  .stage-num .n{color:var(--accent); font-weight:600}
+  .stage-num .arrow{color:var(--line)}
+  .stage-num .t{color:var(--ink); letter-spacing:.06em; text-transform:uppercase; font-size:10px}
+
+  label.field{display:block; margin:8px 0}
+  label.field > span{display:block; color:var(--ink-dim); margin-bottom:3px; font-size:11px}
+  select, input[type=number]{
+    width:100%; background:#12130c; color:var(--ink); border:1px solid var(--line);
+    border-radius:2px; padding:5px 6px; font-family:var(--mono); font-size:12px;
+  }
+  select:focus, input:focus{outline:1px solid var(--accent); border-color:var(--accent)}
+  input[type=range]{width:100%; accent-color:var(--accent); margin:2px 0}
+  .inline{display:flex; align-items:center; gap:8px; justify-content:space-between}
+  .val{color:var(--accent); font-variant-numeric:tabular-nums; min-width:4ch; text-align:right}
+  .check{display:flex; align-items:center; gap:8px; cursor:pointer; color:var(--ink); margin:6px 0}
+  .check input{accent-color:var(--accent)}
+  .hide{display:none !important}
+  .hint{color:var(--ink-dim); font-size:10px; margin-top:6px; line-height:1.4}
+
+  #actions{padding:12px 16px; border-top:1px solid var(--line); display:flex; flex-direction:column; gap:8px}
+  button{
+    font-family:var(--mono); font-size:12px; letter-spacing:.04em; cursor:pointer;
+    border-radius:2px; padding:8px 10px; border:1px solid var(--line);
+    background:#12130c; color:var(--ink); transition:border-color .12s, color .12s;
+  }
+  button:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
+  button:disabled{opacity:.4; cursor:default}
+  button.primary{background:var(--accent-dim); border-color:var(--accent-dim); color:#0e0f08; font-weight:600}
+  button.primary:hover:not(:disabled){background:var(--accent); border-color:var(--accent); color:#0e0f08}
+  .btnrow{display:flex; gap:8px}
+  .btnrow button{flex:1}
+  .meta{color:var(--ink-dim); font-size:10px; text-align:center; min-height:14px}
+
+  @media (max-width:760px){
+    body{flex-direction:column}
+    #panel{width:100%; height:auto; order:2; border-left:none; border-top:1px solid var(--line); position:static}
+    #stage{order:1; min-height:50vh}
+  }
+</style>
+</head>
+<body>
+  <main id="stage" class="paper">
+    <div id="drop" tabindex="0" role="button" aria-label="Cargar imágenes">
+      <b>Suelta una carpeta o imágenes</b>
+      <small>o usa los botones del panel. Todo ocurre en tu navegador; nada sale de tu equipo.</small>
+    </div>
+    <div id="grid" role="list" aria-label="Grilla del corpus"></div>
+    <div id="busy">trabajando…</div>
+    <input type="file" id="file-dir" webkitdirectory multiple class="hide">
+    <input type="file" id="file-multi" accept="image/*" multiple class="hide">
+  </main>
+
+  <aside id="panel">
+    <header>
+      <h1 id="brand" title="Recargar">FORJA</h1>
+      <p>visualizador de corpus → jpg / pdf</p>
+    </header>
+    <div class="scroll">
+
+      <!-- 1 · corpus -->
+      <section class="stage-block">
+        <div class="stage-num"><span class="n">01</span><span class="arrow">›</span><span class="t">Corpus · qué entra</span></div>
+        <div class="btnrow">
+          <button id="pick-dir">elegir carpeta</button>
+          <button id="pick-files">elegir archivos</button>
+        </div>
+        <label class="field" style="margin-top:10px"><span>orden</span>
+          <select id="sort">
+            <option value="name">nombre (natural)</option>
+            <option value="date">fecha de modificación</option>
+            <option value="size">tamaño de archivo</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="inv"> invertir orden</label>
+        <div class="hint">Arrastra la carpeta sincronizada de Drive directamente sobre el escenario. Se admiten subcarpetas.</div>
+      </section>
+
+      <!-- 2 · grilla -->
+      <section class="stage-block">
+        <div class="stage-num"><span class="n">02</span><span class="arrow">›</span><span class="t">Grilla · cómo se coloca</span></div>
+        <label class="field"><span>columnas</span>
+          <div class="inline"><input type="range" id="cols" min="1" max="12" value="4"><span class="val" id="cols-v">4</span></div>
+        </label>
+        <label class="field"><span>espaciado</span>
+          <div class="inline"><input type="range" id="gap" min="0" max="40" value="8"><span class="val" id="gap-v">8</span></div>
+        </label>
+        <label class="field"><span>proporción de celda</span>
+          <select id="aspect">
+            <option value="1">cuadrada 1:1</option>
+            <option value="1.3333">horizontal 4:3</option>
+            <option value="0.75">vertical 3:4</option>
+            <option value="1.7778">panorámica 16:9</option>
+          </select>
+        </label>
+        <label class="field"><span>ajuste de la imagen</span>
+          <select id="fit">
+            <option value="contain">entera (sin recorte)</option>
+            <option value="cover">llenar celda (recorta)</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="labels"> nombres de archivo</label>
+        <label class="field"><span>fondo</span>
+          <select id="bg">
+            <option value="paper">papel claro</option>
+            <option value="dark">carbón</option>
+          </select>
+        </label>
+      </section>
+
+      <!-- 3 · exportación -->
+      <section class="stage-block">
+        <div class="stage-num"><span class="n">03</span><span class="arrow">›</span><span class="t">Exportación · cómo sale</span></div>
+        <label class="field"><span>ancho del JPG (px)</span>
+          <div class="inline"><input type="range" id="jpgw" min="1200" max="6000" step="100" value="2400"><span class="val" id="jpgw-v">2400</span></div>
+        </label>
+        <label class="field"><span>calidad JPG</span>
+          <div class="inline"><input type="range" id="jpgq" min="60" max="100" value="90"><span class="val" id="jpgq-v">90</span></div>
+        </label>
+        <label class="field"><span>página PDF</span>
+          <select id="orient">
+            <option value="p">A4 vertical</option>
+            <option value="l">A4 horizontal</option>
+          </select>
+        </label>
+        <label class="field"><span>margen PDF (mm)</span>
+          <div class="inline"><input type="range" id="margin" min="5" max="25" value="10"><span class="val" id="margin-v">10</span></div>
+        </label>
+        <div class="hint">El PDF pagina automáticamente con las mismas columnas y espaciado de la grilla. Requiere conexión la primera vez (carga jsPDF).</div>
+      </section>
+    </div>
+
+    <div id="actions">
+      <div class="btnrow">
+        <button id="exp-jpg" class="primary" disabled>exportar JPG</button>
+        <button id="exp-pdf" class="primary" disabled>exportar PDF</button>
+      </div>
+      <div class="meta" id="meta">sin corpus cargado</div>
+    </div>
+  </aside>
+
+<script>
+(function(){
+'use strict';
+
+/* ============================================================
+   FORJA · visualizador de corpus — todo local, sin dependencias
+   (jsPDF 2.5.1 se carga bajo demanda solo al exportar PDF)
+   ============================================================ */
+
+const $ = (id) => document.getElementById(id);
+const stage = $('stage'), drop = $('drop'), grid = $('grid');
+const busy = $('busy'), meta = $('meta');
+const MONO = '"Fira Code", ui-monospace, Menlo, Consolas, monospace';
+const JSPDF_URL = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js';
+const IMG_RE = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
+const MAX_SIDE = 16000;   // límite prudente de canvas
+const PDF_K = 8;          // px por mm en el render de página (~203 dpi)
+
+// convención permanente: clic en el nombre recarga
+$('brand').addEventListener('click', () => location.reload());
+
+/* ---------- estado ---------- */
+const state = { items: [], sorted: [] }; // item: {file,url,name,date,size}
+
+/* ---------- lógica pura (testeada en Node antes de integrar) ---------- */
+function naturalCmp(a, b){
+  return a.name.localeCompare(b.name, 'es', { numeric:true, sensitivity:'base' }) || (a.size - b.size);
+}
+function sortItems(items, mode, inv){
+  const cmp = mode === 'date' ? (a,b) => (a.date - b.date) || naturalCmp(a,b)
+            : mode === 'size' ? (a,b) => (a.size - b.size) || naturalCmp(a,b)
+            : naturalCmp;
+  const arr = items.slice().sort(cmp);
+  if (inv) arr.reverse();
+  return arr;
+}
+// composición en espacio abstracto de ancho 1600 unidades; luego se escala
+// uniformemente al destino (px del JPG o mm del PDF). Determinista.
+function layoutGrid(n, cols, gap, aspect, labelFrac){
+  const W = 1600;
+  cols = Math.max(1, cols | 0);
+  const cellW = (W - gap * (cols - 1)) / cols;
+  const cellH = cellW / aspect;
+  const labelH = labelFrac > 0 ? cellW * labelFrac : 0;
+  const boxH = cellH + labelH;
+  const rows = Math.max(1, Math.ceil(n / cols));
+  const totalH = rows * boxH + gap * (rows - 1);
+  return { W, cols, gap, cellW, cellH, labelH, boxH, rows, totalH };
+}
+function rowsPerPage(availH, boxH, gap){
+  return Math.max(1, Math.floor((availH + gap) / (boxH + gap)));
+}
+function fitRect(sw, sh, dw, dh, mode){
+  const s = mode === 'cover' ? Math.max(dw/sw, dh/sh) : Math.min(dw/sw, dh/sh);
+  const w = sw * s, h = sh * s;
+  return { w, h, dx: (dw - w) / 2, dy: (dh - h) / 2 };
+}
+function fmtBytes(b){
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(1) + ' MB';
+}
+
+/* ---------- UI ---------- */
+const ui = {
+  sort: $('sort'), inv: $('inv'),
+  cols: $('cols'), gap: $('gap'), aspect: $('aspect'), fit: $('fit'),
+  labels: $('labels'), bg: $('bg'),
+  jpgw: $('jpgw'), jpgq: $('jpgq'), orient: $('orient'), margin: $('margin'),
+};
+function readCfg(){
+  return {
+    sort: ui.sort.value, inv: ui.inv.checked,
+    cols: +ui.cols.value, gap: +ui.gap.value,
+    aspect: +ui.aspect.value, fit: ui.fit.value,
+    labels: ui.labels.checked, bg: ui.bg.value,
+    jpgW: +ui.jpgw.value, jpgQ: (+ui.jpgq.value)/100,
+    orient: ui.orient.value, margin: +ui.margin.value,
+  };
+}
+[['cols','cols-v'],['gap','gap-v'],['jpgw','jpgw-v'],['jpgq','jpgq-v'],['margin','margin-v']]
+  .forEach(([a,b]) => $(a).addEventListener('input', () => $(b).textContent = $(a).value));
+
+function setBusy(on, txt){ busy.textContent = txt || 'trabajando…'; busy.classList.toggle('on', !!on); }
+
+/* ---------- carga de archivos ---------- */
+function addFiles(fileList){
+  const files = Array.from(fileList).filter(f =>
+    /^image\//.test(f.type) || IMG_RE.test(f.name));
+  const seen = new Set(state.items.map(it => it.name + '|' + it.size));
+  let added = 0;
+  for (const f of files){
+    const key = f.name + '|' + f.size;
+    if (seen.has(key)) continue; // dedupe: mismo nombre y tamaño
+    seen.add(key);
+    state.items.push({ file: f, url: URL.createObjectURL(f), name: f.name, date: f.lastModified, size: f.size });
+    added++;
+  }
+  if (!state.items.length){ meta.textContent = 'No se encontraron imágenes.'; return; }
+  if (!added){ meta.textContent = 'Sin archivos nuevos (duplicados omitidos).'; renderGrid(); return; }
+  renderGrid();
+}
+
+// recorrido recursivo de carpetas soltadas (webkitGetAsEntry)
+function readAll(reader){
+  return new Promise((res, rej) => {
+    const acc = [];
+    (function next(){
+      reader.readEntries(es => { if (!es.length) return res(acc); acc.push(...es); next(); }, rej);
+    })();
+  });
+}
+async function walk(entry, out){
+  if (entry.isFile){
+    const f = await new Promise((res, rej) => entry.file(res, rej));
+    out.push(f);
+  } else if (entry.isDirectory){
+    const es = await readAll(entry.createReader());
+    for (const e of es) await walk(e, out);
+  }
+}
+async function filesFromDrop(dt){
+  const entries = Array.from(dt.items || [])
+    .map(i => i.webkitGetAsEntry && i.webkitGetAsEntry())
+    .filter(Boolean);
+  if (!entries.length) return Array.from(dt.files);
+  const out = [];
+  for (const e of entries) await walk(e, out);
+  return out;
+}
+
+$('pick-dir').addEventListener('click', () => $('file-dir').click());
+$('pick-files').addEventListener('click', () => $('file-multi').click());
+$('file-dir').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+$('file-multi').addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; });
+drop.addEventListener('click', () => $('file-multi').click());
+drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('file-multi').click(); } });
+['dragenter','dragover'].forEach(ev => stage.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hot'); }));
+stage.addEventListener('dragleave', e => { e.preventDefault(); drop.classList.remove('hot'); });
+stage.addEventListener('drop', async e => {
+  e.preventDefault(); drop.classList.remove('hot');
+  setBusy(true, 'leyendo carpeta…');
+  try { addFiles(await filesFromDrop(e.dataTransfer)); }
+  catch(err){ meta.textContent = 'Error al leer: ' + err.message; }
+  setBusy(false);
+});
+
+/* ---------- vista previa ---------- */
+let debounce;
+function scheduleRender(){ clearTimeout(debounce); debounce = setTimeout(renderGrid, 90); }
+Object.values(ui).forEach(el => {
+  el.addEventListener('input', scheduleRender);
+  el.addEventListener('change', scheduleRender);
+});
+
+function renderGrid(){
+  if (!state.items.length) return;
+  const cfg = readCfg();
+  state.sorted = sortItems(state.items, cfg.sort, cfg.inv);
+
+  drop.style.display = 'none';
+  grid.classList.add('on');
+  grid.classList.toggle('labels', cfg.labels);
+  grid.classList.toggle('cover', cfg.fit === 'cover');
+  stage.classList.toggle('paper', cfg.bg === 'paper');
+  stage.classList.toggle('dark', cfg.bg !== 'paper');
+  grid.style.gridTemplateColumns = 'repeat(' + cfg.cols + ',1fr)';
+  grid.style.gap = cfg.gap + 'px';
+  grid.style.setProperty('--ar', String(cfg.aspect));
+
+  const frag = document.createDocumentFragment();
+  for (const it of state.sorted){
+    const fig = document.createElement('figure');
+    fig.className = 'cell'; fig.setAttribute('role','listitem');
+    const ph = document.createElement('div'); ph.className = 'ph';
+    const img = document.createElement('img');
+    img.src = it.url; img.loading = 'lazy'; img.decoding = 'async'; img.alt = it.name;
+    ph.appendChild(img);
+    const cap = document.createElement('figcaption');
+    cap.textContent = it.name; cap.title = it.name;
+    fig.appendChild(ph); fig.appendChild(cap);
+    frag.appendChild(fig);
+  }
+  grid.replaceChildren(frag);
+
+  const total = state.items.reduce((s, it) => s + it.size, 0);
+  meta.textContent = state.items.length + ' imágenes · ' + fmtBytes(total);
+  $('exp-jpg').disabled = $('exp-pdf').disabled = false;
+}
+
+/* ---------- render compartido a canvas (JPG y páginas del PDF) ---------- */
+function bgColor(cfg){ return cfg.bg === 'paper' ? '#ece6d4' : '#16170f'; }
+function labelColor(cfg){ return cfg.bg === 'paper' ? '#3a3a30' : '#b8b6a4'; }
+
+// dibuja los items [from,to) en el contexto g, con layout L escalado por s,
+// desplazado (ox,oy) en px. decodifica con createImageBitmap y libera memoria.
+async function drawRange(g, items, from, to, L, s, ox, oy, cfg, prog){
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let i = from; i < to; i++){
+    const k = i - from;
+    const col = k % L.cols, row = Math.floor(k / L.cols);
+    const x = ox + col * (L.cellW + L.gap) * s;
+    const y = oy + row * (L.boxH + L.gap) * s;
+    const w = L.cellW * s, h = L.cellH * s;
+    let bmp = null;
+    try { bmp = await createImageBitmap(items[i].file); } catch(e){ /* formato no decodificable */ }
+    if (bmp){
+      const f = fitRect(bmp.width, bmp.height, w, h, cfg.fit);
+      if (cfg.fit === 'cover'){
+        g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
+        g.drawImage(bmp, x + f.dx, y + f.dy, f.w, f.h);
+        g.restore();
+      } else {
+        g.drawImage(bmp, x + f.dx, y + f.dy, f.w, f.h);
+      }
+      bmp.close();
+    } else {
+      g.strokeStyle = '#8a8c78'; g.lineWidth = 1;
+      g.strokeRect(x + .5, y + .5, w - 1, h - 1);
+      g.fillStyle = '#8a8c78'; g.font = Math.max(9, h * 0.08) + 'px ' + MONO;
+      g.fillText('no decodificable', x + w/2, y + h/2, w * 0.9);
+    }
+    if (cfg.labels && L.labelH > 0){
+      g.fillStyle = labelColor(cfg);
+      g.font = Math.max(7, Math.round(L.labelH * 0.5 * s)) + 'px ' + MONO;
+      g.fillText(items[i].name, x + w/2, y + h + L.labelH * s * 0.55, w * 0.96);
+    }
+    if (prog) prog(i - from + 1, to - from);
+  }
+}
+
+/* ---------- exportar JPG ---------- */
+async function exportJPG(){
+  const cfg = readCfg();
+  const items = state.sorted.length ? state.sorted : sortItems(state.items, cfg.sort, cfg.inv);
+  if (!items.length) return;
+  setBusy(true, 'exportando… 0/' + items.length);
+  try {
+    const L = layoutGrid(items.length, cfg.cols, cfg.gap, cfg.aspect, cfg.labels ? 0.10 : 0);
+    const pad = cfg.gap; // borde exterior = espaciado
+    let s = cfg.jpgW / (L.W + pad * 2);
+    let ch = Math.round((L.totalH + pad * 2) * s);
+    let note = '';
+    if (ch > MAX_SIDE){ // límite de canvas: reescala todo proporcionalmente
+      s *= MAX_SIDE / ch; ch = MAX_SIDE;
+      note = ' (alto limitado a ' + MAX_SIDE + 'px)';
+    }
+    const cw = Math.round((L.W + pad * 2) * s);
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+    const g = c.getContext('2d');
+    g.fillStyle = bgColor(cfg); g.fillRect(0, 0, cw, ch);
+    await drawRange(g, items, 0, items.length, L, s, pad * s, pad * s, cfg,
+      (i, n) => setBusy(true, 'exportando… ' + i + '/' + n));
+    const blob = await new Promise((res, rej) =>
+      c.toBlob(b => b ? res(b) : rej(new Error('toBlob devolvió null (¿canvas demasiado grande?)')), 'image/jpeg', cfg.jpgQ));
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'forja_corpus_' + Date.now() + '.jpg';
+    a.click(); URL.revokeObjectURL(a.href);
+    meta.textContent = cw + '×' + ch + ' px · ' + fmtBytes(blob.size) + note;
+  } catch(err){
+    meta.textContent = 'Error JPG: ' + err.message;
+  }
+  setBusy(false);
+}
+
+/* ---------- exportar PDF (jsPDF 2.5.1 bajo demanda) ---------- */
+function ensureJsPDF(){
+  return new Promise((res, rej) => {
+    if (window.jspdf && window.jspdf.jsPDF) return res();
+    const sc = document.createElement('script');
+    sc.src = JSPDF_URL;
+    sc.onload = () => window.jspdf && window.jspdf.jsPDF ? res() : rej(new Error('jsPDF cargó pero no expone jsPDF'));
+    sc.onerror = () => rej(new Error('no se pudo cargar jsPDF (¿sin conexión?)'));
+    document.head.appendChild(sc);
+  });
+}
+async function exportPDF(){
+  const cfg = readCfg();
+  const items = state.sorted.length ? state.sorted : sortItems(state.items, cfg.sort, cfg.inv);
+  if (!items.length) return;
+  setBusy(true, 'cargando jsPDF…');
+  try {
+    await ensureJsPDF();
+    const pw = cfg.orient === 'l' ? 297 : 210;
+    const ph = cfg.orient === 'l' ? 210 : 297;
+    const m = Math.min(cfg.margin, Math.floor(Math.min(pw, ph) / 4));
+    const uw = pw - 2 * m, uh = ph - 2 * m; // área útil en mm
+
+    const L = layoutGrid(items.length, cfg.cols, cfg.gap, cfg.aspect, cfg.labels ? 0.10 : 0);
+    const s = (uw * PDF_K) / L.W;               // px por unidad abstracta
+    const rpp = rowsPerPage(uh * PDF_K, L.boxH * s, L.gap * s);
+    const perPage = rpp * L.cols;
+    const pages = Math.ceil(items.length / perPage);
+
+    const doc = new window.jspdf.jsPDF({
+      orientation: cfg.orient === 'l' ? 'landscape' : 'portrait',
+      unit: 'mm', format: 'a4',
+    });
+
+    for (let p = 0; p < pages; p++){
+      const from = p * perPage, to = Math.min(items.length, from + perPage);
+      const nRows = Math.ceil((to - from) / L.cols);
+      const chUnits = nRows * L.boxH + (nRows - 1) * L.gap;
+      const cw = Math.round(uw * PDF_K);
+      const chPx = Math.max(1, Math.round(chUnits * s));
+      const c = document.createElement('canvas'); c.width = cw; c.height = chPx;
+      const g = c.getContext('2d');
+      g.fillStyle = bgColor(cfg); g.fillRect(0, 0, cw, chPx);
+      await drawRange(g, items, from, to, L, s, 0, 0, cfg,
+        (i) => setBusy(true, 'exportando… pág ' + (p+1) + '/' + pages + ' · ' + (from + i) + '/' + items.length));
+      if (p > 0) doc.addPage();
+      doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', m, m, uw, chUnits * s / PDF_K);
+    }
+    doc.save('forja_corpus_' + Date.now() + '.pdf');
+    meta.textContent = pages + (pages === 1 ? ' página' : ' páginas') + ' · ' + items.length + ' imágenes';
+  } catch(err){
+    meta.textContent = 'Error PDF: ' + err.message;
+  }
+  setBusy(false);
+}
+
+$('exp-jpg').addEventListener('click', exportJPG);
+$('exp-pdf').addEventListener('click', exportPDF);
+
+})();
+</script>
+</body>
+</html>
