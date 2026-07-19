@@ -31,8 +31,6 @@
     display:flex; align-items:flex-start; justify-content:center;
     background:repeating-linear-gradient(45deg, #00000000 0 12px, #ffffff05 12px 13px);
   }
-  #stage.paper #grid{background:var(--paper)}
-  #stage.dark #grid{background:var(--bg)}
   #drop{
     border:1px dashed var(--line); border-radius:2px; align-self:center;
     width:min(560px,90%); aspect-ratio:4/3;
@@ -43,27 +41,35 @@
   #drop.hot{border-color:var(--accent); color:var(--ink)}
   #drop b{color:var(--ink); font-weight:600; letter-spacing:.02em}
   #drop small{max-width:36ch}
+
+  /* masonry: contenedor flex de columnas */
   #grid{
-    display:none; grid-template-columns:repeat(4,1fr); gap:8px;
-    width:100%; max-width:1400px; padding:12px; border-radius:2px;
+    display:none; width:100%; max-width:1400px; padding:12px; border-radius:2px;
     box-shadow:0 1px 0 #0006, 0 8px 30px #0008;
   }
-  #grid.on{display:grid}
-  .cell{display:flex; flex-direction:column; min-width:0}
-  .cell .ph{
-    width:100%; aspect-ratio:var(--ar,1); overflow:hidden;
+  #grid.on{display:flex; align-items:flex-start}
+  .mcol{flex:1; min-width:0; display:flex; flex-direction:column}
+  figure.cell{margin:0; min-width:0}
+  .cell img{width:100%; height:auto; display:block}
+  .cell .broken{
+    width:100%; aspect-ratio:4/3; border:1px solid var(--ink-dim);
     display:flex; align-items:center; justify-content:center;
+    color:var(--ink-dim); font-size:10px;
   }
-  .cell img{width:100%; height:100%; object-fit:contain; display:block}
-  #grid.cover .cell img{object-fit:cover}
-  .cell figcaption{
-    display:none; font-size:10px; text-align:center; padding:2px 2px 0;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  .cell figcaption{font-size:10px; line-height:1.45; padding:3px 2px 0; overflow-wrap:break-word}
+  .cell figcaption.fname{text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .cell textarea{
+    width:100%; border:0; background:transparent; resize:none; overflow:hidden;
+    font-family:var(--mono); font-size:10px; line-height:1.45; padding:3px 2px 0;
+    color:inherit; display:block;
   }
-  #grid.labels .cell figcaption{display:block}
-  #stage.paper figcaption{color:#3a3a30}
-  #stage.dark figcaption{color:var(--ink-dim)}
-  figure{margin:0}
+  .cell textarea:focus{outline:1px dashed var(--accent)}
+  .cell textarea::placeholder{color:inherit; opacity:.35}
+  #stage.paper #grid{background:var(--paper)}
+  #stage.dark #grid{background:var(--bg)}
+  #stage.paper .cell{color:#3a3a30}
+  #stage.dark .cell{color:var(--ink-dim)}
+
   #busy{
     position:fixed; inset:0; display:none; align-items:center; justify-content:center;
     background:#16170fcc; color:var(--accent); letter-spacing:.08em; text-transform:uppercase;
@@ -96,7 +102,7 @@
     width:100%; background:#12130c; color:var(--ink); border:1px solid var(--line);
     border-radius:2px; padding:5px 6px; font-family:var(--mono); font-size:12px;
   }
-  select:focus, input:focus{outline:1px solid var(--accent); border-color:var(--accent)}
+  select:focus, input:focus, textarea:focus{outline:1px solid var(--accent); border-color:var(--accent)}
   input[type=range]{width:100%; accent-color:var(--accent); margin:2px 0}
   .inline{display:flex; align-items:center; gap:8px; justify-content:space-between}
   .val{color:var(--accent); font-variant-numeric:tabular-nums; min-width:4ch; text-align:right}
@@ -132,7 +138,7 @@
       <b>Suelta una carpeta o imágenes</b>
       <small>o usa los botones del panel. Todo ocurre en tu navegador; nada sale de tu equipo.</small>
     </div>
-    <div id="grid" role="list" aria-label="Grilla del corpus"></div>
+    <div id="grid" role="list" aria-label="Masonry del corpus"></div>
     <div id="busy">trabajando…</div>
     <input type="file" id="file-dir" webkitdirectory multiple class="hide">
     <input type="file" id="file-multi" accept="image/*" multiple class="hide">
@@ -141,7 +147,7 @@
   <aside id="panel">
     <header>
       <h1 id="brand" title="Recargar">FORJA</h1>
-      <p>visualizador de corpus → jpg / pdf</p>
+      <p>masonry de corpus → jpg / pdf</p>
     </header>
     <div class="scroll">
 
@@ -163,36 +169,29 @@
         <div class="hint">Arrastra la carpeta sincronizada de Drive directamente sobre el escenario. Se admiten subcarpetas.</div>
       </section>
 
-      <!-- 2 · grilla -->
+      <!-- 2 · masonry -->
       <section class="stage-block">
-        <div class="stage-num"><span class="n">02</span><span class="arrow">›</span><span class="t">Grilla · cómo se coloca</span></div>
+        <div class="stage-num"><span class="n">02</span><span class="arrow">›</span><span class="t">Masonry · cómo se coloca</span></div>
         <label class="field"><span>columnas</span>
-          <div class="inline"><input type="range" id="cols" min="1" max="12" value="4"><span class="val" id="cols-v">4</span></div>
+          <div class="inline"><input type="range" id="cols" min="1" max="10" value="4"><span class="val" id="cols-v">4</span></div>
         </label>
         <label class="field"><span>espaciado</span>
           <div class="inline"><input type="range" id="gap" min="0" max="40" value="8"><span class="val" id="gap-v">8</span></div>
         </label>
-        <label class="field"><span>proporción de celda</span>
-          <select id="aspect">
-            <option value="1">cuadrada 1:1</option>
-            <option value="1.3333">horizontal 4:3</option>
-            <option value="0.75">vertical 3:4</option>
-            <option value="1.7778">panorámica 16:9</option>
+        <label class="field"><span>texto bajo cada imagen</span>
+          <select id="cap">
+            <option value="none">sin texto</option>
+            <option value="name">nombre de archivo</option>
+            <option value="comment">modo comentador</option>
           </select>
         </label>
-        <label class="field"><span>ajuste de la imagen</span>
-          <select id="fit">
-            <option value="contain">entera (sin recorte)</option>
-            <option value="cover">llenar celda (recorta)</option>
-          </select>
-        </label>
-        <label class="check"><input type="checkbox" id="labels"> nombres de archivo</label>
         <label class="field"><span>fondo</span>
           <select id="bg">
             <option value="paper">papel claro</option>
             <option value="dark">carbón</option>
           </select>
         </label>
+        <div class="hint" id="cap-hint" style="display:none">Escribe directamente bajo cada imagen. Los comentarios se guardan en este navegador (por nombre y tamaño de archivo) y salen en el JPG y el PDF.</div>
       </section>
 
       <!-- 3 · exportación -->
@@ -213,7 +212,7 @@
         <label class="field"><span>margen PDF (mm)</span>
           <div class="inline"><input type="range" id="margin" min="5" max="25" value="10"><span class="val" id="margin-v">10</span></div>
         </label>
-        <div class="hint">El PDF pagina automáticamente con las mismas columnas y espaciado de la grilla. Requiere conexión la primera vez (carga jsPDF).</div>
+        <div class="hint">El PDF pagina el masonry: llena cada A4 y pasa a la siguiente página. Requiere conexión la primera vez (carga jsPDF).</div>
       </section>
     </div>
 
@@ -231,7 +230,7 @@
 'use strict';
 
 /* ============================================================
-   FORJA · visualizador de corpus — todo local, sin dependencias
+   FORJA · visualizador de corpus — masonry, todo local
    (jsPDF 2.5.1 se carga bajo demanda solo al exportar PDF)
    ============================================================ */
 
@@ -243,12 +242,30 @@ const JSPDF_URL = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.j
 const IMG_RE = /\.(jpe?g|png|webp|gif|avif|bmp)$/i;
 const MAX_SIDE = 16000;   // límite prudente de canvas
 const PDF_K = 8;          // px por mm en el render de página (~203 dpi)
+const NOTES_KEY = 'forjaVisorNotas';
 
 // convención permanente: clic en el nombre recarga
 $('brand').addEventListener('click', () => location.reload());
 
 /* ---------- estado ---------- */
-const state = { items: [], sorted: [] }; // item: {file,url,name,date,size}
+const state = { items: [], sorted: [] }; // item: {file,url,name,date,size,ar,broken}
+const notes = new Map();                 // clave name|size -> comentario
+const keyOf = (it) => it.name + '|' + it.size;
+
+// comentarios persistidos en este navegador; si localStorage no está
+// disponible (modo privado, visor embebido), se degrada a memoria de sesión
+function loadNotes(){
+  try {
+    const raw = localStorage.getItem(NOTES_KEY);
+    if (raw) for (const [k, v] of Object.entries(JSON.parse(raw))) notes.set(k, v);
+  } catch(e){ /* sin persistencia */ }
+}
+function saveNotes(){
+  try {
+    localStorage.setItem(NOTES_KEY, JSON.stringify(Object.fromEntries(notes)));
+  } catch(e){ /* sin persistencia */ }
+}
+loadNotes();
 
 /* ---------- lógica pura (testeada en Node antes de integrar) ---------- */
 function naturalCmp(a, b){
@@ -262,26 +279,48 @@ function sortItems(items, mode, inv){
   if (inv) arr.reverse();
   return arr;
 }
-// composición en espacio abstracto de ancho 1600 unidades; luego se escala
-// uniformemente al destino (px del JPG o mm del PDF). Determinista.
-function layoutGrid(n, cols, gap, aspect, labelFrac){
+// partición de texto en líneas por ancho; measure(t) -> ancho de t
+function wrapText(measure, text, maxW){
+  const lines = [];
+  for (const raw of String(text).split('\n')){
+    const words = raw.split(/\s+/).filter(Boolean);
+    if (!words.length){ lines.push(''); continue; }
+    let line = '';
+    for (const word of words){
+      const t = line ? line + ' ' + word : word;
+      if (!line || measure(t) <= maxW) line = t;
+      else { lines.push(line); line = word; }
+    }
+    lines.push(line);
+  }
+  while (lines.length && lines[lines.length - 1] === '') lines.pop();
+  return lines;
+}
+// masonry en espacio abstracto de ancho 1600: cada entrada cae en la columna
+// más corta; si pageH es finito, cierra página cuando la entrada ya no cabe.
+// entries: [{ar, capH}] -> {W, colW, pages:[{cells:[{i,x,y,imgH,capH}], h}]}
+function layoutMasonry(entries, cols, gap, pageH){
   const W = 1600;
   cols = Math.max(1, cols | 0);
-  const cellW = (W - gap * (cols - 1)) / cols;
-  const cellH = cellW / aspect;
-  const labelH = labelFrac > 0 ? cellW * labelFrac : 0;
-  const boxH = cellH + labelH;
-  const rows = Math.max(1, Math.ceil(n / cols));
-  const totalH = rows * boxH + gap * (rows - 1);
-  return { W, cols, gap, cellW, cellH, labelH, boxH, rows, totalH };
-}
-function rowsPerPage(availH, boxH, gap){
-  return Math.max(1, Math.floor((availH + gap) / (boxH + gap)));
-}
-function fitRect(sw, sh, dw, dh, mode){
-  const s = mode === 'cover' ? Math.max(dw/sw, dh/sh) : Math.min(dw/sw, dh/sh);
-  const w = sw * s, h = sh * s;
-  return { w, h, dx: (dw - w) / 2, dy: (dh - h) / 2 };
+  const colW = (W - gap * (cols - 1)) / cols;
+  const pages = [];
+  let cells = [], colH = new Array(cols).fill(0);
+  const flush = () => {
+    if (cells.length) pages.push({ cells, h: Math.max.apply(null, colH) - gap });
+    cells = []; colH = new Array(cols).fill(0);
+  };
+  for (let i = 0; i < entries.length; i++){
+    const en = entries[i];
+    const imgH = colW / Math.max(0.05, en.ar);
+    const boxH = imgH + en.capH;
+    let c = 0;
+    for (let j = 1; j < cols; j++) if (colH[j] < colH[c]) c = j;
+    if (pageH !== Infinity && colH[c] > 0 && colH[c] + boxH > pageH){ flush(); c = 0; }
+    cells.push({ i, c, x: c * (colW + gap), y: colH[c], imgH, capH: en.capH });
+    colH[c] += boxH + gap;
+  }
+  flush();
+  return { W, colW, pages };
 }
 function fmtBytes(b){
   if (b < 1024) return b + ' B';
@@ -292,16 +331,14 @@ function fmtBytes(b){
 /* ---------- UI ---------- */
 const ui = {
   sort: $('sort'), inv: $('inv'),
-  cols: $('cols'), gap: $('gap'), aspect: $('aspect'), fit: $('fit'),
-  labels: $('labels'), bg: $('bg'),
+  cols: $('cols'), gap: $('gap'), cap: $('cap'), bg: $('bg'),
   jpgw: $('jpgw'), jpgq: $('jpgq'), orient: $('orient'), margin: $('margin'),
 };
 function readCfg(){
   return {
     sort: ui.sort.value, inv: ui.inv.checked,
     cols: +ui.cols.value, gap: +ui.gap.value,
-    aspect: +ui.aspect.value, fit: ui.fit.value,
-    labels: ui.labels.checked, bg: ui.bg.value,
+    cap: ui.cap.value, bg: ui.bg.value,
     jpgW: +ui.jpgw.value, jpgQ: (+ui.jpgq.value)/100,
     orient: ui.orient.value, margin: +ui.margin.value,
   };
@@ -311,21 +348,39 @@ function readCfg(){
 
 function setBusy(on, txt){ busy.textContent = txt || 'trabajando…'; busy.classList.toggle('on', !!on); }
 
-/* ---------- carga de archivos ---------- */
-function addFiles(fileList){
+/* ---------- carga de archivos + medición de proporciones ---------- */
+function measureItem(it){
+  return new Promise((res) => {
+    const img = new Image();
+    img.onload = () => { it.ar = img.naturalWidth / Math.max(1, img.naturalHeight); res(); };
+    img.onerror = () => { it.ar = 4/3; it.broken = true; res(); };
+    img.src = it.url;
+  });
+}
+async function addFiles(fileList){
   const files = Array.from(fileList).filter(f =>
     /^image\//.test(f.type) || IMG_RE.test(f.name));
-  const seen = new Set(state.items.map(it => it.name + '|' + it.size));
-  let added = 0;
+  const seen = new Set(state.items.map(keyOf));
+  const nuevos = [];
   for (const f of files){
-    const key = f.name + '|' + f.size;
-    if (seen.has(key)) continue; // dedupe: mismo nombre y tamaño
-    seen.add(key);
-    state.items.push({ file: f, url: URL.createObjectURL(f), name: f.name, date: f.lastModified, size: f.size });
-    added++;
+    const it = { file: f, url: URL.createObjectURL(f), name: f.name, date: f.lastModified, size: f.size };
+    if (seen.has(keyOf(it))) { URL.revokeObjectURL(it.url); continue; }
+    seen.add(keyOf(it));
+    nuevos.push(it);
   }
-  if (!state.items.length){ meta.textContent = 'No se encontraron imágenes.'; return; }
-  if (!added){ meta.textContent = 'Sin archivos nuevos (duplicados omitidos).'; renderGrid(); return; }
+  if (!nuevos.length){
+    meta.textContent = state.items.length ? 'Sin archivos nuevos (duplicados omitidos).' : 'No se encontraron imágenes.';
+    return;
+  }
+  // medir proporciones (necesarias para el masonry), en tandas de 8
+  setBusy(true, 'midiendo… 0/' + nuevos.length);
+  let done = 0;
+  for (let i = 0; i < nuevos.length; i += 8){
+    await Promise.all(nuevos.slice(i, i + 8).map(it =>
+      measureItem(it).then(() => setBusy(true, 'midiendo… ' + (++done) + '/' + nuevos.length))));
+  }
+  state.items.push.apply(state.items, nuevos);
+  setBusy(false);
   renderGrid();
 }
 
@@ -368,10 +423,33 @@ stage.addEventListener('dragleave', e => { e.preventDefault(); drop.classList.re
 stage.addEventListener('drop', async e => {
   e.preventDefault(); drop.classList.remove('hot');
   setBusy(true, 'leyendo carpeta…');
-  try { addFiles(await filesFromDrop(e.dataTransfer)); }
-  catch(err){ meta.textContent = 'Error al leer: ' + err.message; }
-  setBusy(false);
+  try { await addFiles(await filesFromDrop(e.dataTransfer)); }
+  catch(err){ meta.textContent = 'Error al leer: ' + err.message; setBusy(false); }
 });
+
+/* ---------- entradas de layout compartidas (vista y export) ---------- */
+const scratch = document.createElement('canvas').getContext('2d');
+// tipografía de pies en unidades abstractas, proporcional al ancho de columna
+function capMetrics(colW){
+  const font = colW * 0.048;
+  return { font, lineH: font * 1.45, pad: font * 0.6, maxW: colW * 0.94 };
+}
+function buildEntries(cfg, items){
+  const colW = (1600 - cfg.gap * (cfg.cols - 1)) / cfg.cols;
+  const M = capMetrics(colW);
+  scratch.font = M.font + 'px ' + MONO;
+  const measure = (t) => scratch.measureText(t).width;
+  return items.map(it => {
+    let lines = [];
+    if (cfg.cap === 'name') lines = [it.name];
+    else if (cfg.cap === 'comment'){
+      const t = (notes.get(keyOf(it)) || '').trim();
+      if (t) lines = wrapText(measure, t, M.maxW);
+    }
+    const capH = lines.length ? lines.length * M.lineH + M.pad : 0;
+    return { it, ar: it.ar || 1, capH, lines };
+  });
+}
 
 /* ---------- vista previa ---------- */
 let debounce;
@@ -381,35 +459,61 @@ Object.values(ui).forEach(el => {
   el.addEventListener('change', scheduleRender);
 });
 
+function autoGrow(ta){ ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+
 function renderGrid(){
   if (!state.items.length) return;
   const cfg = readCfg();
+  $('cap-hint').style.display = cfg.cap === 'comment' ? 'block' : 'none';
   state.sorted = sortItems(state.items, cfg.sort, cfg.inv);
 
   drop.style.display = 'none';
   grid.classList.add('on');
-  grid.classList.toggle('labels', cfg.labels);
-  grid.classList.toggle('cover', cfg.fit === 'cover');
   stage.classList.toggle('paper', cfg.bg === 'paper');
   stage.classList.toggle('dark', cfg.bg !== 'paper');
-  grid.style.gridTemplateColumns = 'repeat(' + cfg.cols + ',1fr)';
   grid.style.gap = cfg.gap + 'px';
-  grid.style.setProperty('--ar', String(cfg.aspect));
 
-  const frag = document.createDocumentFragment();
-  for (const it of state.sorted){
+  // misma asignación de columnas que usará el export
+  const entries = buildEntries(cfg, state.sorted);
+  const L = layoutMasonry(entries, cfg.cols, cfg.gap, Infinity);
+  const colDivs = [];
+  for (let c = 0; c < cfg.cols; c++){
+    const d = document.createElement('div');
+    d.className = 'mcol'; d.style.gap = cfg.gap + 'px';
+    colDivs.push(d);
+  }
+  for (const cell of L.pages[0].cells){
+    const en = entries[cell.i];
     const fig = document.createElement('figure');
     fig.className = 'cell'; fig.setAttribute('role','listitem');
-    const ph = document.createElement('div'); ph.className = 'ph';
-    const img = document.createElement('img');
-    img.src = it.url; img.loading = 'lazy'; img.decoding = 'async'; img.alt = it.name;
-    ph.appendChild(img);
-    const cap = document.createElement('figcaption');
-    cap.textContent = it.name; cap.title = it.name;
-    fig.appendChild(ph); fig.appendChild(cap);
-    frag.appendChild(fig);
+    if (en.it.broken){
+      const b = document.createElement('div'); b.className = 'broken';
+      b.textContent = 'no decodificable'; fig.appendChild(b);
+    } else {
+      const img = document.createElement('img');
+      img.src = en.it.url; img.loading = 'lazy'; img.decoding = 'async'; img.alt = en.it.name;
+      fig.appendChild(img);
+    }
+    if (cfg.cap === 'name'){
+      const cap = document.createElement('figcaption');
+      cap.className = 'fname'; cap.textContent = en.it.name; cap.title = en.it.name;
+      fig.appendChild(cap);
+    } else if (cfg.cap === 'comment'){
+      const ta = document.createElement('textarea');
+      ta.rows = 1; ta.placeholder = '· comentario';
+      ta.value = notes.get(keyOf(en.it)) || '';
+      ta.addEventListener('input', () => {
+        autoGrow(ta);
+        const v = ta.value;
+        if (v.trim()) notes.set(keyOf(en.it), v); else notes.delete(keyOf(en.it));
+        saveNotes();
+      });
+      fig.appendChild(ta);
+    }
+    colDivs[cell.c].appendChild(fig);
   }
-  grid.replaceChildren(frag);
+  grid.replaceChildren.apply(grid, colDivs);
+  grid.querySelectorAll('textarea').forEach(autoGrow);
 
   const total = state.items.reduce((s, it) => s + it.size, 0);
   meta.textContent = state.items.length + ' imágenes · ' + fmtBytes(total);
@@ -418,66 +522,70 @@ function renderGrid(){
 
 /* ---------- render compartido a canvas (JPG y páginas del PDF) ---------- */
 function bgColor(cfg){ return cfg.bg === 'paper' ? '#ece6d4' : '#16170f'; }
-function labelColor(cfg){ return cfg.bg === 'paper' ? '#3a3a30' : '#b8b6a4'; }
+function inkColor(cfg){ return cfg.bg === 'paper' ? '#3a3a30' : '#b8b6a4'; }
 
-// dibuja los items [from,to) en el contexto g, con layout L escalado por s,
-// desplazado (ox,oy) en px. decodifica con createImageBitmap y libera memoria.
-async function drawRange(g, items, from, to, L, s, ox, oy, cfg, prog){
-  g.textAlign = 'center'; g.textBaseline = 'middle';
-  for (let i = from; i < to; i++){
-    const k = i - from;
-    const col = k % L.cols, row = Math.floor(k / L.cols);
-    const x = ox + col * (L.cellW + L.gap) * s;
-    const y = oy + row * (L.boxH + L.gap) * s;
-    const w = L.cellW * s, h = L.cellH * s;
+// dibuja las celdas de una página; layout en unidades abstractas, escala s,
+// desplazamiento (ox,oy) en px. libera cada bitmap tras dibujarlo.
+async function drawCells(g, cells, entries, colW, s, ox, oy, cfg, prog){
+  const M = capMetrics(colW);
+  for (let k = 0; k < cells.length; k++){
+    const cell = cells[k], en = entries[cell.i];
+    const x = ox + cell.x * s, y = oy + cell.y * s;
+    const w = colW * s, h = cell.imgH * s;
     let bmp = null;
-    try { bmp = await createImageBitmap(items[i].file); } catch(e){ /* formato no decodificable */ }
+    if (!en.it.broken){
+      try { bmp = await createImageBitmap(en.it.file); } catch(e){ /* no decodificable */ }
+    }
     if (bmp){
-      const f = fitRect(bmp.width, bmp.height, w, h, cfg.fit);
-      if (cfg.fit === 'cover'){
-        g.save(); g.beginPath(); g.rect(x, y, w, h); g.clip();
-        g.drawImage(bmp, x + f.dx, y + f.dy, f.w, f.h);
-        g.restore();
-      } else {
-        g.drawImage(bmp, x + f.dx, y + f.dy, f.w, f.h);
-      }
+      g.drawImage(bmp, x, y, w, h); // la celda tiene la proporción natural: sin recorte
       bmp.close();
     } else {
-      g.strokeStyle = '#8a8c78'; g.lineWidth = 1;
+      g.strokeStyle = inkColor(cfg); g.lineWidth = 1;
       g.strokeRect(x + .5, y + .5, w - 1, h - 1);
-      g.fillStyle = '#8a8c78'; g.font = Math.max(9, h * 0.08) + 'px ' + MONO;
+      g.fillStyle = inkColor(cfg);
+      g.font = Math.max(9, h * 0.08) + 'px ' + MONO;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
       g.fillText('no decodificable', x + w/2, y + h/2, w * 0.9);
     }
-    if (cfg.labels && L.labelH > 0){
-      g.fillStyle = labelColor(cfg);
-      g.font = Math.max(7, Math.round(L.labelH * 0.5 * s)) + 'px ' + MONO;
-      g.fillText(items[i].name, x + w/2, y + h + L.labelH * s * 0.55, w * 0.96);
+    if (en.lines.length){
+      g.fillStyle = inkColor(cfg);
+      g.font = Math.max(6, M.font * s) + 'px ' + MONO;
+      g.textBaseline = 'alphabetic';
+      const cx = cfg.cap === 'name';
+      g.textAlign = cx ? 'center' : 'left';
+      const tx = cx ? x + w/2 : x + (colW - M.maxW) / 2 * s;
+      for (let li = 0; li < en.lines.length; li++){
+        const ty = y + h + (M.pad * 0.4 + M.lineH * (li + 0.8)) * s;
+        g.fillText(en.lines[li], tx, ty, M.maxW * s);
+      }
     }
-    if (prog) prog(i - from + 1, to - from);
+    if (prog) prog(k + 1, cells.length);
   }
 }
 
 /* ---------- exportar JPG ---------- */
 async function exportJPG(){
   const cfg = readCfg();
-  const items = state.sorted.length ? state.sorted : sortItems(state.items, cfg.sort, cfg.inv);
-  if (!items.length) return;
+  if (!state.items.length) return;
+  const items = sortItems(state.items, cfg.sort, cfg.inv);
   setBusy(true, 'exportando… 0/' + items.length);
   try {
-    const L = layoutGrid(items.length, cfg.cols, cfg.gap, cfg.aspect, cfg.labels ? 0.10 : 0);
+    const entries = buildEntries(cfg, items);
+    const L = layoutMasonry(entries, cfg.cols, cfg.gap, Infinity);
+    const page = L.pages[0];
     const pad = cfg.gap; // borde exterior = espaciado
     let s = cfg.jpgW / (L.W + pad * 2);
-    let ch = Math.round((L.totalH + pad * 2) * s);
+    let ch = Math.round((page.h + pad * 2) * s);
     let note = '';
     if (ch > MAX_SIDE){ // límite de canvas: reescala todo proporcionalmente
       s *= MAX_SIDE / ch; ch = MAX_SIDE;
-      note = ' (alto limitado a ' + MAX_SIDE + 'px)';
+      note = ' (alto limitado a ' + MAX_SIDE + 'px; usa PDF para corpus largos)';
     }
     const cw = Math.round((L.W + pad * 2) * s);
     const c = document.createElement('canvas'); c.width = cw; c.height = ch;
     const g = c.getContext('2d');
     g.fillStyle = bgColor(cfg); g.fillRect(0, 0, cw, ch);
-    await drawRange(g, items, 0, items.length, L, s, pad * s, pad * s, cfg,
+    await drawCells(g, page.cells, entries, L.colW, s, pad * s, pad * s, cfg,
       (i, n) => setBusy(true, 'exportando… ' + i + '/' + n));
     const blob = await new Promise((res, rej) =>
       c.toBlob(b => b ? res(b) : rej(new Error('toBlob devolvió null (¿canvas demasiado grande?)')), 'image/jpeg', cfg.jpgQ));
@@ -505,43 +613,42 @@ function ensureJsPDF(){
 }
 async function exportPDF(){
   const cfg = readCfg();
-  const items = state.sorted.length ? state.sorted : sortItems(state.items, cfg.sort, cfg.inv);
-  if (!items.length) return;
+  if (!state.items.length) return;
+  const items = sortItems(state.items, cfg.sort, cfg.inv);
   setBusy(true, 'cargando jsPDF…');
   try {
     await ensureJsPDF();
     const pw = cfg.orient === 'l' ? 297 : 210;
     const ph = cfg.orient === 'l' ? 210 : 297;
     const m = Math.min(cfg.margin, Math.floor(Math.min(pw, ph) / 4));
-    const uw = pw - 2 * m, uh = ph - 2 * m; // área útil en mm
+    const uw = pw - 2 * m, uh = ph - 2 * m;      // área útil en mm
+    const pageHU = uh / uw * 1600;               // alto de página en unidades abstractas
 
-    const L = layoutGrid(items.length, cfg.cols, cfg.gap, cfg.aspect, cfg.labels ? 0.10 : 0);
-    const s = (uw * PDF_K) / L.W;               // px por unidad abstracta
-    const rpp = rowsPerPage(uh * PDF_K, L.boxH * s, L.gap * s);
-    const perPage = rpp * L.cols;
-    const pages = Math.ceil(items.length / perPage);
+    const entries = buildEntries(cfg, items);
+    const L = layoutMasonry(entries, cfg.cols, cfg.gap, pageHU);
+    const s = (uw * PDF_K) / L.W;                // px por unidad abstracta
 
     const doc = new window.jspdf.jsPDF({
       orientation: cfg.orient === 'l' ? 'landscape' : 'portrait',
       unit: 'mm', format: 'a4',
     });
 
-    for (let p = 0; p < pages; p++){
-      const from = p * perPage, to = Math.min(items.length, from + perPage);
-      const nRows = Math.ceil((to - from) / L.cols);
-      const chUnits = nRows * L.boxH + (nRows - 1) * L.gap;
+    let drawn = 0;
+    for (let p = 0; p < L.pages.length; p++){
+      const page = L.pages[p];
+      const hU = Math.min(page.h, pageHU);       // celda más alta que la página: se recorta
       const cw = Math.round(uw * PDF_K);
-      const chPx = Math.max(1, Math.round(chUnits * s));
+      const chPx = Math.max(1, Math.round(hU * s));
       const c = document.createElement('canvas'); c.width = cw; c.height = chPx;
       const g = c.getContext('2d');
       g.fillStyle = bgColor(cfg); g.fillRect(0, 0, cw, chPx);
-      await drawRange(g, items, from, to, L, s, 0, 0, cfg,
-        (i) => setBusy(true, 'exportando… pág ' + (p+1) + '/' + pages + ' · ' + (from + i) + '/' + items.length));
+      await drawCells(g, page.cells, entries, L.colW, s, 0, 0, cfg,
+        () => setBusy(true, 'exportando… pág ' + (p+1) + '/' + L.pages.length + ' · ' + (++drawn) + '/' + items.length));
       if (p > 0) doc.addPage();
-      doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', m, m, uw, chUnits * s / PDF_K);
+      doc.addImage(c.toDataURL('image/jpeg', 0.92), 'JPEG', m, m, uw, chPx / PDF_K);
     }
     doc.save('forja_corpus_' + Date.now() + '.pdf');
-    meta.textContent = pages + (pages === 1 ? ' página' : ' páginas') + ' · ' + items.length + ' imágenes';
+    meta.textContent = L.pages.length + (L.pages.length === 1 ? ' página' : ' páginas') + ' · ' + items.length + ' imágenes';
   } catch(err){
     meta.textContent = 'Error PDF: ' + err.message;
   }
