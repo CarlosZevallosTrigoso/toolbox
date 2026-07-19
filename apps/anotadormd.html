@@ -20,6 +20,23 @@
     --serif: "Iowan Old Style", "Charter", Georgia, "Times New Roman", serif;
     --r:2px;
   }
+  /* ---- tema oscuro (paleta czt-bosque en carbón, misma familia que el ordenador de imágenes) ---- */
+  body.oscuro{
+    --paper:#16170f;
+    --panel:#1f2017;
+    --line:#33352a;
+    --ink:#d8d6c4;
+    --ink-dim:#8a8c78;
+    --moss:#8fa676;         /* musgo aclarado: bordes y focos legibles sobre carbón */
+    --steel:#7d99b0;
+    --warm:#c08a5a;
+  }
+  body.oscuro #doc code{background:#ffffff14}
+  body.oscuro #fab{color:#16170f}
+  body.oscuro #fab:hover{color:#16170f}
+  body.oscuro ::highlight(forja-nota){ background:rgba(143,166,118,.26); }
+  body.oscuro ::highlight(forja-activa){ background:rgba(192,138,90,.40); }
+
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{
@@ -143,6 +160,14 @@
 
   .hide{display:none !important}
 
+  /* ---- contador de palabras/caracteres/páginas ---- */
+  #stats{
+    position:fixed; right:352px; bottom:12px; z-index:40; display:none;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+    color:var(--ink-dim); font-size:10px; padding:3px 8px;
+    font-variant-numeric:tabular-nums; letter-spacing:.02em; user-select:none;
+  }
+
   /* ---- modo edición ---- */
   #editor{
     display:block; width:100%; max-width:76ch; margin:0 auto;
@@ -189,6 +214,7 @@
       <button id="subir" disabled>subir</button>
       <button id="export" disabled>exportar .json</button>
       <button id="exportMd" disabled>exportar .md</button>
+      <button id="tema" title="Cambiar tema">oscuro</button>
     </div>
     <div id="contador"></div>
   </header>
@@ -219,6 +245,7 @@
   </main>
 
   <button id="fab" title="Crear anotación">＋ anotar</button>
+  <div id="stats"></div>
   <input type="file" id="file" accept=".md,.markdown,text/markdown,text/plain" class="hide">
   <input type="file" id="fileJson" accept=".json,application/json" class="hide">
 
@@ -652,7 +679,25 @@
     $('editar').disabled = !rawMd;
     $('recargar').disabled = !docUrl || editando;
     $('contador').textContent = annos.length ? (annos.length + (annos.length === 1 ? ' anotación' : ' anotaciones')) : '';
+    updateStats();
   }
+
+  // contador inferior: palabras, caracteres y páginas (500 palabras/página).
+  // En lectura cuenta el texto visible; en edición, la fuente markdown en vivo.
+  // separador de miles determinista (sin depender de los datos de locale del entorno)
+  function miles(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+  function updateStats(){
+    const el = $('stats');
+    if (!rawMd){ el.style.display = 'none'; return; }
+    const texto = editando ? editor.value : docText;
+    const palabras = (texto.match(/\S+/g) || []).length;
+    const pags = Math.ceil(palabras / 500);
+    el.style.display = 'block';
+    el.textContent = miles(palabras) + ' palabras · '
+      + miles(texto.length) + ' caracteres · '
+      + pags + (pags === 1 ? ' página' : ' páginas');
+  }
+  editor.addEventListener('input', updateStats);
 
   // ===== botón flotante =====
   function showFab(range){
@@ -866,6 +911,23 @@
 
   // convención FORJA: clic en el título recarga
   $('marca').addEventListener('click', ()=> location.reload());
+
+  // ===== tema claro/oscuro =====
+  function aplicarTema(oscuro){
+    document.body.classList.toggle('oscuro', oscuro);
+    $('tema').textContent = oscuro ? 'claro' : 'oscuro';  // el botón nombra el tema al que pasarás
+  }
+  $('tema').addEventListener('click', ()=>{
+    const o = !document.body.classList.contains('oscuro');
+    aplicarTema(o);
+    try { localStorage.setItem('forja-anotador-tema', o ? 'oscuro' : 'claro'); } catch(e){} // privado/bloqueado: sin persistencia, sin error
+  });
+  (function(){
+    let pref = null;
+    try { pref = localStorage.getItem('forja-anotador-tema'); } catch(e){}
+    aplicarTema(pref ? pref === 'oscuro'
+      : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches));
+  })();
 
   if (!canHL){
     // aviso discreto si el navegador no soporta resaltado nativo (todo lo demás funciona)
