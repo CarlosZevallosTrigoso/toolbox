@@ -143,8 +143,17 @@
 
   .hide{display:none !important}
 
-  /* ---- modal de subida ---- */
-  #modal{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:#0000005c}
+  /* ---- campo de URL en estado vacío ---- */
+  .urlrow{display:flex; gap:6px; margin-top:14px}
+  .urlrow input{
+    flex:1; background:var(--panel); color:var(--ink); border:1px solid var(--line);
+    border-radius:var(--r); padding:6px 8px; font-family:var(--mono); font-size:12px; min-width:0;
+  }
+  .urlrow input:focus{outline:1px solid var(--moss); border-color:var(--moss)}
+  #urlEstado{margin-top:6px; font-size:10.5px; color:var(--ink-dim); min-height:14px; text-align:left; line-height:1.4}
+
+  /* ---- modales (subida y carga por URL) ---- */
+  .modal{position:fixed; inset:0; z-index:60; display:flex; align-items:center; justify-content:center; background:#0000005c}
   .modal-box{background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:16px 18px; width:min(430px,92%)}
   .modal-box h3{margin:0 0 10px; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-dim); font-weight:600}
   .modal-box label{display:block; margin:8px 0; color:var(--ink-dim); font-size:11px}
@@ -152,7 +161,7 @@
   .modal-box input:focus{outline:1px solid var(--moss); border-color:var(--moss)}
   .modal-acc{display:flex; gap:8px; margin-top:12px}
   .modal-acc button{flex:1}
-  #estado{margin-top:10px; font-size:11px; color:var(--ink-dim); min-height:16px; line-height:1.4}
+  #estado,#urlEstado2{margin-top:10px; font-size:11px; color:var(--ink-dim); min-height:16px; line-height:1.4}
   .nota.huerfana{opacity:.72; border-style:dashed}
   .nota.huerfana .quote{border-left-color:var(--ink-dim)}
 </style>
@@ -164,6 +173,7 @@
     <div class="acciones">
       <button id="cargar">cargar .md</button>
       <button id="cargarJson">cargar .json</button>
+      <button id="btnUrl">cargar URL</button>
       <button id="subir" disabled>subir</button>
       <button id="export" disabled>exportar .json</button>
     </div>
@@ -179,6 +189,11 @@
         </div>
         <textarea id="paste" placeholder="…o pega aquí el markdown y pulsa «cargar texto»"></textarea>
         <div><button id="cargarPaste">cargar texto</button></div>
+        <div class="urlrow">
+          <input type="url" id="urlIn" placeholder="…o la URL de un .md en GitHub (github.com/usuario/repo/blob/…)" autocomplete="off">
+          <button id="cargarUrl">cargar</button>
+        </div>
+        <div id="urlEstado"></div>
       </div>
       <article id="doc"></article>
     </section>
@@ -193,7 +208,21 @@
   <input type="file" id="file" accept=".md,.markdown,text/markdown,text/plain" class="hide">
   <input type="file" id="fileJson" accept=".json,application/json" class="hide">
 
-  <div id="modal" class="hide">
+  <div id="modalUrl" class="modal hide">
+    <div class="modal-box">
+      <h3>Cargar desde URL</h3>
+      <label>URL del archivo .md (GitHub u otro host con CORS)
+        <input id="urlIn2" type="url" placeholder="https://github.com/usuario/repo/blob/main/doc.md" autocomplete="off">
+      </label>
+      <div class="modal-acc">
+        <button id="urlEnviar">cargar</button>
+        <button id="urlCerrar">cerrar</button>
+      </div>
+      <div id="urlEstado2"></div>
+    </div>
+  </div>
+
+  <div id="modal" class="modal hide">
     <div class="modal-box">
       <h3>Subir anotaciones</h3>
       <label>Endpoint (POST)
@@ -627,6 +656,51 @@
       esJson(f) ? readJsonFile(f) : readFile(f);
     }
   }));
+
+  // ---- carga desde URL ----
+  // github.com/.../blob/... -> raw.githubusercontent.com (CORS: Access-Control-Allow-Origin: *).
+  // Otras URLs se intentan tal cual: funcionan solo si el host permite CORS.
+  function aRaw(u){
+    const m = u.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^?#]+)/);
+    return m ? 'https://raw.githubusercontent.com/' + m[1] + '/' + m[2] + '/' + m[3] : u;
+  }
+  function nombreDeUrl(u){
+    try {
+      const seg = new URL(u).pathname.split('/').filter(Boolean);
+      return decodeURIComponent(seg[seg.length - 1] || '') || 'documento.md';
+    } catch(e){ return 'documento.md'; }
+  }
+  async function cargarDesdeUrl(entrada, decir, antesDeRender){
+    const u = (entrada || '').trim();
+    if (!u){ decir('Indica una URL.'); return; }
+    const raw = aRaw(u);
+    try { new URL(raw); } catch(e){ decir('URL inválida.'); return; }
+    decir('Cargando…');
+    try {
+      const res = await fetch(raw);
+      if (!res.ok){
+        decir(res.status === 404
+          ? 'No encontrado (404): revisa ruta y rama. Los repos privados también responden 404.'
+          : 'El servidor respondió ' + res.status + ' ' + res.statusText + '.');
+        return;
+      }
+      const texto = await res.text();
+      decir('');
+      if (antesDeRender) antesDeRender();
+      maybeRender(texto, nombreDeUrl(raw));
+    } catch(e){
+      decir('No se pudo cargar: ' + e.message + ' — si la red funciona, el host no permite CORS.');
+    }
+  }
+  // estado vacío
+  $('cargarUrl').addEventListener('click', ()=> cargarDesdeUrl($('urlIn').value, m=> $('urlEstado').textContent = m));
+  $('urlIn').addEventListener('keydown', e=>{ if (e.key === 'Enter'){ e.preventDefault(); $('cargarUrl').click(); } });
+  // modal (accesible también con documento abierto)
+  $('btnUrl').addEventListener('click', ()=>{ $('urlEstado2').textContent = ''; $('modalUrl').classList.remove('hide'); $('urlIn2').focus(); });
+  $('urlCerrar').addEventListener('click', ()=> $('modalUrl').classList.add('hide'));
+  $('modalUrl').addEventListener('mousedown', e=>{ if (e.target === $('modalUrl')) $('modalUrl').classList.add('hide'); });
+  $('urlEnviar').addEventListener('click', ()=> cargarDesdeUrl($('urlIn2').value, m=> $('urlEstado2').textContent = m, ()=> $('modalUrl').classList.add('hide')));
+  $('urlIn2').addEventListener('keydown', e=>{ if (e.key === 'Enter'){ e.preventDefault(); $('urlEnviar').click(); } });
 
   // ---- subida configurable ----
   function estado(msg){ $('estado').textContent = msg; }
