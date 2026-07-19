@@ -67,14 +67,33 @@
   button:disabled{opacity:.4; cursor:default}
   #contador{color:var(--ink-dim); font-size:10px; font-variant-numeric:tabular-nums; flex:none; min-width:9ch; text-align:right}
 
-  /* ---- cuerpo: lectura + panel ---- */
+  /* ---- cuerpo: toc + lectura + panel ---- */
   main{display:flex; flex:1; min-height:0}
+  #toc{
+    width:240px; flex:none; display:none; overflow-y:auto;
+    background:var(--panel); border-right:1px solid var(--line);
+    padding:14px 8px 24px;
+  }
+  #toc h2{
+    margin:0 0 8px; padding:0 6px; font-size:10px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--ink-dim); font-weight:600;
+  }
+  .toc-it{
+    display:block; padding:3px 6px; cursor:pointer; user-select:none;
+    border-left:2px solid transparent; color:var(--ink-dim);
+    font-size:11px; line-height:1.45; word-break:break-word;
+    transition:color .12s, border-color .12s;
+  }
+  .toc-it:hover, .toc-it:focus{color:var(--moss); border-left-color:var(--moss); outline:none}
+  .toc-it.n2{padding-left:18px}
+  .toc-it.n3{padding-left:30px; font-size:10.5px}
+  body.editando #toc{display:none !important}
   #read{
     flex:1; min-width:0; overflow-y:auto; position:relative;
     padding:32px 40px 120px;
   }
   #doc{
-    max-width:68ch; margin:0 auto;
+    max-width:68ch; margin:0;
     font-family:var(--serif); font-size:17px; line-height:1.75; color:var(--ink);
   }
   #doc.plano{font-family:var(--mono); font-size:13px; line-height:1.6; white-space:pre-wrap}
@@ -160,18 +179,28 @@
 
   .hide{display:none !important}
 
-  /* ---- contador de palabras/caracteres/páginas ---- */
+  /* ---- contador de palabras/caracteres/páginas (esquina inferior derecha) ---- */
   #stats{
-    position:fixed; right:352px; bottom:12px; z-index:40; display:none;
+    position:fixed; right:12px; bottom:12px; z-index:70; display:none;
     background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
     color:var(--ink-dim); font-size:10px; padding:3px 8px;
     font-variant-numeric:tabular-nums; letter-spacing:.02em; user-select:none;
   }
 
+  /* ---- control de ancho de lectura (esquina inferior izquierda) ---- */
+  #anchoCtl{
+    position:fixed; left:12px; bottom:12px; z-index:40; display:none;
+    align-items:center; gap:8px;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+    color:var(--ink-dim); font-size:10px; padding:3px 8px; user-select:none;
+  }
+  #anchoCtl input{width:130px; accent-color:var(--moss); margin:0}
+  #anchoCtl .val{color:var(--moss); font-variant-numeric:tabular-nums; min-width:3ch; text-align:right}
+  body.editando #anchoCtl{display:none !important}
+
   /* ---- modo edición ---- */
   /* mientras se edita, el panel de anotaciones se retira y el editor toma el ancho */
   body.editando #panel{display:none}
-  body.editando #stats{right:12px}
   #editor{
     display:block; width:100%; max-width:120ch; margin:0 auto;
     height:calc(100vh - 130px); resize:none;
@@ -223,6 +252,10 @@
   </header>
 
   <main>
+    <nav id="toc" aria-label="Tabla de contenidos">
+      <h2>Contenido</h2>
+      <div id="tocList"></div>
+    </nav>
     <section id="read">
       <div id="empty">
         <div id="drop" tabindex="0" role="button" aria-label="Cargar markdown">
@@ -249,6 +282,11 @@
 
   <button id="fab" title="Crear anotación">＋ anotar</button>
   <div id="stats"></div>
+  <div id="anchoCtl">
+    <span>ancho</span>
+    <input type="range" id="ancho" min="60" max="160" step="2" value="68">
+    <span class="val" id="ancho-v">68</span>
+  </div>
   <input type="file" id="file" accept=".md,.markdown,text/markdown,text/plain" class="hide">
   <input type="file" id="fileJson" accept=".json,application/json" class="hide">
 
@@ -323,7 +361,33 @@
     docEl.style.display = 'block';
     $('docname').textContent = docName;
     setEdicion(false);
+    buildToc();
     refreshHighlights(); renderList(); updateChrome();
+  }
+
+  // ===== tabla de contenidos =====
+  // Se arma con referencias directas a los h1–h3 renderizados: cero mutación del DOM
+  // del documento, así que los offsets y Range de las anotaciones no se ven afectados.
+  function buildToc(){
+    const nav = $('toc'), tl = $('tocList');
+    tl.innerHTML = '';
+    const hs = docEl.querySelectorAll('h1, h2, h3');
+    if (!hs.length){ nav.style.display = 'none'; return; }   // texto plano o md sin cabeceras
+    hs.forEach(h => {
+      const it = document.createElement('div');
+      it.className = 'toc-it n' + h.tagName.charAt(1);
+      it.textContent = h.textContent;
+      it.title = h.textContent;
+      it.tabIndex = 0;
+      const ir = ()=>{
+        const rc = h.getBoundingClientRect(), cc = read.getBoundingClientRect();
+        read.scrollTop += (rc.top - cc.top) - 16;
+      };
+      it.addEventListener('click', ir);
+      it.addEventListener('keydown', e=>{ if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); ir(); } });
+      tl.appendChild(it);
+    });
+    nav.style.display = 'block';
   }
 
   // offset de un punto (nodo, offset) dentro de docEl, medido en el mismo espacio que docText
@@ -683,8 +747,28 @@
     $('editar').disabled = !rawMd;
     $('recargar').disabled = !docUrl || editando;
     $('contador').textContent = annos.length ? (annos.length + (annos.length === 1 ? ' anotación' : ' anotaciones')) : '';
+    $('anchoCtl').style.display = rawMd ? 'flex' : 'none';
     updateStats();
   }
+
+  // ===== ancho de lectura configurable (persistente) =====
+  // Cambiar max-width solo reflowea: los Range apuntan a posiciones del DOM, no a coordenadas,
+  // así que los resaltados y anclajes sobreviven intactos a cualquier ancho.
+  function aplicarAncho(v){
+    v = Math.max(60, Math.min(160, +v || 68));
+    docEl.style.maxWidth = v + 'ch';
+    $('ancho').value = v;
+    $('ancho-v').textContent = v;
+  }
+  $('ancho').addEventListener('input', ()=>{
+    aplicarAncho($('ancho').value);
+    try { localStorage.setItem('forja-anotador-ancho', $('ancho').value); } catch(e){}
+  });
+  (function(){
+    let a = null;
+    try { a = localStorage.getItem('forja-anotador-ancho'); } catch(e){}
+    if (a != null) aplicarAncho(a);
+  })();
 
   // contador inferior: palabras, caracteres y páginas (500 palabras/página).
   // En lectura cuenta el texto visible; en edición, la fuente markdown en vivo.
