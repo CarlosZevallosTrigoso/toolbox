@@ -178,16 +178,20 @@
   #fab:hover{background:var(--warm); border-color:var(--warm); color:#f3efe3}
 
   /* ---- modo tablet: fab como barra inferior fija + objetivos táctiles ---- */
-  body.tablet #fab{
-    left:50% !important; transform:translateX(-50%);
-    top:auto !important; bottom:16px;
-    padding:14px 30px; font-size:16px; min-height:52px;
-    box-shadow:0 4px 18px #0006;
-  }
+  /* modo tablet: no usamos el flotante (el SO lo tapa); «anotar» va en el panel */
+  body.tablet #fab{ display:none !important; }
   body.tablet .acciones button{ padding:9px 12px; min-height:44px; }
   body.tablet .add-in{ min-height:42px; font-size:13px }
   body.tablet .add-btn{ min-height:42px; padding:9px 13px }
   #tablet.activo{ border-color:var(--moss); color:var(--moss) }
+  /* botón «anotar» del panel: solo visible en modo tablet */
+  #anotarBtn{
+    display:none; margin:8px; width:calc(100% - 16px);
+    padding:13px 12px; font-size:14px; font-weight:600; border-radius:2px;
+    background:var(--panel); color:var(--ink-dim); border:1px solid var(--line);
+  }
+  body.tablet #anotarBtn{ display:block }
+  #anotarBtn.lista{ background:var(--moss); color:#f3efe3; border-color:var(--moss) }
 
   .hide{display:none !important}
 
@@ -289,6 +293,7 @@
 
     <aside id="panel">
       <h2>Anotaciones</h2>
+      <button id="anotarBtn" disabled>＋ anotar selección</button>
       <div id="list"><p class="vacio">Sin anotaciones todavía.</p></div>
     </aside>
   </main>
@@ -819,11 +824,15 @@
   function hideFab(){ fab.classList.remove('on'); }
 
   // detección de selección: selectionchange cubre ratón Y táctil (mouseup no llega al seleccionar en tablet)
+  function tabletOn(){ return document.body.classList.contains('tablet'); }
+  function setAnotar(on){ const b = $('anotarBtn'); b.disabled = !on; b.classList.toggle('lista', on); }
   function tryShowFab(){
-    if (editando){ hideFab(); pending = null; return; }
+    if (editando){ hideFab(); setAnotar(false); pending = null; return; }
     const cap = captureSelection();
-    if (!cap){ hideFab(); pending = null; return; }
-    pending = cap; showFab(cap.range);
+    if (!cap){ hideFab(); setAnotar(false); pending = null; return; }
+    pending = cap;
+    if (tabletOn()) setAnotar(true);   // tablet: habilita el botón fijo del panel (no peleamos con el SO)
+    else showFab(cap.range);           // escritorio: botón flotante junto a la selección
   }
   let selTimer = null;
   function tryShowFabDebounced(){ clearTimeout(selTimer); selTimer = setTimeout(tryShowFab, 250); } // espera a soltar los tiradores
@@ -831,14 +840,16 @@
   read.addEventListener('mouseup', tryShowFab);            // ratón: inmediato
   read.addEventListener('touchend', tryShowFabDebounced);  // refuerzo táctil
   fab.addEventListener('click', addAnno);
-  document.addEventListener('pointerdown', e=>{ if (!fab.contains(e.target)) hideFab(); }); // ocultar: ratón y táctil
-  read.addEventListener('scroll', ()=>{ if (!document.body.classList.contains('tablet')) hideFab(); }); // en tablet la barra persiste al desplazar
+  $('anotarBtn').addEventListener('click', ()=>{ if (pending){ addAnno(); setAnotar(false); } });
+  document.addEventListener('pointerdown', e=>{ if (!fab.contains(e.target)) hideFab(); }); // ocultar flotante: ratón y táctil
+  read.addEventListener('scroll', ()=>{ if (!tabletOn()) hideFab(); });
 
   // ===== modo tablet (táctil) =====
   function aplicarTablet(on){
     document.body.classList.toggle('tablet', on);
     $('tablet').classList.toggle('activo', on);
     $('tablet').textContent = on ? 'tablet ✓' : 'tablet';
+    hideFab(); tryShowFab(); // reevalúa la selección actual con el control del modo elegido
   }
   $('tablet').addEventListener('click', ()=>{
     const on = !document.body.classList.contains('tablet');
