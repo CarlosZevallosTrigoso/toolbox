@@ -177,6 +177,18 @@
   #fab.on{display:block}
   #fab:hover{background:var(--warm); border-color:var(--warm); color:#f3efe3}
 
+  /* ---- modo tablet: fab como barra inferior fija + objetivos táctiles ---- */
+  body.tablet #fab{
+    left:50% !important; transform:translateX(-50%);
+    top:auto !important; bottom:16px;
+    padding:14px 30px; font-size:16px; min-height:52px;
+    box-shadow:0 4px 18px #0006;
+  }
+  body.tablet .acciones button{ padding:9px 12px; min-height:44px; }
+  body.tablet .add-in{ min-height:42px; font-size:13px }
+  body.tablet .add-btn{ min-height:42px; padding:9px 13px }
+  #tablet.activo{ border-color:var(--moss); color:var(--moss) }
+
   .hide{display:none !important}
 
   /* ---- contador de palabras/caracteres/páginas (esquina inferior derecha) ---- */
@@ -246,6 +258,7 @@
       <button id="subir" disabled>subir</button>
       <button id="export" disabled>exportar .json</button>
       <button id="exportMd" disabled>exportar .md</button>
+      <button id="tablet" title="Modo táctil: botón anotar fijo abajo y objetivos grandes">tablet</button>
       <button id="tema" title="Cambiar tema">oscuro</button>
     </div>
     <div id="contador"></div>
@@ -789,24 +802,55 @@
 
   // ===== botón flotante =====
   function showFab(range){
+    fab.classList.add('on');
+    if (document.body.classList.contains('tablet')){
+      fab.style.left = ''; fab.style.top = ''; // el CSS lo fija como barra inferior
+      return;
+    }
     const rects = range.getClientRects();
     const r = rects.length ? rects[rects.length - 1] : range.getBoundingClientRect();
-    fab.style.left = Math.min(r.right, window.innerWidth - 90) + 'px';
-    fab.style.top  = (r.bottom + 6) + 'px';
-    fab.classList.add('on');
+    const fw = fab.offsetWidth || 96, fh = fab.offsetHeight || 40;
+    const left = Math.max(8, Math.min(r.right, window.innerWidth - fw - 8));
+    let top = r.bottom + 8;
+    if (top + fh > window.innerHeight - 8) top = Math.max(8, r.top - fh - 8); // si no cabe abajo, va arriba
+    fab.style.left = left + 'px';
+    fab.style.top = top + 'px';
   }
   function hideFab(){ fab.classList.remove('on'); }
 
-  read.addEventListener('mouseup', ()=>{
-    if (editando){ hideFab(); return; }
+  // detección de selección: selectionchange cubre ratón Y táctil (mouseup no llega al seleccionar en tablet)
+  function tryShowFab(){
+    if (editando){ hideFab(); pending = null; return; }
     const cap = captureSelection();
     if (!cap){ hideFab(); pending = null; return; }
     pending = cap; showFab(cap.range);
-  });
-  fab.addEventListener('mousedown', e=> e.preventDefault()); // no perder la captura al hacer clic
+  }
+  let selTimer = null;
+  function tryShowFabDebounced(){ clearTimeout(selTimer); selTimer = setTimeout(tryShowFab, 250); } // espera a soltar los tiradores
+  document.addEventListener('selectionchange', tryShowFabDebounced);
+  read.addEventListener('mouseup', tryShowFab);            // ratón: inmediato
+  read.addEventListener('touchend', tryShowFabDebounced);  // refuerzo táctil
   fab.addEventListener('click', addAnno);
-  document.addEventListener('mousedown', e=>{ if (!fab.contains(e.target)) hideFab(); });
-  read.addEventListener('scroll', hideFab);
+  document.addEventListener('pointerdown', e=>{ if (!fab.contains(e.target)) hideFab(); }); // ocultar: ratón y táctil
+  read.addEventListener('scroll', ()=>{ if (!document.body.classList.contains('tablet')) hideFab(); }); // en tablet la barra persiste al desplazar
+
+  // ===== modo tablet (táctil) =====
+  function aplicarTablet(on){
+    document.body.classList.toggle('tablet', on);
+    $('tablet').classList.toggle('activo', on);
+    $('tablet').textContent = on ? 'tablet ✓' : 'tablet';
+  }
+  $('tablet').addEventListener('click', ()=>{
+    const on = !document.body.classList.contains('tablet');
+    aplicarTablet(on);
+    try { localStorage.setItem('forja-anotador-tablet', on ? '1' : '0'); } catch(e){}
+  });
+  (function(){
+    let pref = null;
+    try { pref = localStorage.getItem('forja-anotador-tablet'); } catch(e){}
+    const touch = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
+    aplicarTablet(pref != null ? pref === '1' : touch); // preferencia guardada, o autodetección táctil
+  })();
 
   // ===== exportar =====
   function hash32(s){ let h = 5381; for (let i=0;i<s.length;i++) h = ((h<<5) + h + s.charCodeAt(i)) | 0; return (h>>>0).toString(16); }
