@@ -47,17 +47,18 @@
 
   /* ---- cabecera ---- */
   header{
-    display:flex; align-items:center; gap:16px;
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap; row-gap:8px;
     padding:10px 16px; border-bottom:1px solid var(--line); background:var(--panel);
     flex:none;
   }
+  #editar.saliendo{ background:var(--warm); color:#f3efe3; border-color:var(--warm) }
   #marca{
     margin:0; font-size:12px; font-weight:600; letter-spacing:.18em; color:var(--ink);
     cursor:pointer; user-select:none; white-space:nowrap;
   }
   #marca:hover{color:var(--moss)}
   #docname{color:var(--ink-dim); font-size:11px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1}
-  .acciones{display:flex; gap:8px; flex:none}
+  .acciones{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
   button{
     font-family:var(--mono); font-size:11px; letter-spacing:.03em; cursor:pointer;
     border-radius:var(--r); padding:6px 10px; border:1px solid var(--line);
@@ -531,6 +532,7 @@
     editor.classList.toggle('hide', !on);
     docEl.style.display = on ? 'none' : 'block';
     $('editar').textContent = on ? 'volver a lectura' : 'editar';
+    $('editar').classList.toggle('saliendo', on);
     hideFab();
     updateChrome();
   }
@@ -565,6 +567,8 @@
       aplicarEdicion(nuevo);
     }
   });
+  // Escape sale del editor (escritorio), aplicando cambios como el botón
+  document.addEventListener('keydown', e=>{ if (e.key === 'Escape' && editando){ e.preventDefault(); $('editar').click(); } });
 
   // ===== importar .json =====
   function importJSON(text, fname){
