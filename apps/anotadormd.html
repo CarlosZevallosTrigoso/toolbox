@@ -38,11 +38,11 @@
   body.oscuro ::highlight(forja-activa){ background:rgba(192,138,90,.40); }
 
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
+  html,body{margin:0;height:100%;overflow:hidden}
   body{
     background:var(--paper); color:var(--ink);
     font-family:var(--mono); font-size:12px; line-height:1.5;
-    display:flex; flex-direction:column; height:100vh; overflow:hidden;
+    display:flex; flex-direction:column; height:100vh; height:100dvh; overflow:hidden;
   }
 
   /* ---- cabecera ---- */
@@ -91,6 +91,7 @@
   body.editando #toc{display:none !important}
   #read{
     flex:1; min-width:0; overflow-y:auto; position:relative;
+    overscroll-behavior:contain;
     padding:32px 40px 120px;
   }
   #doc{
@@ -220,7 +221,7 @@
   body.editando #panel{display:none}
   #editor{
     display:block; width:100%; max-width:120ch; margin:0 auto;
-    height:calc(100vh - 130px); resize:none;
+    height:calc(100vh - 130px); height:calc(100dvh - 130px); resize:none;
     background:var(--panel); color:var(--ink); border:1px solid var(--line);
     border-radius:var(--r); padding:16px 18px;
     font-family:var(--mono); font-size:12.5px; line-height:1.65; tab-size:2;
