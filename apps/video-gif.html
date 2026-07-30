@@ -1129,6 +1129,28 @@ function estimateBytes(w, h, nFrames) {
   });
 
   // ---------- carga ----------
+  // Fuerza al navegador a resolver la duración real de un video que la reporta
+  // como Infinity/NaN (MOV con moov al final). Seek a t enorme + durationchange.
+  // Devuelve la duración resuelta (o la que haya tras el timeout) y rebobina a 0.
+  function probeDuration(v){
+    return new Promise((resolve)=>{
+      let settled = false;
+      const finish = ()=>{
+        if(settled) return; settled = true;
+        clearTimeout(timer);
+        v.removeEventListener('durationchange', onChange);
+        v.removeEventListener('seeked', onChange);
+        try{ v.currentTime = 0; }catch(e){}
+        resolve(v.duration);
+      };
+      const onChange = ()=>{ if(isFinite(v.duration) && v.duration > 0) finish(); };
+      const timer = setTimeout(finish, 4000); // si nada llega, devolvemos lo que haya
+      v.addEventListener('durationchange', onChange);
+      v.addEventListener('seeked', onChange);
+      try{ v.currentTime = 1e101; }catch(e){ finish(); }
+    });
+  }
+
   function loadFile(file){
     if(!file){ return; }
     if(!/^video\//.test(file.type) && !/\.(mp4|mov|m4v|webm)$/i.test(file.name)){
@@ -1137,10 +1159,19 @@ function estimateBytes(w, h, nFrames) {
     const url = URL.createObjectURL(file);
     // loadeddata (no loadedmetadata): garantiza dimensiones y primer frame
     // decodificado; en Safari con MOV, videoWidth puede ser 0 en loadedmetadata.
-    vid.onloadeddata = ()=>{
+    vid.onloadeddata = async ()=>{
       vid.onloadeddata = null; // una sola vez por carga
-      srcW = vid.videoWidth; srcH = vid.videoHeight; duration = vid.duration;
-      if(!srcW || !srcH || !isFinite(duration)){
+      srcW = vid.videoWidth; srcH = vid.videoHeight;
+      let dur = vid.duration;
+      // MOV de QuickTime con el átomo moov al final: el navegador reporta
+      // Infinity o NaN al inicio. Workaround estándar: seek a un tiempo enorme
+      // y esperar durationchange; el navegador resuelve la duración real.
+      if(!isFinite(dur) || dur <= 0){
+        meta.textContent = 'midiendo duración…';
+        dur = await probeDuration(vid);
+      }
+      duration = dur;
+      if(!srcW || !srcH || !isFinite(duration) || duration <= 0){
         meta.textContent = 'El navegador no puede decodificar este códec (¿ProRes?). Prueba H.264.';
         URL.revokeObjectURL(url); return;
       }
