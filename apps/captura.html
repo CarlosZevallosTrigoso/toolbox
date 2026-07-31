@@ -251,8 +251,13 @@ function tamanoLegible(bytes) {
   async function encenderCamara(){
     apagarCamara();
     try{
+      // se pide resolución alta como "ideal": la cámara da lo máximo que pueda
+      // sin fallar si no llega (ideal no es exact).
       streamCam = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: $('camara').value }, audio: false
+        video: {
+          facingMode: $('camara').value,
+          width: { ideal: 4032 }, height: { ideal: 3024 },
+        }, audio: false
       });
       $('prev').srcObject = streamCam;
       return true;
