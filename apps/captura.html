@@ -205,6 +205,7 @@
       </div>
       <div class="btnrow" id="extraer" style="padding-top:0">
         <button id="sacar-foto" class="hide">guardar foto</button>
+        <button id="sacar-sello" class="hide">foto+datos</button>
         <button id="sacar-audio" class="hide">guardar audio</button>
         <button id="borrar" class="hide">borrar de memoria</button>
       </div>
@@ -294,6 +295,51 @@ function extensionDeMime(mime) {
     'audio/ogg': 'ogg', 'audio/wav': 'wav', 'application/json': 'json',
   };
   return mapa[base] || (base.split('/')[1] || 'bin');
+}
+
+function cardinalDe(deg) {
+  if (typeof deg !== 'number' || !isFinite(deg)) return null;
+  const pts = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+  return pts[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
+}
+
+function fechaSello(iso, tz) {
+  const d = new Date(iso);
+  if (isNaN(d)) return null;
+  try {
+    const fmt = new Intl.DateTimeFormat('es', {
+      timeZone: tz || undefined,
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+    });
+    const p = {};
+    for (const parte of fmt.formatToParts(d)) p[parte.type] = parte.value;
+    return p.day + '.' + p.month + '.' + p.year + ' ' + p.hour + ':' + p.minute + ':' + p.second;
+  } catch (_) { return d.toISOString(); }
+}
+
+function lineasSello(mo) {
+  const L = [];
+  const f = fechaSello(mo.creado, mo.meta && mo.meta.zonaHoraria);
+  let l1 = f || '';
+  if (mo.meta && mo.meta.zonaHoraria) l1 += (l1 ? ' · ' : '') + mo.meta.zonaHoraria;
+  if (l1) L.push(l1);
+  if (mo.posicion) {
+    const p = mo.posicion;
+    let l2 = p.lat.toFixed(5) + ', ' + p.lon.toFixed(5);
+    if (typeof p.precisionM === 'number') l2 += ' ±' + Math.round(p.precisionM) + ' m';
+    if (typeof p.altitudM === 'number') l2 += ' · alt ' + Math.round(p.altitudM) + ' m';
+    L.push(l2);
+  }
+  const partes3 = [];
+  if (mo.orientacion && typeof mo.orientacion.brujula === 'number') {
+    partes3.push(Math.round(mo.orientacion.brujula) + '° ' + cardinalDe(mo.orientacion.brujula));
+  }
+  if (mo.movimiento && mo.movimiento.resumen && mo.movimiento.resumen.magnitud) {
+    partes3.push('agitación máx ' + mo.movimiento.resumen.magnitud.max + ' m/s²');
+  }
+  if (partes3.length) L.push(partes3.join(' · '));
+  return L;
 }
 
 // ============================================================
@@ -652,6 +698,7 @@ function extensionDeMime(mime) {
     if(media.audio) au.src = media.audio.dataURL;
 
     $('sacar-foto').classList.toggle('hide', !media.foto);
+    $('sacar-sello').classList.toggle('hide', !media.foto);
     $('sacar-audio').classList.toggle('hide', !media.audio);
     $('borrar').classList.toggle('hide', !mo._id);
 
@@ -721,6 +768,42 @@ function extensionDeMime(mime) {
     if(!f) return;
     const base = nombreArchivo(fechaDe(momento)).replace(/\.json$/, '');
     bajarBlob(blobDeDataURL(f.dataURL), base + '_foto.' + extensionDeMime(f.formato));
+  });
+  // foto+datos: banda estilo data-back añadida DEBAJO de la foto (no tapa píxeles)
+  $('sacar-sello').addEventListener('click', () => {
+    const f = momento && momento.media && momento.media.foto;
+    if(!f) return;
+    const mo = momento;
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth, h = img.naturalHeight;
+      const lineas = lineasSello(mo);
+      const fpx = Math.max(13, Math.round(w * 0.024));   // tamaño de texto proporcional
+      const lh = Math.round(fpx * 1.7);
+      const pad = Math.round(fpx * 1.2);
+      const banda = pad * 2 + lh * Math.max(1, lineas.length);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h + banda;
+      const x = c.getContext('2d');
+      x.drawImage(img, 0, 0);
+      x.fillStyle = '#16170f';
+      x.fillRect(0, h, w, banda);
+      x.textBaseline = 'middle';
+      x.font = '500 ' + fpx + 'px ui-monospace, "SF Mono", Menlo, Consolas, monospace';
+      x.fillStyle = '#d8d6c4';
+      lineas.forEach((l, i) => x.fillText(l, pad, h + pad + lh * i + lh / 2));
+      // marca discreta en musgo, alineada a la derecha de la primera línea
+      x.fillStyle = '#8fa676';
+      const marca = 'CAPTURA';
+      x.fillText(marca, w - pad - x.measureText(marca).width, h + pad + lh / 2);
+      const base = nombreArchivo(fechaDe(mo)).replace(/\.json$/, '');
+      c.toBlob((blob) => {
+        if(blob) bajarBlob(blob, base + '_sello.jpg');
+        else linea.textContent = 'no se pudo generar el sello';
+      }, 'image/jpeg', 0.9);
+    };
+    img.onerror = () => { linea.textContent = 'no se pudo decodificar la foto'; };
+    img.src = f.dataURL;
   });
   $('sacar-audio').addEventListener('click', () => {
     const a = momento && momento.media && momento.media.audio;
