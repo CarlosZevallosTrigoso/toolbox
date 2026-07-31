@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CAPTURA · momento en JSON</title>
+<style>
+  :root{
+    --bg:#16170f;
+    --panel:#1f2017;
+    --line:#33352a;
+    --ink:#d8d6c4;
+    --ink-dim:#8a8c78;
+    --accent:#8fa676;
+    --accent-dim:#5c6b4b;
+    --warn:#c08a5a;
+    --mono: ui-monospace, "SF Mono", "Fira Code", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--mono); font-size:13px; line-height:1.5;
+    min-height:100vh; display:flex; flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  header{
+    padding:16px 18px 12px; border-bottom:1px solid var(--line);
+    display:flex; align-items:baseline; gap:10px;
+  }
+  header h1{
+    margin:0; font-size:13px; font-weight:600; letter-spacing:.22em; cursor:pointer;
+    color:var(--ink); user-select:none;
+  }
+  header p{margin:0; color:var(--ink-dim); font-size:11px}
+
+  main{flex:1; max-width:560px; width:100%; margin:0 auto; padding-bottom:24px}
+
+  section{border-bottom:1px solid var(--line); padding:14px 18px}
+  .sec-t{
+    color:var(--ink-dim); font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+    margin-bottom:10px;
+  }
+  .sw{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:7px 0; cursor:pointer;
+  }
+  .sw > span{color:var(--ink)}
+  .sw small{display:block; color:var(--ink-dim); font-size:10px; margin-top:1px}
+  .tog{
+    flex:none; width:38px; height:20px; border:1px solid var(--line); border-radius:2px;
+    background:#12130c; position:relative; transition:border-color .12s;
+  }
+  .tog::after{
+    content:''; position:absolute; top:2px; left:2px; width:14px; height:14px;
+    background:var(--ink-dim); border-radius:2px; transition:left .12s, background .12s;
+  }
+  .sw input{display:none}
+  .sw input:checked + .tog{border-color:var(--accent-dim)}
+  .sw input:checked + .tog::after{left:20px; background:var(--accent)}
+
+  .sub{padding:4px 0 6px 0}
+  .inline{display:flex; align-items:center; gap:10px}
+  .inline input[type=range]{flex:1; accent-color:var(--accent)}
+  .val{color:var(--accent); font-variant-numeric:tabular-nums; min-width:3ch; text-align:right}
+  .selrow{display:flex; gap:8px; align-items:center; padding:4px 0}
+  select{
+    flex:1; background:#12130c; color:var(--ink); border:1px solid var(--line);
+    border-radius:2px; padding:6px; font-family:var(--mono); font-size:12px;
+  }
+  .hide{display:none !important}
+
+  /* previsualización de cámara */
+  #prev-wrap{position:relative; margin-top:8px; border:1px solid var(--line); border-radius:2px; overflow:hidden; background:#000}
+  #prev{display:block; width:100%; max-height:38vh; object-fit:cover}
+
+  /* botón de captura */
+  #cap-zone{padding:18px}
+  #cap{
+    width:100%; padding:16px; font-family:var(--mono); font-size:14px; font-weight:600;
+    letter-spacing:.14em; text-transform:uppercase; cursor:pointer;
+    background:var(--accent-dim); color:#0e0f08; border:1px solid var(--accent-dim); border-radius:2px;
+    transition:background .12s;
+  }
+  #cap:active{background:var(--accent)}
+  #cap:disabled{opacity:.4}
+  #cap.rec{background:var(--warn); border-color:var(--warn)}
+  #estado-linea{
+    text-align:center; color:var(--ink-dim); font-size:11px; min-height:17px; margin-top:8px;
+    font-variant-numeric:tabular-nums;
+  }
+
+  /* resultado */
+  #resultado{display:none}
+  #resultado.on{display:block}
+  .ficha{padding:14px 18px}
+  .ficha img{width:100%; border:1px solid var(--line); border-radius:2px; display:block}
+  .ficha audio{width:100%; margin-top:8px}
+  table{width:100%; border-collapse:collapse; margin-top:10px; font-size:11px}
+  td{padding:3px 0; vertical-align:top}
+  td:first-child{color:var(--ink-dim); width:38%}
+  td:last-child{color:var(--ink); word-break:break-word}
+  td .ok{color:var(--accent)}
+  td .no{color:var(--warn)}
+  .btnrow{display:flex; gap:8px; padding:0 18px 18px}
+  .btnrow button{
+    flex:1; font-family:var(--mono); font-size:12px; letter-spacing:.04em; cursor:pointer;
+    border-radius:2px; padding:10px; border:1px solid var(--line);
+    background:#12130c; color:var(--ink); transition:border-color .12s, color .12s;
+  }
+  .btnrow button:hover{border-color:var(--accent); color:var(--accent)}
+  .btnrow button.primary{background:var(--accent-dim); border-color:var(--accent-dim); color:#0e0f08; font-weight:600}
+</style>
+</head>
+<body>
+  <header>
+    <h1 id="titulo">CAPTURA</h1>
+    <p>congela un momento · exporta JSON</p>
+  </header>
+
+  <main>
+    <!-- composición del momento -->
+    <div id="config">
+      <section>
+        <div class="sec-t">Sensores · siempre que el dispositivo los dé</div>
+        <label class="sw"><span>movimiento y orientación<small>acelerómetro · giroscopio · brújula · 1 s de muestras</small></span>
+          <input type="checkbox" id="t-mov" checked><span class="tog"></span></label>
+        <label class="sw"><span>posición<small>GPS · lat/lon/altitud/precisión</small></span>
+          <input type="checkbox" id="t-pos" checked><span class="tog"></span></label>
+      </section>
+
+      <section>
+        <div class="sec-t">Media · qué incluye el momento</div>
+        <label class="sw"><span>foto<small>un cuadro de la cámara, JPEG embebido</small></span>
+          <input type="checkbox" id="t-foto"><span class="tog"></span></label>
+        <div id="foto-opts" class="sub hide">
+          <div class="selrow">
+            <select id="camara">
+              <option value="environment">cámara trasera</option>
+              <option value="user">cámara frontal</option>
+            </select>
+          </div>
+          <div id="prev-wrap"><video id="prev" autoplay playsinline muted></video></div>
+        </div>
+        <label class="sw"><span>audio<small>clip embebido, AAC en Safari</small></span>
+          <input type="checkbox" id="t-audio"><span class="tog"></span></label>
+        <div id="audio-opts" class="sub hide">
+          <div class="inline"><span style="color:var(--ink-dim);font-size:11px">duración</span>
+            <input type="range" id="dur" min="2" max="15" value="5"><span class="val"><span id="dur-v">5</span>s</span>
+          </div>
+        </div>
+      </section>
+
+      <div id="cap-zone">
+        <button id="cap">● capturar momento</button>
+        <div id="estado-linea"></div>
+      </div>
+    </div>
+
+    <!-- resultado -->
+    <div id="resultado">
+      <div class="ficha">
+        <div class="sec-t">Momento capturado</div>
+        <img id="r-foto" class="hide" alt="Foto del momento">
+        <audio id="r-audio" class="hide" controls></audio>
+        <table id="r-tabla"></table>
+      </div>
+      <div class="btnrow">
+        <button id="exportar" class="primary">exportar JSON</button>
+        <button id="otra">nueva captura</button>
+      </div>
+    </div>
+  </main>
+
+<script>
+'use strict';
+// ============================================================
+// CAPTURA — núcleo puro (sin DOM). Testeado en Node.
+// ============================================================
+function resumenEje(valores) {
+  const v = valores.filter((x) => typeof x === 'number' && isFinite(x));
+  if (!v.length) return null;
+  let min = Infinity, max = -Infinity, sum = 0;
+  for (const x of v) { if (x < min) min = x; if (x > max) max = x; sum += x; }
+  const media = sum / v.length;
+  let sq = 0;
+  for (const x of v) sq += (x - media) * (x - media);
+  const r = (n) => Math.round(n * 1000) / 1000;
+  return { min: r(min), max: r(max), media: r(media), desv: r(Math.sqrt(sq / v.length)) };
+}
+
+function resumenMovimiento(muestras) {
+  if (!muestras || !muestras.length) return null;
+  const ejes = ['ax', 'ay', 'az', 'agx', 'agy', 'agz', 'rx', 'ry', 'rz'];
+  const out = { n: muestras.length, duracionMs: null, ejes: {} };
+  const t0 = muestras[0].t, t1 = muestras[muestras.length - 1].t;
+  if (typeof t0 === 'number' && typeof t1 === 'number') out.duracionMs = Math.round(t1 - t0);
+  for (const e of ejes) {
+    const s = resumenEje(muestras.map((m) => m[e]));
+    if (s) out.ejes[e] = s;
+  }
+  const mags = muestras
+    .filter((m) => [m.ax, m.ay, m.az].every((x) => typeof x === 'number' && isFinite(x)))
+    .map((m) => Math.sqrt(m.ax * m.ax + m.ay * m.ay + m.az * m.az));
+  const sm = resumenEje(mags);
+  if (sm) out.magnitud = sm;
+  return out;
+}
+
+function ensamblarMomento(partes) {
+  const m = { formato: 'captura/1', creado: partes.creadoISO || null };
+  const secciones = ['meta', 'posicion', 'orientacion', 'movimiento', 'pantalla', 'media'];
+  for (const s of secciones) {
+    if (partes[s] !== null && partes[s] !== undefined) m[s] = partes[s];
+  }
+  if (partes.estado) m.estado = partes.estado;
+  return m;
+}
+
+function nombreArchivo(fecha) {
+  const p = (n) => String(n).padStart(2, '0');
+  return 'captura_' + fecha.getFullYear() + p(fecha.getMonth() + 1) + p(fecha.getDate()) +
+    '_' + p(fecha.getHours()) + p(fecha.getMinutes()) + p(fecha.getSeconds()) + '.json';
+}
+
+function tamanoLegible(bytes) {
+  if (!isFinite(bytes) || bytes < 0) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1048576).toFixed(2) + ' MB';
+}
+
+// ============================================================
+// HILO PRINCIPAL — DOM, permisos, sensores
+// ============================================================
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const linea = $('estado-linea');
+  const VENTANA_MOV_MS = 1000;
+
+  $('titulo').addEventListener('click', () => location.reload());
+
+  // ---------- estado de UI ----------
+  let streamCam = null;      // MediaStream de cámara (previsualización)
+  let momento = null;        // último momento ensamblado
+  let capturando = false;
+
+  $('dur').addEventListener('input', () => { $('dur-v').textContent = $('dur').value; });
+
+  // ---------- cámara: encender/apagar con el toggle ----------
+  async function encenderCamara(){
+    apagarCamara();
+    try{
+      streamCam = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: $('camara').value }, audio: false
+      });
+      $('prev').srcObject = streamCam;
+      return true;
+    }catch(err){
+      linea.textContent = 'cámara: ' + traducirError(err);
+      $('t-foto').checked = false; $('foto-opts').classList.add('hide');
+      return false;
+    }
+  }
+  function apagarCamara(){
+    if(streamCam){ streamCam.getTracks().forEach(t => t.stop()); streamCam = null; }
+    $('prev').srcObject = null;
+  }
+  $('t-foto').addEventListener('change', async (e) => {
+    $('foto-opts').classList.toggle('hide', !e.target.checked);
+    if(e.target.checked) await encenderCamara(); else apagarCamara();
+  });
+  $('camara').addEventListener('change', () => { if($('t-foto').checked) encenderCamara(); });
+  $('t-audio').addEventListener('change', (e) => {
+    $('audio-opts').classList.toggle('hide', !e.target.checked);
+  });
+
+  function traducirError(err){
+    const n = err && err.name;
+    if(n === 'NotAllowedError') return 'permiso denegado';
+    if(n === 'NotFoundError') return 'no disponible';
+    if(n === 'NotReadableError') return 'en uso por otra app';
+    return String(n || err);
+  }
+
+  // ---------- fuentes de datos ----------
+  // Cada fuente devuelve {dato, estado}. Nunca lanza: el momento se ensambla con lo que haya.
+
+  async function pedirPermisoMovimiento(){
+    // iOS 13+: requestPermission debe llamarse dentro del gesto del usuario
+    try{
+      if(typeof DeviceMotionEvent !== 'undefined' &&
+         typeof DeviceMotionEvent.requestPermission === 'function'){
+        const r = await DeviceMotionEvent.requestPermission();
+        return r === 'granted';
+      }
+      return typeof DeviceMotionEvent !== 'undefined';
+    }catch(_){ return false; }
+  }
+
+  function capturarMovimiento(ms){
+    return new Promise((resolve) => {
+      const muestras = [];
+      let ultimaOri = null;
+      const t0 = performance.now();
+      const onMov = (e) => {
+        const a = e.acceleration || {}, ag = e.accelerationIncludingGravity || {}, r = e.rotationRate || {};
+        muestras.push({
+          t: Math.round(performance.now() - t0),
+          ax: a.x, ay: a.y, az: a.z,
+          agx: ag.x, agy: ag.y, agz: ag.z,
+          rx: r.alpha, ry: r.beta, rz: r.gamma,
+        });
+      };
+      const onOri = (e) => {
+        ultimaOri = {
+          alpha: red(e.alpha), beta: red(e.beta), gamma: red(e.gamma),
+          absoluta: !!e.absolute,
+        };
+        // brújula: solo iOS/WebKit. Fuera de ahí queda ausente, no inventada.
+        if(typeof e.webkitCompassHeading === 'number'){
+          ultimaOri.brujula = red(e.webkitCompassHeading);
+          if(typeof e.webkitCompassAccuracy === 'number') ultimaOri.brujulaPrecision = red(e.webkitCompassAccuracy);
+        }
+      };
+      window.addEventListener('devicemotion', onMov);
+      window.addEventListener('deviceorientation', onOri);
+      setTimeout(() => {
+        window.removeEventListener('devicemotion', onMov);
+        window.removeEventListener('deviceorientation', onOri);
+        resolve({ muestras, orientacion: ultimaOri });
+      }, ms);
+    });
+  }
+  function red(n){ return typeof n === 'number' ? Math.round(n * 100) / 100 : n; }
+
+  function capturarPosicion(){
+    return new Promise((resolve) => {
+      if(!navigator.geolocation) return resolve({ dato: null, estado: 'no disponible' });
+      navigator.geolocation.getCurrentPosition(
+        (p) => resolve({ dato: {
+          lat: p.coords.latitude, lon: p.coords.longitude,
+          precisionM: red(p.coords.accuracy),
+          altitudM: p.coords.altitude === null ? null : red(p.coords.altitude),
+          rumbo: p.coords.heading === null ? null : red(p.coords.heading),
+          velocidadMs: p.coords.speed === null ? null : red(p.coords.speed),
+        }, estado: 'ok' }),
+        (err) => resolve({ dato: null, estado: err.code === 1 ? 'permiso denegado' : err.code === 3 ? 'timeout' : 'error' }),
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      );
+    });
+  }
+
+  function capturarFoto(){
+    // requiere previsualización ya encendida (el toggle pidió el permiso)
+    const v = $('prev');
+    if(!streamCam || !v.videoWidth) return { dato: null, estado: 'sin señal de cámara' };
+    const c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    try{
+      return { dato: c.toDataURL('image/jpeg', 0.85), estado: 'ok',
+               ancho: c.width, alto: c.height };
+    }catch(err){ return { dato: null, estado: 'error al codificar' }; }
+  }
+
+  async function capturarAudio(segundos, onTick){
+    let stream;
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }catch(err){ return { dato: null, estado: traducirError(err) }; }
+    return new Promise((resolve) => {
+      let rec;
+      try{ rec = new MediaRecorder(stream); }
+      catch(err){
+        stream.getTracks().forEach(t => t.stop());
+        return resolve({ dato: null, estado: 'MediaRecorder no disponible' });
+      }
+      const chunks = [];
+      rec.ondataavailable = (e) => { if(e.data && e.data.size) chunks.push(e.data); };
+      rec.onstop = () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunks, { type: rec.mimeType || 'audio/mp4' });
+        const fr = new FileReader();
+        fr.onload = () => resolve({ dato: fr.result, estado: 'ok', tipo: blob.type, segundos });
+        fr.onerror = () => resolve({ dato: null, estado: 'error al leer blob' });
+        fr.readAsDataURL(blob);
+      };
+      rec.start();
+      let rest = segundos;
+      onTick(rest);
+      const iv = setInterval(() => {
+        rest--;
+        if(rest > 0){ onTick(rest); }
+        else{ clearInterval(iv); if(rec.state !== 'inactive') rec.stop(); }
+      }, 1000);
+    });
+  }
+
+  // ---------- captura del momento ----------
+  async function capturar(){
+    if(capturando) return;
+    capturando = true;
+    const btn = $('cap');
+    btn.disabled = true;
+    const estado = {};
+    const cfg = {
+      mov: $('t-mov').checked, pos: $('t-pos').checked,
+      foto: $('t-foto').checked, audio: $('t-audio').checked,
+      dur: +$('dur').value,
+    };
+    const ahora = new Date();
+
+    // metadatos siempre presentes
+    const meta = {
+      userAgent: navigator.userAgent,
+      idioma: navigator.language,
+      zonaHoraria: (Intl.DateTimeFormat().resolvedOptions() || {}).timeZone || null,
+      enLinea: navigator.onLine,
+    };
+    const pantalla = {
+      pantalla: { w: screen.width, h: screen.height },
+      viewport: { w: window.innerWidth, h: window.innerHeight },
+      densidad: window.devicePixelRatio,
+      orientacion: (screen.orientation && screen.orientation.type) || null,
+    };
+
+    // permiso de movimiento DENTRO del gesto, antes de cualquier await largo
+    let movOK = false;
+    if(cfg.mov){
+      linea.textContent = 'pidiendo permisos…';
+      movOK = await pedirPermisoMovimiento();
+      if(!movOK) estado.movimiento = 'permiso denegado o no disponible';
+    }
+
+    // foto: cuadro inmediato (la cámara ya está encendida por el toggle)
+    let media = {};
+    if(cfg.foto){
+      const f = capturarFoto();
+      estado.foto = f.estado;
+      if(f.dato) media.foto = { dataURL: f.dato, ancho: f.ancho, alto: f.alto, formato: 'image/jpeg' };
+    }
+
+    // lanzar en paralelo: movimiento, posición, audio
+    linea.textContent = 'capturando…';
+    if(cfg.audio) btn.classList.add('rec');
+    const tareas = [];
+    tareas.push(cfg.mov && movOK ? capturarMovimiento(VENTANA_MOV_MS) : Promise.resolve(null));
+    tareas.push(cfg.pos ? capturarPosicion() : Promise.resolve(null));
+    tareas.push(cfg.audio
+      ? capturarAudio(cfg.dur, (s) => { linea.textContent = 'grabando audio… ' + s + 's'; })
+      : Promise.resolve(null));
+
+    const [rMov, rPos, rAudio] = await Promise.all(tareas);
+    btn.classList.remove('rec');
+
+    let movimiento = null, orientacion = null, posicion = null;
+    if(rMov){
+      const res = resumenMovimiento(rMov.muestras);
+      if(res){ movimiento = { resumen: res, muestras: rMov.muestras }; estado.movimiento = 'ok'; }
+      else if(!estado.movimiento) estado.movimiento = 'sin muestras (¿escritorio?)';
+      orientacion = rMov.orientacion;
+      if(cfg.mov && !orientacion && !estado.orientacion) estado.orientacion = 'sin lecturas';
+    }
+    if(rPos){ posicion = rPos.dato; estado.posicion = rPos.estado; }
+    if(rAudio){
+      estado.audio = rAudio.estado;
+      if(rAudio.dato) media.audio = { dataURL: rAudio.dato, formato: rAudio.tipo, segundos: rAudio.segundos };
+    }
+
+    momento = ensamblarMomento({
+      creadoISO: ahora.toISOString(),
+      meta, pantalla, posicion, orientacion, movimiento,
+      media: Object.keys(media).length ? media : null,
+      estado,
+    });
+    momento._fecha = ahora; // interno, se quita al exportar
+
+    mostrarResultado();
+    linea.textContent = '';
+    btn.disabled = false;
+    capturando = false;
+  }
+  $('cap').addEventListener('click', capturar);
+
+  // ---------- resultado ----------
+  function mostrarResultado(){
+    apagarCamara();
+    $('config').style.display = 'none';
+    $('resultado').classList.add('on');
+
+    const img = $('r-foto'), au = $('r-audio');
+    const media = momento.media || {};
+    img.classList.toggle('hide', !media.foto);
+    if(media.foto) img.src = media.foto.dataURL;
+    au.classList.toggle('hide', !media.audio);
+    if(media.audio) au.src = media.audio.dataURL;
+
+    const filas = [];
+    filas.push(['creado', momento.creado]);
+    if(momento.posicion){
+      filas.push(['posición', momento.posicion.lat.toFixed(5) + ', ' + momento.posicion.lon.toFixed(5) +
+        ' (±' + momento.posicion.precisionM + ' m)']);
+    }
+    if(momento.orientacion && typeof momento.orientacion.brujula === 'number'){
+      filas.push(['brújula', momento.orientacion.brujula + '°']);
+    }
+    if(momento.movimiento){
+      const r = momento.movimiento.resumen;
+      filas.push(['movimiento', r.n + ' muestras / ' + r.duracionMs + ' ms' +
+        (r.magnitud ? ' · agitación máx ' + r.magnitud.max + ' m/s²' : '')]);
+    }
+    const est = momento.estado || {};
+    for(const k of Object.keys(est)){
+      const ok = est[k] === 'ok';
+      filas.push([k, '<span class="' + (ok ? 'ok' : 'no') + '">' + est[k] + '</span>']);
+    }
+    const json = jsonExport();
+    filas.push(['tamaño JSON', tamanoLegible(new Blob([json]).size)]);
+
+    $('r-tabla').innerHTML = filas.map(([k, v]) =>
+      '<tr><td>' + k + '</td><td>' + v + '</td></tr>').join('');
+  }
+
+  function jsonExport(){
+    const copia = Object.assign({}, momento);
+    delete copia._fecha;
+    return JSON.stringify(copia, null, 2);
+  }
+
+  $('exportar').addEventListener('click', () => {
+    const blob = new Blob([jsonExport()], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombreArchivo(momento._fecha || new Date());
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  $('otra').addEventListener('click', async () => {
+    $('resultado').classList.remove('on');
+    $('config').style.display = '';
+    momento = null;
+    if($('t-foto').checked) await encenderCamara();
+  });
+})();
+</script>
+</body>
+</html>
