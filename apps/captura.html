@@ -110,6 +110,35 @@
   }
   .btnrow button:hover{border-color:var(--accent); color:var(--accent)}
   .btnrow button.primary{background:var(--accent-dim); border-color:var(--accent-dim); color:#0e0f08; font-weight:600}
+
+  /* navegación de vistas */
+  nav{display:flex; border-bottom:1px solid var(--line)}
+  nav button{
+    flex:1; font-family:var(--mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase;
+    padding:10px; background:none; border:none; color:var(--ink-dim); cursor:pointer;
+    border-bottom:2px solid transparent;
+  }
+  nav button.act{color:var(--accent); border-bottom-color:var(--accent)}
+
+  /* visor / archivo */
+  #visor{display:none}
+  #visor.on{display:block}
+  #drop-json{
+    margin:14px 18px 0; border:1px dashed var(--line); border-radius:2px; padding:16px;
+    text-align:center; color:var(--ink-dim); cursor:pointer; font-size:11px;
+    transition:border-color .12s, color .12s;
+  }
+  #drop-json.hot, #drop-json:active{border-color:var(--accent); color:var(--ink)}
+  #lista{padding:6px 0}
+  .item{
+    display:flex; align-items:center; gap:12px; padding:10px 18px; cursor:pointer;
+    border-bottom:1px solid var(--line);
+  }
+  .item:hover{background:#1a1b12}
+  .item .cuando{color:var(--ink); font-variant-numeric:tabular-nums}
+  .item .que{color:var(--ink-dim); font-size:10px; margin-top:1px}
+  .item .peso{margin-left:auto; color:var(--ink-dim); font-size:10px; font-variant-numeric:tabular-nums; flex:none}
+  .vacio{padding:24px 18px; color:var(--ink-dim); text-align:center; font-size:11px}
 </style>
 </head>
 <body>
@@ -117,6 +146,11 @@
     <h1 id="titulo">CAPTURA</h1>
     <p>congela un momento · exporta JSON</p>
   </header>
+
+  <nav>
+    <button id="nav-cap" class="act">capturar</button>
+    <button id="nav-arc">archivo</button>
+  </nav>
 
   <main>
     <!-- composición del momento -->
@@ -169,6 +203,19 @@
         <button id="exportar" class="primary">exportar JSON</button>
         <button id="otra">nueva captura</button>
       </div>
+      <div class="btnrow" id="extraer" style="padding-top:0">
+        <button id="sacar-foto" class="hide">guardar foto</button>
+        <button id="sacar-audio" class="hide">guardar audio</button>
+        <button id="borrar" class="hide">borrar de memoria</button>
+      </div>
+    </div>
+
+    <!-- archivo / visor -->
+    <div id="visor">
+      <div id="drop-json">suelta un captura_*.json aquí, o toca para elegir</div>
+      <input type="file" id="file-json" accept="application/json,.json" class="hide">
+      <div class="sec-t" style="padding:14px 18px 0">Memoria corta · este navegador</div>
+      <div id="lista"></div>
     </div>
   </main>
 
@@ -228,6 +275,25 @@ function tamanoLegible(bytes) {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / 1048576).toFixed(2) + ' MB';
+}
+
+function escalarDimensiones(w, h, maxLado) {
+  if (!(w > 0) || !(h > 0)) return { w: 0, h: 0 };
+  const mayor = Math.max(w, h);
+  if (mayor <= maxLado) return { w: w, h: h };
+  const f = maxLado / mayor;
+  return { w: Math.round(w * f), h: Math.round(h * f) };
+}
+
+function extensionDeMime(mime) {
+  if (!mime) return 'bin';
+  const base = String(mime).split(';')[0].trim();
+  const mapa = {
+    'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+    'audio/mp4': 'm4a', 'audio/aac': 'aac', 'audio/webm': 'weba',
+    'audio/ogg': 'ogg', 'audio/wav': 'wav', 'application/json': 'json',
+  };
+  return mapa[base] || (base.split('/')[1] || 'bin');
 }
 
 // ============================================================
@@ -356,15 +422,17 @@ function tamanoLegible(bytes) {
     });
   }
 
+  const FOTO_MAX_LADO = 2048;
   function capturarFoto(){
     // requiere previsualización ya encendida (el toggle pidió el permiso)
     const v = $('prev');
     if(!streamCam || !v.videoWidth) return { dato: null, estado: 'sin señal de cámara' };
+    const dim = escalarDimensiones(v.videoWidth, v.videoHeight, FOTO_MAX_LADO);
     const c = document.createElement('canvas');
-    c.width = v.videoWidth; c.height = v.videoHeight;
-    c.getContext('2d').drawImage(v, 0, 0);
+    c.width = dim.w; c.height = dim.h;
+    c.getContext('2d').drawImage(v, 0, 0, dim.w, dim.h);
     try{
-      return { dato: c.toDataURL('image/jpeg', 0.85), estado: 'ok',
+      return { dato: c.toDataURL('image/jpeg', 0.82), estado: 'ok',
                ancho: c.width, alto: c.height };
     }catch(err){ return { dato: null, estado: 'error al codificar' }; }
   }
@@ -481,73 +549,258 @@ function tamanoLegible(bytes) {
     });
     momento._fecha = ahora; // interno, se quita al exportar
 
-    mostrarResultado();
+    // memoria corta: guardar sin bloquear la UI; si falla, el momento sigue vivo en pantalla
+    try{ momento._id = await guardarEnDB(momento); }
+    catch(err){ momento._id = null; }
+
+    mostrarResultado(momento);
     linea.textContent = '';
     btn.disabled = false;
     capturando = false;
   }
   $('cap').addEventListener('click', capturar);
 
-  // ---------- resultado ----------
-  function mostrarResultado(){
+  // ---------- memoria corta (IndexedDB) ----------
+  const DB_NOMBRE = 'captura', DB_STORE = 'momentos';
+  function abrirDB(){
+    return new Promise((resolve, reject) => {
+      if(!window.indexedDB) return reject(new Error('IndexedDB no disponible'));
+      const req = indexedDB.open(DB_NOMBRE, 1);
+      req.onupgradeneeded = () => {
+        req.result.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  function guardarEnDB(mo){
+    return abrirDB().then((db) => new Promise((resolve, reject) => {
+      const copia = JSON.parse(jsonDe(mo)); // sin campos internos
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      const req = tx.objectStore(DB_STORE).add({ momento: copia });
+      req.onsuccess = () => resolve(req.result);
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+  function listarDB(){
+    return abrirDB().then((db) => new Promise((resolve, reject) => {
+      const out = [];
+      const tx = db.transaction(DB_STORE, 'readonly');
+      tx.objectStore(DB_STORE).openCursor(null, 'prev').onsuccess = (e) => {
+        const cur = e.target.result;
+        if(!cur){ resolve(out); return; }
+        const mo = cur.value.momento || {};
+        const media = mo.media || {};
+        out.push({
+          id: cur.value.id,
+          creado: mo.creado,
+          tiene: [
+            mo.posicion ? 'gps' : null,
+            mo.movimiento ? 'mov' : null,
+            media.foto ? 'foto' : null,
+            media.audio ? 'audio' : null,
+          ].filter(Boolean),
+          bytes: JSON.stringify(mo).length,
+        });
+        cur.continue();
+      };
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+  function leerDeDB(id){
+    return abrirDB().then((db) => new Promise((resolve, reject) => {
+      const req = db.transaction(DB_STORE, 'readonly').objectStore(DB_STORE).get(id);
+      req.onsuccess = () => resolve(req.result ? req.result.momento : null);
+      req.onerror = () => reject(req.error);
+    }));
+  }
+  function borrarDeDB(id){
+    return abrirDB().then((db) => new Promise((resolve, reject) => {
+      const tx = db.transaction(DB_STORE, 'readwrite');
+      tx.objectStore(DB_STORE).delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
+  // ---------- navegación de vistas ----------
+  function verVista(cual){
+    $('config').style.display = cual === 'cap' ? '' : 'none';
+    $('resultado').classList.toggle('on', cual === 'res');
+    $('visor').classList.toggle('on', cual === 'arc');
+    $('nav-cap').classList.toggle('act', cual === 'cap' || cual === 'res');
+    $('nav-arc').classList.toggle('act', cual === 'arc');
+    if(cual !== 'cap') apagarCamara();
+  }
+  $('nav-cap').addEventListener('click', async () => {
+    verVista('cap');
+    if($('t-foto').checked) await encenderCamara();
+  });
+  $('nav-arc').addEventListener('click', () => { verVista('arc'); pintarLista(); });
+
+  // ---------- ficha (compartida entre captura fresca y visor) ----------
+  function mostrarResultado(mo){
+    momento = mo;
     apagarCamara();
-    $('config').style.display = 'none';
-    $('resultado').classList.add('on');
+    verVista('res');
 
     const img = $('r-foto'), au = $('r-audio');
-    const media = momento.media || {};
+    const media = mo.media || {};
     img.classList.toggle('hide', !media.foto);
     if(media.foto) img.src = media.foto.dataURL;
     au.classList.toggle('hide', !media.audio);
     if(media.audio) au.src = media.audio.dataURL;
 
+    $('sacar-foto').classList.toggle('hide', !media.foto);
+    $('sacar-audio').classList.toggle('hide', !media.audio);
+    $('borrar').classList.toggle('hide', !mo._id);
+
     const filas = [];
-    filas.push(['creado', momento.creado]);
-    if(momento.posicion){
-      filas.push(['posición', momento.posicion.lat.toFixed(5) + ', ' + momento.posicion.lon.toFixed(5) +
-        ' (±' + momento.posicion.precisionM + ' m)']);
+    filas.push(['creado', mo.creado]);
+    if(mo.posicion){
+      filas.push(['posición', mo.posicion.lat.toFixed(5) + ', ' + mo.posicion.lon.toFixed(5) +
+        ' (±' + mo.posicion.precisionM + ' m)']);
     }
-    if(momento.orientacion && typeof momento.orientacion.brujula === 'number'){
-      filas.push(['brújula', momento.orientacion.brujula + '°']);
+    if(mo.orientacion && typeof mo.orientacion.brujula === 'number'){
+      filas.push(['brújula', mo.orientacion.brujula + '°']);
     }
-    if(momento.movimiento){
-      const r = momento.movimiento.resumen;
+    if(mo.movimiento && mo.movimiento.resumen){
+      const r = mo.movimiento.resumen;
       filas.push(['movimiento', r.n + ' muestras / ' + r.duracionMs + ' ms' +
         (r.magnitud ? ' · agitación máx ' + r.magnitud.max + ' m/s²' : '')]);
     }
-    const est = momento.estado || {};
+    if(media.foto && media.foto.ancho){
+      filas.push(['foto', media.foto.ancho + '×' + media.foto.alto]);
+    }
+    const est = mo.estado || {};
     for(const k of Object.keys(est)){
       const ok = est[k] === 'ok';
       filas.push([k, '<span class="' + (ok ? 'ok' : 'no') + '">' + est[k] + '</span>']);
     }
-    const json = jsonExport();
-    filas.push(['tamaño JSON', tamanoLegible(new Blob([json]).size)]);
+    filas.push(['tamaño JSON', tamanoLegible(new Blob([jsonDe(mo)]).size)]);
 
     $('r-tabla').innerHTML = filas.map(([k, v]) =>
       '<tr><td>' + k + '</td><td>' + v + '</td></tr>').join('');
   }
 
-  function jsonExport(){
-    const copia = Object.assign({}, momento);
-    delete copia._fecha;
+  function jsonDe(mo){
+    const copia = Object.assign({}, mo);
+    delete copia._fecha; delete copia._id;
     return JSON.stringify(copia, null, 2);
+  }
+  function fechaDe(mo){
+    if(mo._fecha) return mo._fecha;
+    const d = new Date(mo.creado);
+    return isNaN(d) ? new Date() : d;
+  }
+
+  // ---------- descargas ----------
+  function bajarBlob(blob, nombre){
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nombre;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  function blobDeDataURL(dataURL){
+    const coma = dataURL.indexOf(',');
+    const cabecera = dataURL.slice(0, coma);
+    const mime = (cabecera.match(/^data:([^;]+)/) || [])[1] || 'application/octet-stream';
+    const bin = atob(dataURL.slice(coma + 1));
+    const bytes = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
   }
 
   $('exportar').addEventListener('click', () => {
-    const blob = new Blob([jsonExport()], { type: 'application/json' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = nombreArchivo(momento._fecha || new Date());
-    a.click();
-    URL.revokeObjectURL(a.href);
+    if(!momento) return;
+    bajarBlob(new Blob([jsonDe(momento)], { type: 'application/json' }), nombreArchivo(fechaDe(momento)));
+  });
+  $('sacar-foto').addEventListener('click', () => {
+    const f = momento && momento.media && momento.media.foto;
+    if(!f) return;
+    const base = nombreArchivo(fechaDe(momento)).replace(/\.json$/, '');
+    bajarBlob(blobDeDataURL(f.dataURL), base + '_foto.' + extensionDeMime(f.formato));
+  });
+  $('sacar-audio').addEventListener('click', () => {
+    const a = momento && momento.media && momento.media.audio;
+    if(!a) return;
+    const base = nombreArchivo(fechaDe(momento)).replace(/\.json$/, '');
+    bajarBlob(blobDeDataURL(a.dataURL), base + '_audio.' + extensionDeMime(a.formato));
+  });
+  $('borrar').addEventListener('click', async () => {
+    if(!momento || !momento._id) return;
+    await borrarDeDB(momento._id);
+    verVista('arc'); pintarLista();
   });
 
   $('otra').addEventListener('click', async () => {
-    $('resultado').classList.remove('on');
-    $('config').style.display = '';
     momento = null;
+    verVista('cap');
     if($('t-foto').checked) await encenderCamara();
   });
+
+  // ---------- visor: lista de memoria corta ----------
+  async function pintarLista(){
+    const lista = $('lista');
+    let items;
+    try{ items = await listarDB(); }
+    catch(err){
+      lista.innerHTML = '<div class="vacio">memoria corta no disponible en este navegador</div>';
+      return;
+    }
+    if(!items.length){
+      lista.innerHTML = '<div class="vacio">sin capturas guardadas — cada captura nueva queda aquí</div>';
+      return;
+    }
+    lista.innerHTML = items.map((it) => {
+      const d = new Date(it.creado);
+      const cuando = isNaN(d) ? String(it.creado) : d.toLocaleString('es', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      return '<div class="item" data-id="' + it.id + '">' +
+        '<div><div class="cuando">' + cuando + '</div>' +
+        '<div class="que">' + (it.tiene.join(' · ') || 'solo metadatos') + '</div></div>' +
+        '<div class="peso">' + tamanoLegible(it.bytes) + '</div></div>';
+    }).join('');
+    lista.querySelectorAll('.item').forEach((el) => {
+      el.addEventListener('click', async () => {
+        const mo = await leerDeDB(+el.dataset.id);
+        if(!mo){ pintarLista(); return; }
+        mo._id = +el.dataset.id;
+        mostrarResultado(mo);
+      });
+    });
+  }
+
+  // ---------- visor: abrir JSON externo ----------
+  function abrirJSONExterno(file){
+    if(!file) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      try{
+        const mo = JSON.parse(fr.result);
+        if(mo.formato !== 'captura/1'){
+          $('drop-json').textContent = 'ese JSON no es una captura (falta formato captura/1)';
+          return;
+        }
+        mostrarResultado(mo);
+      }catch(err){
+        $('drop-json').textContent = 'no se pudo leer: JSON inválido';
+      }
+    };
+    fr.onerror = () => { $('drop-json').textContent = 'no se pudo leer el archivo'; };
+    fr.readAsText(file);
+  }
+  $('drop-json').addEventListener('click', () => $('file-json').click());
+  $('file-json').addEventListener('change', (e) => { abrirJSONExterno(e.target.files[0]); e.target.value = ''; });
+  ;['dragenter','dragover'].forEach((ev) => $('drop-json').addEventListener(ev, (e) => {
+    e.preventDefault(); $('drop-json').classList.add('hot');
+  }));
+  ;['dragleave','drop'].forEach((ev) => $('drop-json').addEventListener(ev, (e) => {
+    e.preventDefault(); $('drop-json').classList.remove('hot');
+    if(ev === 'drop') abrirJSONExterno(e.dataTransfer.files[0]);
+  }));
 })();
 </script>
 </body>
