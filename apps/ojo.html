@@ -16,7 +16,6 @@
     --accent:#8fa676;
     --accent-dim:#5c6b4b;
     --warn:#c08a5a;
-    --rec:#b0563a;
     --mono: ui-monospace, "SF Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
@@ -38,7 +37,6 @@
   }
   #gps.ok{color:var(--accent)}
   #gps.err{color:var(--warn)}
-  #contador{font-variant-numeric:tabular-nums}
 
   /* ---- pantalla inicial ---- */
   #inicio{
@@ -46,7 +44,7 @@
     gap:16px; padding:24px; text-align:center;
   }
   #inicio h1{margin:0; font-size:14px; font-weight:600; letter-spacing:.18em; color:var(--ink); cursor:pointer}
-  #inicio p{margin:0; color:var(--ink-dim); max-width:34ch; line-height:1.5}
+  #inicio p{margin:0; color:var(--ink-dim); max-width:30ch; line-height:1.5}
   #arrancar{
     margin-top:8px; padding:14px 28px; font-family:var(--mono); font-size:13px;
     letter-spacing:.08em; background:var(--accent-dim); color:#0e0f08; font-weight:600;
@@ -55,20 +53,15 @@
   #arrancar:active{background:var(--accent)}
 
   /* ---- zona de captura ---- */
-  #captura{flex:1; display:none; flex-direction:column; gap:1px; background:var(--line)}
+  #captura{flex:1; display:none; flex-direction:column; background:var(--bg)}
   .disparo{
-    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:6px; background:var(--bg); border:none; color:var(--ink);
+    flex:1; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); border:none; color:var(--ink);
     font-family:var(--mono); cursor:pointer; padding:0;
   }
   .disparo:disabled{color:var(--ink-dim)}
   .disparo .tag{font-size:15px; font-weight:600; letter-spacing:.22em}
-  .disparo .sub{font-size:10px; color:var(--ink-dim); letter-spacing:.06em}
-  #b-foto{flex:1}
-  #b-video{flex:none; height:84px}
-  #b-video .tag{font-size:12px}
   #b-foto:active:not(:disabled){background:#0c0d08}
-  #b-video:active:not(:disabled){background:#0c0d08}
 
   /* ---- selector de lente ---- */
   #lente{
@@ -86,7 +79,6 @@
     font-size:22px; font-weight:600; letter-spacing:.3em; text-transform:uppercase;
   }
   #flash.listo{display:flex; color:var(--accent); background:#000d}
-  #flash.rec{display:flex; color:var(--rec); background:#000a}
 
   /* ---- acciones de sesión ---- */
   #sesion{
@@ -113,23 +105,17 @@
   <div id="estado">
     <span id="gps">gps: esperando</span>
     <button id="lente">1×</button>
-    <span id="contador">0 vistas · 0 miradas</span>
   </div>
 
   <div id="inicio">
     <h1 id="titulo">FORJA · CAPTURA</h1>
-    <p>Captura ciega: foto o video de 5 s, sin visor. Todo queda en el dispositivo hasta que compartas al carrete.</p>
+    <p>Captura ciega, sin visor. Nada sale del dispositivo hasta que lo compartas.</p>
     <button id="arrancar">pensar</button>
   </div>
 
   <div id="captura">
     <button class="disparo" id="b-foto">
       <span class="tag">VISTA</span>
-      <span class="sub">un toque · captura inmediata</span>
-    </button>
-    <button class="disparo" id="b-video">
-      <span class="tag">MIRADA</span>
-      <span class="sub">5 segundos · con audio</span>
     </button>
   </div>
 
@@ -150,7 +136,7 @@
 (function(){
   const $ = (id)=>document.getElementById(id);
   const vid=$('vid'), cv=$('cv'), flash=$('flash'), msg=$('msg');
-  const bFoto=$('b-foto'), bVideo=$('b-video');
+  const bFoto=$('b-foto');
 
   // ---------- funciones puras (testeadas en Node) ----------
   function pad(n){ return String(n).padStart(2,'0'); }
@@ -177,20 +163,13 @@
       precision_m: pos ? Math.round(pos.acc) : null,
     };
   }
-  function extPorMime(mime){
-    if(!mime) return 'mp4';
-    if(mime.indexOf('mp4')!==-1) return 'mp4';
-    if(mime.indexOf('webm')!==-1) return 'webm';
-    return 'mp4';
-  }
 
   // ---------- estado ----------
-  let stream=null, recorder=null, grabando=false;
+  let stream=null;
   let lentePrincipal=null, lenteUltra=null, lenteEnUso='1x';
   let ultimaPos=null;             // {lat,lon,acc} más reciente
-  let nFotos=0, nVideos=0;
+  let nFotos=0;
   let wakeLock=null;
-  let mimeVideo='';
 
   // ---------- IndexedDB (checkpoint: sobrevive si el tab muere) ----------
   const DB='forja_captura', STORE='items';
@@ -236,10 +215,8 @@
     if(ms){ setTimeout(()=>{ flash.className=''; }, ms); }
   }
   function refrescarContador(){
-    $('contador').textContent = nFotos+' vistas · '+nVideos+' miradas';
-    const total=nFotos+nVideos;
-    $('compartir').textContent='compartir ('+total+')';
-    ['compartir','json','limpiar'].forEach(id=> $(id).disabled = total===0);
+    $('compartir').textContent='compartir ('+nFotos+')';
+    ['compartir','json','limpiar'].forEach(id=> $(id).disabled = nFotos===0);
   }
 
   // ---------- GPS en background: ningún tap espera al GPS ----------
@@ -281,14 +258,14 @@
     }).catch(()=>{});
   }
   function cambiarLente(){
-    if(grabando || !lenteUltra) return;
+    if(!lenteUltra) return;
     const destino = lenteEnUso==='1x' ? lenteUltra : lentePrincipal;
     if(!destino) return;
     $('lente').disabled=true;
     stream.getTracks().forEach(t=>t.stop());
     navigator.mediaDevices.getUserMedia({
       video:{ deviceId:{exact:destino}, width:{ideal:4032}, height:{ideal:3024} },
-      audio:true
+      audio:false
     }).then(s=>{
       stream=s; vid.srcObject=s;
       return vid.play().catch(()=>{});
@@ -309,23 +286,12 @@
     $('arrancar').disabled=true; $('arrancar').textContent='pidiendo permisos…';
     navigator.mediaDevices.getUserMedia({
       video:{ facingMode:'environment', width:{ideal:4032}, height:{ideal:3024} },
-      audio:true
+      audio:false
     }).then(s=>{
       stream=s;
       vid.srcObject=s;
       return vid.play().catch(()=>{}); // iOS a veces resuelve play() con rechazo benigno
     }).then(()=>{
-      // mime de video: probar candidatos en orden de preferencia para el carrete
-      const candidatos=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
-      if(window.MediaRecorder){
-        for(const c of candidatos){
-          if(MediaRecorder.isTypeSupported(c)){ mimeVideo=c; break; }
-        }
-      }
-      if(!window.MediaRecorder || !mimeVideo){
-        bVideo.disabled=true;
-        bVideo.querySelector('.sub').textContent='no soportado en este navegador';
-      }
       $('inicio').style.display='none';
       $('captura').style.display='flex';
       iniciarGPS();
@@ -333,8 +299,7 @@
       detectarLentes();
       // recuperar sesión previa si el tab murió con items pendientes
       idbAll().then(items=>{
-        nFotos=items.filter(i=>i.tipo==='vista').length;
-        nVideos=items.filter(i=>i.tipo==='mirada').length;
+        nFotos=items.length;
         refrescarContador();
         if(items.length) aviso('sesión anterior recuperada: '+items.length+' items', 4000);
       }).catch(()=>{});
@@ -346,7 +311,7 @@
 
   // ---------- foto: congelar frame del stream a máxima resolución del video ----------
   bFoto.addEventListener('click', ()=>{
-    if(!stream || grabando) return;
+    if(!stream) return;
     const w=vid.videoWidth, h=vid.videoHeight;
     if(!w || !h){ aviso('cámara aún no lista', 2000); return; }
     const d=new Date(), pos=ultimaPos;
@@ -360,47 +325,6 @@
         .then(()=>{ nFotos++; refrescarContador(); mostrarFlash('listo','listo',450); })
         .catch(e=>aviso('error guardando: '+e, 4000));
     }, 'image/jpeg', 0.92);
-  });
-
-  // ---------- video: 5 segundos exactos ----------
-  bVideo.addEventListener('click', ()=>{
-    if(!stream || grabando || bVideo.disabled) return;
-    grabando=true;
-    bFoto.disabled=true; bVideo.disabled=true;
-    const d=new Date(), pos=ultimaPos;
-    const chunks=[];
-    try{
-      recorder=new MediaRecorder(stream, {mimeType:mimeVideo});
-    }catch(e){
-      grabando=false; bFoto.disabled=false; bVideo.disabled=false;
-      aviso('MediaRecorder falló: '+e.name, 4000); return;
-    }
-    recorder.ondataavailable=(e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
-    recorder.onstop=()=>{
-      const ext=extPorMime(mimeVideo);
-      const blob=new Blob(chunks, {type: mimeVideo.split(';')[0]});
-      const archivo=nombreArchivo('mirada', d, ext);
-      idbAdd({ tipo:'mirada', archivo, blob, meta:entradaMeta('mirada', archivo, d, pos) })
-        .then(()=>{ nVideos++; refrescarContador(); mostrarFlash('listo','listo',450); })
-        .catch(e=>aviso('error guardando: '+e, 4000))
-        .finally(()=>{ grabando=false; bFoto.disabled=false; bVideo.disabled=false; });
-    };
-    recorder.onerror=()=>{
-      grabando=false; bFoto.disabled=false; bVideo.disabled=false;
-      flash.className=''; aviso('error de grabación', 4000);
-    };
-    recorder.start();
-    // cuenta regresiva visible
-    let rest=5;
-    mostrarFlash('rec','● '+rest);
-    const iv=setInterval(()=>{
-      rest--;
-      if(rest>0){ mostrarFlash('rec','● '+rest); }
-      else{
-        clearInterval(iv); flash.className='';
-        if(recorder && recorder.state!=='inactive') recorder.stop();
-      }
-    }, 1000);
   });
 
   // ---------- compartir: el único camino real al carrete ----------
@@ -433,8 +357,8 @@
 
   // ---------- limpiar sesión ----------
   $('limpiar').addEventListener('click', ()=>{
-    if(!confirm('¿Borrar los '+(nFotos+nVideos)+' items de la sesión? Asegúrate de haberlos compartido.')) return;
-    idbClear().then(()=>{ nFotos=0; nVideos=0; refrescarContador(); aviso('sesión limpia', 2500); });
+    if(!confirm('¿Borrar los '+nFotos+' items de la sesión? Asegúrate de haberlos compartido.')) return;
+    idbClear().then(()=>{ nFotos=0; refrescarContador(); aviso('sesión limpia', 2500); });
   });
 
   refrescarContador();
