@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FORJA · captura</title>
+<style>
+  :root{
+    --bg:#000;
+    --panel:#16170f;
+    --line:#33352a;
+    --ink:#d8d6c4;
+    --ink-dim:#8a8c78;
+    --accent:#8fa676;
+    --accent-dim:#5c6b4b;
+    --warn:#c08a5a;
+    --rec:#b0563a;
+    --mono: ui-monospace, "SF Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; height:100%; overscroll-behavior:none}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--mono); font-size:13px;
+    display:flex; flex-direction:column;
+    height:100dvh; user-select:none; -webkit-user-select:none;
+    touch-action:manipulation;
+  }
+
+  /* ---- barra de estado ---- */
+  #estado{
+    flex:none; display:flex; justify-content:space-between; align-items:center;
+    padding:calc(env(safe-area-inset-top, 0px) + 10px) 16px 10px;
+    color:var(--ink-dim); font-size:11px; letter-spacing:.04em;
+    border-bottom:1px solid var(--line);
+  }
+  #gps.ok{color:var(--accent)}
+  #gps.err{color:var(--warn)}
+  #contador{font-variant-numeric:tabular-nums}
+
+  /* ---- pantalla inicial ---- */
+  #inicio{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:16px; padding:24px; text-align:center;
+  }
+  #inicio h1{margin:0; font-size:14px; font-weight:600; letter-spacing:.18em; color:var(--ink); cursor:pointer}
+  #inicio p{margin:0; color:var(--ink-dim); max-width:34ch; line-height:1.5}
+  #arrancar{
+    margin-top:8px; padding:14px 28px; font-family:var(--mono); font-size:13px;
+    letter-spacing:.08em; background:var(--accent-dim); color:#0e0f08; font-weight:600;
+    border:1px solid var(--accent-dim); border-radius:2px; cursor:pointer;
+  }
+  #arrancar:active{background:var(--accent)}
+
+  /* ---- zona de captura ---- */
+  #captura{flex:1; display:none; flex-direction:column; gap:1px; background:var(--line)}
+  .disparo{
+    flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:6px; background:var(--bg); border:none; color:var(--ink);
+    font-family:var(--mono); cursor:pointer; padding:0;
+  }
+  .disparo:disabled{color:var(--ink-dim)}
+  .disparo .tag{font-size:15px; font-weight:600; letter-spacing:.22em}
+  .disparo .sub{font-size:10px; color:var(--ink-dim); letter-spacing:.06em}
+  #b-foto{flex:2}
+  #b-foto:active:not(:disabled){background:#0c0d08}
+  #b-video:active:not(:disabled){background:#0c0d08}
+
+  /* ---- flash de confirmación ---- */
+  #flash{
+    position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+    pointer-events:none; z-index:10;
+    font-size:22px; font-weight:600; letter-spacing:.3em; text-transform:uppercase;
+  }
+  #flash.listo{display:flex; color:var(--accent); background:#000d}
+  #flash.rec{display:flex; color:var(--rec); background:#000a}
+
+  /* ---- acciones de sesión ---- */
+  #sesion{
+    flex:none; display:flex; gap:1px; background:var(--line);
+    border-top:1px solid var(--line);
+    padding-bottom:env(safe-area-inset-bottom, 0px);
+  }
+  #sesion button{
+    flex:1; padding:16px 4px; background:var(--panel); color:var(--ink);
+    border:none; font-family:var(--mono); font-size:11px; letter-spacing:.06em; cursor:pointer;
+  }
+  #sesion button:disabled{color:var(--ink-dim); opacity:.5}
+  #sesion button:active:not(:disabled){color:var(--accent)}
+
+  #msg{
+    position:fixed; left:0; right:0; bottom:calc(env(safe-area-inset-bottom, 0px) + 76px);
+    text-align:center; color:var(--warn); font-size:11px; padding:0 16px;
+    pointer-events:none; z-index:9;
+  }
+  video, canvas{position:fixed; width:1px; height:1px; opacity:0; pointer-events:none; left:-10px; top:-10px}
+</style>
+</head>
+<body>
+  <div id="estado">
+    <span id="gps">gps: esperando</span>
+    <span id="contador">0 fotos · 0 videos</span>
+  </div>
+
+  <div id="inicio">
+    <h1 id="titulo">FORJA · CAPTURA</h1>
+    <p>Captura ciega: foto o video de 5 s, sin visor. Todo queda en el dispositivo hasta que compartas al carrete.</p>
+    <button id="arrancar">iniciar cámara</button>
+  </div>
+
+  <div id="captura">
+    <button class="disparo" id="b-foto">
+      <span class="tag">FOTO</span>
+      <span class="sub">un toque · captura inmediata</span>
+    </button>
+    <button class="disparo" id="b-video">
+      <span class="tag">VIDEO</span>
+      <span class="sub">5 segundos · con audio</span>
+    </button>
+  </div>
+
+  <div id="sesion">
+    <button id="compartir" disabled>compartir (0)</button>
+    <button id="json" disabled>json</button>
+    <button id="limpiar" disabled>limpiar</button>
+  </div>
+
+  <div id="flash"></div>
+  <div id="msg"></div>
+
+  <video id="vid" autoplay playsinline muted></video>
+  <canvas id="cv"></canvas>
+
+<script>
+'use strict';
+(function(){
+  const $ = (id)=>document.getElementById(id);
+  const vid=$('vid'), cv=$('cv'), flash=$('flash'), msg=$('msg');
+  const bFoto=$('b-foto'), bVideo=$('b-video');
+
+  // ---------- funciones puras (testeadas en Node) ----------
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function selloTiempo(d){
+    return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+
+           pad(d.getHours())+pad(d.getMinutes())+pad(d.getSeconds());
+  }
+  function nombreArchivo(tipo, d, ext){
+    return 'forja_'+tipo+'_'+selloTiempo(d)+'.'+ext;
+  }
+  function fechaLocalISO(d){
+    // ISO local con offset, no UTC: la hora que viste en el lugar donde estabas
+    const off=-d.getTimezoneOffset(), s=off>=0?'+':'-', a=Math.abs(off);
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())+'T'+
+           pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds())+
+           s+pad(Math.floor(a/60))+':'+pad(a%60);
+  }
+  function entradaMeta(tipo, archivo, d, pos){
+    return {
+      tipo, archivo,
+      fecha: fechaLocalISO(d),
+      lat: pos ? pos.lat : null,
+      lon: pos ? pos.lon : null,
+      precision_m: pos ? Math.round(pos.acc) : null,
+    };
+  }
+  function extPorMime(mime){
+    if(!mime) return 'mp4';
+    if(mime.indexOf('mp4')!==-1) return 'mp4';
+    if(mime.indexOf('webm')!==-1) return 'webm';
+    return 'mp4';
+  }
+
+  // ---------- estado ----------
+  let stream=null, recorder=null, grabando=false;
+  let ultimaPos=null;             // {lat,lon,acc} más reciente
+  let nFotos=0, nVideos=0;
+  let wakeLock=null;
+  let mimeVideo='';
+
+  // ---------- IndexedDB (checkpoint: sobrevive si el tab muere) ----------
+  const DB='forja_captura', STORE='items';
+  function abrirDB(){
+    return new Promise((res,rej)=>{
+      const rq=indexedDB.open(DB,1);
+      rq.onupgradeneeded=()=>{ rq.result.createObjectStore(STORE,{keyPath:'id',autoIncrement:true}); };
+      rq.onsuccess=()=>res(rq.result);
+      rq.onerror=()=>rej(rq.error);
+    });
+  }
+  function idbAdd(item){
+    return abrirDB().then(db=>new Promise((res,rej)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).add(item);
+      tx.oncomplete=()=>res();
+      tx.onerror=()=>rej(tx.error);
+    }));
+  }
+  function idbAll(){
+    return abrirDB().then(db=>new Promise((res,rej)=>{
+      const rq=db.transaction(STORE,'readonly').objectStore(STORE).getAll();
+      rq.onsuccess=()=>res(rq.result||[]);
+      rq.onerror=()=>rej(rq.error);
+    }));
+  }
+  function idbClear(){
+    return abrirDB().then(db=>new Promise((res,rej)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).clear();
+      tx.oncomplete=()=>res();
+      tx.onerror=()=>rej(tx.error);
+    }));
+  }
+
+  // ---------- UI ----------
+  function aviso(t, ms){
+    msg.textContent=t||'';
+    if(ms){ setTimeout(()=>{ if(msg.textContent===t) msg.textContent=''; }, ms); }
+  }
+  function mostrarFlash(clase, texto, ms){
+    flash.className=clase; flash.textContent=texto;
+    if(ms){ setTimeout(()=>{ flash.className=''; }, ms); }
+  }
+  function refrescarContador(){
+    $('contador').textContent = nFotos+' fotos · '+nVideos+' videos';
+    const total=nFotos+nVideos;
+    $('compartir').textContent='compartir ('+total+')';
+    ['compartir','json','limpiar'].forEach(id=> $(id).disabled = total===0);
+  }
+
+  // ---------- GPS en background: ningún tap espera al GPS ----------
+  function iniciarGPS(){
+    if(!navigator.geolocation){ $('gps').textContent='gps: no disponible'; $('gps').className='err'; return; }
+    navigator.geolocation.watchPosition(
+      (p)=>{ ultimaPos={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy};
+             $('gps').textContent='gps: ±'+Math.round(p.coords.accuracy)+' m';
+             $('gps').className='ok'; },
+      (e)=>{ $('gps').textContent='gps: sin señal'; $('gps').className='err'; },
+      { enableHighAccuracy:true, maximumAge:10000, timeout:20000 }
+    );
+  }
+
+  // ---------- wake lock (iOS 16.4+; si falla, se sigue sin él) ----------
+  function pedirWakeLock(){
+    if(!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen')
+      .then(wl=>{ wakeLock=wl; })
+      .catch(()=>{});
+  }
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState==='visible' && stream) pedirWakeLock();
+  });
+
+  // ---------- arranque ----------
+  $('titulo').addEventListener('click', ()=>location.reload());
+  $('arrancar').addEventListener('click', ()=>{
+    $('arrancar').disabled=true; $('arrancar').textContent='pidiendo permisos…';
+    navigator.mediaDevices.getUserMedia({
+      video:{ facingMode:'environment', width:{ideal:4032}, height:{ideal:3024} },
+      audio:true
+    }).then(s=>{
+      stream=s;
+      vid.srcObject=s;
+      return vid.play().catch(()=>{}); // iOS a veces resuelve play() con rechazo benigno
+    }).then(()=>{
+      // mime de video: probar candidatos en orden de preferencia para el carrete
+      const candidatos=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'];
+      if(window.MediaRecorder){
+        for(const c of candidatos){
+          if(MediaRecorder.isTypeSupported(c)){ mimeVideo=c; break; }
+        }
+      }
+      if(!window.MediaRecorder || !mimeVideo){
+        bVideo.disabled=true;
+        bVideo.querySelector('.sub').textContent='no soportado en este navegador';
+      }
+      $('inicio').style.display='none';
+      $('captura').style.display='flex';
+      iniciarGPS();
+      pedirWakeLock();
+      // recuperar sesión previa si el tab murió con items pendientes
+      idbAll().then(items=>{
+        nFotos=items.filter(i=>i.tipo==='foto').length;
+        nVideos=items.filter(i=>i.tipo==='video').length;
+        refrescarContador();
+        if(items.length) aviso('sesión anterior recuperada: '+items.length+' items', 4000);
+      }).catch(()=>{});
+    }).catch(err=>{
+      $('arrancar').disabled=false; $('arrancar').textContent='iniciar cámara';
+      aviso('permiso denegado o cámara no disponible: '+err.name, 6000);
+    });
+  });
+
+  // ---------- foto: congelar frame del stream a máxima resolución del video ----------
+  bFoto.addEventListener('click', ()=>{
+    if(!stream || grabando) return;
+    const w=vid.videoWidth, h=vid.videoHeight;
+    if(!w || !h){ aviso('cámara aún no lista', 2000); return; }
+    const d=new Date(), pos=ultimaPos;
+    cv.width=w; cv.height=h;
+    cv.getContext('2d').drawImage(vid,0,0,w,h);
+    cv.toBlob(blob=>{
+      if(!blob){ aviso('fallo al capturar', 3000); return; }
+      const archivo=nombreArchivo('foto', d, 'jpg');
+      // atomicidad: blob + meta se guardan juntos en un solo registro
+      idbAdd({ tipo:'foto', archivo, blob, meta:entradaMeta('foto', archivo, d, pos) })
+        .then(()=>{ nFotos++; refrescarContador(); mostrarFlash('listo','listo',450); })
+        .catch(e=>aviso('error guardando: '+e, 4000));
+    }, 'image/jpeg', 0.92);
+  });
+
+  // ---------- video: 5 segundos exactos ----------
+  bVideo.addEventListener('click', ()=>{
+    if(!stream || grabando || bVideo.disabled) return;
+    grabando=true;
+    bFoto.disabled=true; bVideo.disabled=true;
+    const d=new Date(), pos=ultimaPos;
+    const chunks=[];
+    try{
+      recorder=new MediaRecorder(stream, {mimeType:mimeVideo});
+    }catch(e){
+      grabando=false; bFoto.disabled=false; bVideo.disabled=false;
+      aviso('MediaRecorder falló: '+e.name, 4000); return;
+    }
+    recorder.ondataavailable=(e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+    recorder.onstop=()=>{
+      const ext=extPorMime(mimeVideo);
+      const blob=new Blob(chunks, {type: mimeVideo.split(';')[0]});
+      const archivo=nombreArchivo('video', d, ext);
+      idbAdd({ tipo:'video', archivo, blob, meta:entradaMeta('video', archivo, d, pos) })
+        .then(()=>{ nVideos++; refrescarContador(); mostrarFlash('listo','listo',450); })
+        .catch(e=>aviso('error guardando: '+e, 4000))
+        .finally(()=>{ grabando=false; bFoto.disabled=false; bVideo.disabled=false; });
+    };
+    recorder.onerror=()=>{
+      grabando=false; bFoto.disabled=false; bVideo.disabled=false;
+      flash.className=''; aviso('error de grabación', 4000);
+    };
+    recorder.start();
+    // cuenta regresiva visible
+    let rest=5;
+    mostrarFlash('rec','● '+rest);
+    const iv=setInterval(()=>{
+      rest--;
+      if(rest>0){ mostrarFlash('rec','● '+rest); }
+      else{
+        clearInterval(iv); flash.className='';
+        if(recorder && recorder.state!=='inactive') recorder.stop();
+      }
+    }, 1000);
+  });
+
+  // ---------- compartir: el único camino real al carrete ----------
+  $('compartir').addEventListener('click', ()=>{
+    idbAll().then(items=>{
+      if(!items.length) return;
+      const files=items.map(i=>new File([i.blob], i.archivo, {type:i.blob.type}));
+      if(!navigator.canShare || !navigator.canShare({files})){
+        aviso('este navegador no permite compartir archivos', 5000); return;
+      }
+      navigator.share({files})
+        .then(()=>aviso('compartido — usa «guardar» en el menú para el carrete', 6000))
+        .catch(e=>{ if(e.name!=='AbortError') aviso('share falló: '+e.name+' (¿demasiados items? prueba limpiar por tandas)', 6000); });
+    }).catch(e=>aviso('error leyendo sesión: '+e, 4000));
+  });
+
+  // ---------- JSON de metadata ----------
+  $('json').addEventListener('click', ()=>{
+    idbAll().then(items=>{
+      if(!items.length) return;
+      const meta=items.map(i=>i.meta);
+      const blob=new Blob([JSON.stringify(meta,null,2)],{type:'application/json'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='forja_captura_'+selloTiempo(new Date())+'.json';
+      a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+    }).catch(e=>aviso('error: '+e, 4000));
+  });
+
+  // ---------- limpiar sesión ----------
+  $('limpiar').addEventListener('click', ()=>{
+    if(!confirm('¿Borrar los '+(nFotos+nVideos)+' items de la sesión? Asegúrate de haberlos compartido.')) return;
+    idbClear().then(()=>{ nFotos=0; nVideos=0; refrescarContador(); aviso('sesión limpia', 2500); });
+  });
+
+  refrescarContador();
+})();
+</script>
+</body>
+</html>
