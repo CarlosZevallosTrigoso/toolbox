@@ -64,9 +64,20 @@
   .disparo:disabled{color:var(--ink-dim)}
   .disparo .tag{font-size:15px; font-weight:600; letter-spacing:.22em}
   .disparo .sub{font-size:10px; color:var(--ink-dim); letter-spacing:.06em}
-  #b-foto{flex:2}
+  #b-foto{flex:1}
+  #b-video{flex:none; height:84px}
+  #b-video .tag{font-size:12px}
   #b-foto:active:not(:disabled){background:#0c0d08}
   #b-video:active:not(:disabled){background:#0c0d08}
+
+  /* ---- selector de lente ---- */
+  #lente{
+    display:none; background:none; border:1px solid var(--line); border-radius:2px;
+    color:var(--ink); font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+    padding:3px 10px; cursor:pointer;
+  }
+  #lente:active{border-color:var(--accent); color:var(--accent)}
+  #lente:disabled{opacity:.4}
 
   /* ---- flash de confirmación ---- */
   #flash{
@@ -101,22 +112,23 @@
 <body>
   <div id="estado">
     <span id="gps">gps: esperando</span>
-    <span id="contador">0 fotos · 0 videos</span>
+    <button id="lente">1×</button>
+    <span id="contador">0 vistas · 0 miradas</span>
   </div>
 
   <div id="inicio">
     <h1 id="titulo">FORJA · CAPTURA</h1>
     <p>Captura ciega: foto o video de 5 s, sin visor. Todo queda en el dispositivo hasta que compartas al carrete.</p>
-    <button id="arrancar">iniciar cámara</button>
+    <button id="arrancar">pensar</button>
   </div>
 
   <div id="captura">
     <button class="disparo" id="b-foto">
-      <span class="tag">FOTO</span>
+      <span class="tag">VISTA</span>
       <span class="sub">un toque · captura inmediata</span>
     </button>
     <button class="disparo" id="b-video">
-      <span class="tag">VIDEO</span>
+      <span class="tag">MIRADA</span>
       <span class="sub">5 segundos · con audio</span>
     </button>
   </div>
@@ -174,6 +186,7 @@
 
   // ---------- estado ----------
   let stream=null, recorder=null, grabando=false;
+  let lentePrincipal=null, lenteUltra=null, lenteEnUso='1x';
   let ultimaPos=null;             // {lat,lon,acc} más reciente
   let nFotos=0, nVideos=0;
   let wakeLock=null;
@@ -223,7 +236,7 @@
     if(ms){ setTimeout(()=>{ flash.className=''; }, ms); }
   }
   function refrescarContador(){
-    $('contador').textContent = nFotos+' fotos · '+nVideos+' videos';
+    $('contador').textContent = nFotos+' vistas · '+nVideos+' miradas';
     const total=nFotos+nVideos;
     $('compartir').textContent='compartir ('+total+')';
     ['compartir','json','limpiar'].forEach(id=> $(id).disabled = total===0);
@@ -252,6 +265,44 @@
     if(document.visibilityState==='visible' && stream) pedirWakeLock();
   });
 
+  // ---------- lentes: principal (1×) y ultra gran angular (0.5×) ----------
+  // La detección de la ultra depende del label del dispositivo ("Ultra Wide" /
+  // "ultra gran angular" según idioma del sistema). Si no se identifica, el
+  // botón no aparece y todo sigue funcionando con la principal.
+  function detectarLentes(){
+    const track=stream.getVideoTracks()[0];
+    lentePrincipal=(track.getSettings && track.getSettings().deviceId) || null;
+    navigator.mediaDevices.enumerateDevices().then(devs=>{
+      const ultra=devs.find(d=>d.kind==='videoinput' && /ultra/i.test(d.label||''));
+      if(ultra && ultra.deviceId && ultra.deviceId!==lentePrincipal){
+        lenteUltra=ultra.deviceId;
+        $('lente').style.display='inline-block';
+      }
+    }).catch(()=>{});
+  }
+  function cambiarLente(){
+    if(grabando || !lenteUltra) return;
+    const destino = lenteEnUso==='1x' ? lenteUltra : lentePrincipal;
+    if(!destino) return;
+    $('lente').disabled=true;
+    stream.getTracks().forEach(t=>t.stop());
+    navigator.mediaDevices.getUserMedia({
+      video:{ deviceId:{exact:destino}, width:{ideal:4032}, height:{ideal:3024} },
+      audio:true
+    }).then(s=>{
+      stream=s; vid.srcObject=s;
+      return vid.play().catch(()=>{});
+    }).then(()=>{
+      lenteEnUso = lenteEnUso==='1x' ? '0.5x' : '1x';
+      $('lente').textContent = lenteEnUso==='1x' ? '1×' : '0.5×';
+      $('lente').disabled=false;
+    }).catch(err=>{
+      $('lente').disabled=false;
+      aviso('no se pudo cambiar de lente: '+err.name, 4000);
+    });
+  }
+  $('lente').addEventListener('click', cambiarLente);
+
   // ---------- arranque ----------
   $('titulo').addEventListener('click', ()=>location.reload());
   $('arrancar').addEventListener('click', ()=>{
@@ -279,15 +330,16 @@
       $('captura').style.display='flex';
       iniciarGPS();
       pedirWakeLock();
+      detectarLentes();
       // recuperar sesión previa si el tab murió con items pendientes
       idbAll().then(items=>{
-        nFotos=items.filter(i=>i.tipo==='foto').length;
-        nVideos=items.filter(i=>i.tipo==='video').length;
+        nFotos=items.filter(i=>i.tipo==='vista').length;
+        nVideos=items.filter(i=>i.tipo==='mirada').length;
         refrescarContador();
         if(items.length) aviso('sesión anterior recuperada: '+items.length+' items', 4000);
       }).catch(()=>{});
     }).catch(err=>{
-      $('arrancar').disabled=false; $('arrancar').textContent='iniciar cámara';
+      $('arrancar').disabled=false; $('arrancar').textContent='pensar';
       aviso('permiso denegado o cámara no disponible: '+err.name, 6000);
     });
   });
@@ -302,9 +354,9 @@
     cv.getContext('2d').drawImage(vid,0,0,w,h);
     cv.toBlob(blob=>{
       if(!blob){ aviso('fallo al capturar', 3000); return; }
-      const archivo=nombreArchivo('foto', d, 'jpg');
+      const archivo=nombreArchivo('vista', d, 'jpg');
       // atomicidad: blob + meta se guardan juntos en un solo registro
-      idbAdd({ tipo:'foto', archivo, blob, meta:entradaMeta('foto', archivo, d, pos) })
+      idbAdd({ tipo:'vista', archivo, blob, meta:entradaMeta('vista', archivo, d, pos) })
         .then(()=>{ nFotos++; refrescarContador(); mostrarFlash('listo','listo',450); })
         .catch(e=>aviso('error guardando: '+e, 4000));
     }, 'image/jpeg', 0.92);
@@ -327,8 +379,8 @@
     recorder.onstop=()=>{
       const ext=extPorMime(mimeVideo);
       const blob=new Blob(chunks, {type: mimeVideo.split(';')[0]});
-      const archivo=nombreArchivo('video', d, ext);
-      idbAdd({ tipo:'video', archivo, blob, meta:entradaMeta('video', archivo, d, pos) })
+      const archivo=nombreArchivo('mirada', d, ext);
+      idbAdd({ tipo:'mirada', archivo, blob, meta:entradaMeta('mirada', archivo, d, pos) })
         .then(()=>{ nVideos++; refrescarContador(); mostrarFlash('listo','listo',450); })
         .catch(e=>aviso('error guardando: '+e, 4000))
         .finally(()=>{ grabando=false; bFoto.disabled=false; bVideo.disabled=false; });
