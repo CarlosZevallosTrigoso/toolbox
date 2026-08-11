@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tabl3.xyz</title>
+<style>
+  :root{
+    --bg:#ffffff;
+    --ink:#111111;
+    --ink-dim:#8a8a8a;
+    --line:#e6e6e6;
+    --line-strong:#c4c4c4;
+    --accent:#111111;
+    --accent-soft:#555555;
+    --accent-wash:#f3f3f3;
+    --danger:#111111;
+    --mono: "Fira Code", ui-monospace, "SF Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0; height:100%}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:var(--mono); font-size:13px; line-height:1.5;
+    display:flex; flex-direction:column; min-height:100vh;
+  }
+
+  /* ---- barra superior ---- */
+  #bar{
+    display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    padding:10px 16px; border-bottom:1px solid var(--line);
+    position:sticky; top:0; background:var(--bg); z-index:10;
+  }
+  #brand{
+    font-size:13px; font-weight:600; letter-spacing:.14em; cursor:pointer;
+    color:var(--ink); user-select:none;
+  }
+  #brand:hover{text-decoration:underline}
+  .sep{color:var(--line-strong); user-select:none}
+  #bar button, #bar label.chk{
+    font-family:var(--mono); font-size:11px; letter-spacing:.05em;
+    background:none; border:none; color:var(--ink-dim); cursor:pointer;
+    padding:3px 2px; text-transform:uppercase;
+  }
+  #bar button:hover{color:var(--ink); text-decoration:underline}
+  #bar button.danger:hover{background:var(--ink); color:var(--bg); text-decoration:none}
+  label.chk{display:flex; align-items:center; gap:6px; cursor:pointer}
+  label.chk input{accent-color:var(--ink); margin:0}
+  label.chk:hover{color:var(--ink)}
+  #count{margin-left:auto; color:var(--ink-dim); font-size:11px; white-space:nowrap}
+  #count b{color:var(--ink); font-weight:600}
+
+  /* ---- grilla ---- */
+  #wrap{flex:1; overflow:auto; padding:0}
+  table{
+    border-collapse:collapse; table-layout:fixed;
+  }
+  th, td{
+    border:1px solid var(--line);
+    min-width:120px; max-width:360px;
+    height:30px; padding:4px 8px;
+    font-family:var(--mono); font-size:13px;
+    vertical-align:top; overflow:hidden;
+    white-space:pre-wrap; word-break:break-word;
+  }
+  th{
+    background:#f7f7f7; color:var(--ink-dim); font-weight:400; font-size:10px;
+    letter-spacing:.08em; text-align:center; user-select:none;
+    padding:2px 6px; height:22px; position:relative;
+  }
+  th.corner{min-width:44px; width:44px; background:var(--bg); border-color:var(--line)}
+  th.rowh{min-width:44px; width:44px; text-align:center; font-variant-numeric:tabular-nums; cursor:pointer}
+  th.colh{cursor:pointer}
+  th.rowh:hover, th.colh:hover{color:var(--ink); background:var(--accent-wash)}
+  th .del{
+    display:none; position:absolute; top:1px; right:3px;
+    color:var(--ink); font-size:11px; line-height:1; cursor:pointer;
+  }
+  th:hover .del{display:block}
+  td[contenteditable]{cursor:cell; outline:none}
+  td[contenteditable]:focus{
+    outline:2px solid var(--ink); outline-offset:-2px;
+    background:var(--accent-wash); cursor:text;
+  }
+  tr.hdr td{
+    font-weight:600; background:#f7f7f7; border-bottom:1px solid var(--line-strong);
+  }
+  .addrow, .addcol{
+    color:var(--ink-dim); font-size:14px; text-align:center; cursor:pointer;
+    user-select:none; border:1px dashed var(--line);
+  }
+  .addrow:hover, .addcol:hover{color:var(--ink); border-color:var(--line-strong); background:var(--accent-wash)}
+
+  /* ---- modal ---- */
+  #veil{
+    position:fixed; inset:0; background:#11111155; display:none;
+    align-items:center; justify-content:center; z-index:50;
+  }
+  #veil.on{display:flex}
+  #modal{
+    background:var(--bg); border:1px solid var(--line-strong); border-radius:2px;
+    padding:20px; width:min(380px, 92vw);
+  }
+  #modal h2{margin:0 0 8px; font-size:12px; letter-spacing:.1em; text-transform:uppercase}
+  #modal p{margin:0 0 16px; color:var(--ink-dim); font-size:12px}
+  #modal .btns{display:flex; gap:8px; justify-content:flex-end}
+  #modal button{
+    font-family:var(--mono); font-size:12px; padding:6px 12px; cursor:pointer;
+    border:1px solid var(--line-strong); background:var(--bg); color:var(--ink); border-radius:2px;
+  }
+  #modal button:hover{border-color:var(--ink)}
+  #modal button.danger{border-color:var(--ink); color:var(--ink)}
+  #modal button.danger:hover{background:var(--ink); color:var(--bg)}
+
+  .hide{display:none !important}
+  #file{display:none}
+
+  @media (max-width:700px){
+    #bar{gap:10px; padding:8px 10px}
+    #count{width:100%; margin-left:0; text-align:right}
+    th,td{min-width:96px}
+  }
+</style>
+</head>
+<body>
+
+  <div id="bar">
+    <span id="brand" title="recargar">tabl3.xyz</span>
+    <span class="sep">·</span>
+    <label class="chk"><input type="checkbox" id="hdr" checked> encabezados</label>
+    <span class="sep">·</span>
+    <button id="b-addrow">+ fila</button>
+    <button id="b-addcol">+ columna</button>
+    <span class="sep">·</span>
+    <button id="b-export">exportar .csv</button>
+    <button id="b-import">importar .csv</button>
+    <span class="sep">·</span>
+    <button id="b-clear" class="danger">borrar todo</button>
+    <span id="count"></span>
+  </div>
+
+  <div id="wrap">
+    <table id="grid" aria-label="Tablero"></table>
+  </div>
+
+  <div id="veil">
+    <div id="modal">
+      <h2 id="m-title"></h2>
+      <p id="m-text"></p>
+      <div class="btns">
+        <button id="m-cancel">cancelar</button>
+        <button id="m-ok" class="danger">confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="file" accept=".csv,text/csv,text/plain">
+
+<script>
+'use strict';
+// ============================================================
+// tabl3 — núcleo puro (sin DOM). Testeable en Node.
+// CSV según RFC 4180: comas, comillas dobles, saltos de línea.
+// ============================================================
+
+// ---------- serialización CSV ----------
+function csvEscapeCell(v) {
+  const s = v == null ? '' : String(v);
+  if (/[",\r\n]/.test(s)) {
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+// data: array de arrays de strings. Devuelve texto CSV con CRLF (RFC 4180).
+function toCSV(data) {
+  return data.map((row) => row.map(csvEscapeCell).join(',')).join('\r\n');
+}
+
+// ---------- parseo CSV ----------
+// Parser de estado carácter a carácter. Acepta \r\n, \n y \r como fin de línea.
+// Comillas dobles escapadas ("") dentro de campos entrecomillados.
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQuotes = false;
+  let i = 0;
+  const n = text.length;
+
+  while (i < n) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 2; continue; }
+        inQuotes = false; i++; continue;
+      }
+      field += c; i++; continue;
+    }
+    if (c === '"') { inQuotes = true; i++; continue; }
+    if (c === ',') { row.push(field); field = ''; i++; continue; }
+    if (c === '\r') {
+      row.push(field); field = ''; rows.push(row); row = [];
+      i += (text[i + 1] === '\n') ? 2 : 1; continue;
+    }
+    if (c === '\n') {
+      row.push(field); field = ''; rows.push(row); row = [];
+      i++; continue;
+    }
+    field += c; i++;
+  }
+  // último campo/fila (si el archivo no termina en newline)
+  if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+
+  // descartar última fila si quedó totalmente vacía (archivo terminado en newline ya lo evita,
+  // pero algunos exports dejan línea final vacía real)
+  if (rows.length && rows[rows.length - 1].length === 1 && rows[rows.length - 1][0] === '') {
+    rows.pop();
+  }
+  return rows;
+}
+
+// ---------- normalización de grilla ----------
+// Rectangulariza: todas las filas al ancho máximo, rellenando con ''.
+function normalizeGrid(rows, minRows, minCols) {
+  const maxCols = Math.max(minCols || 1, ...rows.map((r) => r.length), 1);
+  const out = rows.map((r) => {
+    const nr = r.slice(0, maxCols).map((c) => (c == null ? '' : String(c)));
+    while (nr.length < maxCols) nr.push('');
+    return nr;
+  });
+  const targetRows = Math.max(minRows || 1, out.length);
+  while (out.length < targetRows) out.push(new Array(maxCols).fill(''));
+  return out;
+}
+
+// Recorta filas/columnas vacías al final (para export limpio).
+// Nunca recorta la fila de encabezado (índice 0) si hasHeader.
+function trimGrid(data, hasHeader) {
+  const minRows = hasHeader ? 1 : 0;
+  let lastRow = data.length - 1;
+  while (lastRow >= minRows && data[lastRow].every((c) => c === '')) lastRow--;
+  let lastCol = -1;
+  for (let r = 0; r <= lastRow; r++) {
+    for (let c = data[r].length - 1; c > lastCol; c--) {
+      if (data[r][c] !== '') { lastCol = c; break; }
+    }
+  }
+  if (lastRow < 0 || lastCol < 0) return [];
+  return data.slice(0, lastRow + 1).map((r) => r.slice(0, lastCol + 1));
+}
+
+// Cuenta celdas no vacías.
+function countFilled(data) {
+  let k = 0;
+  for (const row of data) for (const c of row) if (c !== '') k++;
+  return k;
+}
+
+// Etiqueta de columna estilo hoja de cálculo: 0->A, 25->Z, 26->AA…
+function colLabel(i) {
+  let s = '';
+  i = i + 1;
+  while (i > 0) {
+    const m = (i - 1) % 26;
+    s = String.fromCharCode(65 + m) + s;
+    i = Math.floor((i - 1) / 26);
+  }
+  return s;
+}
+
+// ============================================================
+// tabl3 — historial undo/redo por snapshots (puro, sin DOM)
+// ============================================================
+
+function cloneGrid(data) {
+  return data.map((r) => r.slice());
+}
+
+// makeHistory(limit) -> { push, undo, redo, canUndo, canRedo, size }
+// push(state): registra el estado ANTERIOR a una mutación; limpia la rama de redo.
+// undo(current): devuelve el estado previo y guarda current en redo, o null.
+// redo(current): inverso, o null.
+// Los estados son {data, hasHeader}; se clonan al entrar y al salir.
+function makeHistory(limit) {
+  limit = limit || 100;
+  const past = [];
+  const future = [];
+
+  function snap(state) {
+    return { data: cloneGrid(state.data), hasHeader: !!state.hasHeader };
+  }
+
+  return {
+    push(state) {
+      past.push(snap(state));
+      if (past.length > limit) past.shift();
+      future.length = 0;
+    },
+    undo(current) {
+      if (!past.length) return null;
+      future.push(snap(current));
+      return snap(past.pop());
+    },
+    redo(current) {
+      if (!future.length) return null;
+      past.push(snap(current));
+      if (past.length > limit) past.shift();
+      return snap(future.pop());
+    },
+    canUndo() { return past.length > 0; },
+    canRedo() { return future.length > 0; },
+    size() { return past.length; },
+  };
+}
+
+// ============================================================
+// tabl3 — cálculo de grilla que llena el viewport (puro)
+// ============================================================
+
+// availW/availH: espacio disponible para la tabla (px).
+// cellW/rowH: tamaño de una celda de datos incluyendo borde.
+// headW/headH: cabecera de fila (izq) y de columna (arriba).
+// Devuelve {rows, cols} con mínimos de seguridad; +1 en cada eje
+// para que la grilla desborde apenas y no deje franja en blanco.
+function fitGrid(availW, availH, cellW, rowH, headW, headH, minRows, minCols) {
+  minRows = minRows || 3;
+  minCols = minCols || 2;
+  if (!(availW > 0) || !(availH > 0)) return { rows: 12, cols: 5 }; // sin layout (jsdom/oculto): fallback v1
+  const cols = Math.max(minCols, Math.ceil((availW - headW) / cellW));
+  const rows = Math.max(minRows, Math.ceil((availH - headH) / rowH));
+  return { rows, cols };
+}
+
+/* === CAPA DOM === */
+(function(){
+  const $ = (id) => document.getElementById(id);
+  const grid = $('grid'), countEl = $('count'), hdrChk = $('hdr'), fileInput = $('file');
+
+  const LS_KEY = 'tabl3';
+  // dimensiones de celda coherentes con el CSS: min-width 120 (96 en móvil) + 1px borde, alto 30 + 1px
+  function viewportMins(){
+    const wrap = $('wrap');
+    const cellW = (window.innerWidth <= 700 ? 96 : 120) + 1;
+    return fitGrid(wrap.clientWidth || window.innerWidth,
+                   wrap.clientHeight || (window.innerHeight - 46),
+                   cellW, 31, 45, 23);
+  }
+  // expandir el tablero a un mínimo (solo crece; sin checkpoint: no es acción del usuario)
+  function growTo(rows, cols){
+    let changed = false;
+    if(data[0].length < cols){
+      const add = cols - data[0].length;
+      data.forEach(row=>{ for(let k=0;k<add;k++) row.push(''); });
+      changed = true;
+    }
+    while(data.length < rows){ data.push(new Array(data[0].length).fill('')); changed = true; }
+    return changed;
+  }
+
+  // ---------- estado ----------
+  let data;          // array de arrays de strings
+  let hasHeader;
+  const history = makeHistory(100);
+  function checkpoint(){ history.push({data, hasHeader}); }
+
+  function load(){
+    try{
+      const raw = localStorage.getItem(LS_KEY);
+      if(raw){
+        const st = JSON.parse(raw);
+        data = normalizeGrid(st.data || [], 1, 1);
+        hasHeader = !!st.hasHeader;
+        return;
+      }
+    }catch(e){ /* estado corrupto: empezar limpio */ }
+    data = normalizeGrid([], 1, 1);
+    hasHeader = true;
+  }
+
+  let saveT;
+  function save(){
+    clearTimeout(saveT);
+    saveT = setTimeout(()=>{
+      try{ localStorage.setItem(LS_KEY, JSON.stringify({data, hasHeader})); }
+      catch(e){ /* cuota llena: no bloquear la edición */ }
+    }, 250);
+  }
+
+  // ---------- render ----------
+  function render(){
+    const R = data.length, C = data[0].length;
+    const frag = document.createDocumentFragment();
+
+    // fila de encabezados de columna A B C…
+    const trh = document.createElement('tr');
+    const corner = document.createElement('th');
+    corner.className = 'corner';
+    trh.appendChild(corner);
+    for(let c=0; c<C; c++){
+      const th = document.createElement('th');
+      th.className = 'colh';
+      th.textContent = colLabel(c);
+      th.dataset.col = c;
+      const del = document.createElement('span');
+      del.className = 'del'; del.textContent = '×'; del.title = 'eliminar columna';
+      del.dataset.delcol = c;
+      th.appendChild(del);
+      trh.appendChild(th);
+    }
+    const addc = document.createElement('th');
+    addc.className = 'addcol'; addc.textContent = '+'; addc.title = 'agregar columna';
+    trh.appendChild(addc);
+    frag.appendChild(trh);
+
+    // filas de datos
+    for(let r=0; r<R; r++){
+      const tr = document.createElement('tr');
+      if(hasHeader && r===0) tr.className = 'hdr';
+      const th = document.createElement('th');
+      th.className = 'rowh';
+      th.textContent = (hasHeader && r===0) ? 'H' : (hasHeader ? r : r+1);
+      const del = document.createElement('span');
+      del.className = 'del'; del.textContent = '×'; del.title = 'eliminar fila';
+      del.dataset.delrow = r;
+      th.appendChild(del);
+      tr.appendChild(th);
+      for(let c=0; c<C; c++){
+        const td = document.createElement('td');
+        td.setAttribute('contenteditable','true');
+        td.setAttribute('spellcheck','false');
+        td.dataset.r = r; td.dataset.c = c;
+        td.textContent = data[r][c];
+        tr.appendChild(td);
+      }
+      frag.appendChild(tr);
+    }
+
+    // fila de agregar
+    const tra = document.createElement('tr');
+    const tda = document.createElement('td');
+    tda.className = 'addrow'; tda.colSpan = C+1; tda.textContent = '+';
+    tda.title = 'agregar fila';
+    tra.appendChild(document.createElement('th'));
+    tra.appendChild(tda);
+    frag.appendChild(tra);
+
+    grid.replaceChildren(frag);
+    updateCount();
+  }
+
+  function updateCount(){
+    const t = trimGrid(data, false);
+    const filled = countFilled(data);
+    countEl.innerHTML = t.length
+      ? '<b>'+t.length+'</b>×<b>'+t[0].length+'</b> · <b>'+filled+'</b> celdas'
+      : 'vacío';
+  }
+
+  // ---------- edición ----------
+  // serializa el contenido de una celda contenteditable a texto plano:
+  // <br> y elementos de bloque (div/p que inserta el navegador) -> \n
+  function cellText(td){
+    let out = '';
+    (function walk(node){
+      for(const ch of node.childNodes){
+        if(ch.nodeType === 3){ out += ch.data; continue; }
+        if(ch.nodeType !== 1) continue;
+        const tag = ch.tagName;
+        if(tag === 'BR'){ out += '\n'; continue; }
+        const block = (tag === 'DIV' || tag === 'P');
+        if(block && out !== '' && !out.endsWith('\n')) out += '\n';
+        walk(ch);
+      }
+    })(td);
+    return out;
+  }
+
+  function commitCell(td){
+    const r = +td.dataset.r, c = +td.dataset.c;
+    const v = cellText(td).replace(/\u00a0/g,' ').replace(/\n$/,'');
+    if(data[r][c] !== v){
+      checkpoint();
+      data[r][c] = v;
+      save(); updateCount();
+      // auto-grow: si escribió en la última fila, agregar una
+      if(v !== '' && r === data.length-1) addRow(false, true);
+    }
+  }
+
+  function cellAt(r,c){ return grid.querySelector('td[data-r="'+r+'"][data-c="'+c+'"]'); }
+
+  function focusCell(r,c){
+    const R = data.length, C = data[0].length;
+    r = Math.max(0, Math.min(R-1, r));
+    c = Math.max(0, Math.min(C-1, c));
+    const td = cellAt(r,c);
+    if(td){
+      td.focus();
+      // caret al final
+      const sel = window.getSelection(), rg = document.createRange();
+      rg.selectNodeContents(td); rg.collapse(false);
+      sel.removeAllRanges(); sel.addRange(rg);
+    }
+  }
+
+  function caretAtStart(td){
+    const s = window.getSelection();
+    if(!s.rangeCount) return true;
+    const r = s.getRangeAt(0);
+    if(!r.collapsed) return false;
+    const pre = r.cloneRange();
+    pre.selectNodeContents(td); pre.setEnd(r.startContainer, r.startOffset);
+    return pre.toString().length === 0;
+  }
+  function caretAtEnd(td){
+    const s = window.getSelection();
+    if(!s.rangeCount) return true;
+    const r = s.getRangeAt(0);
+    if(!r.collapsed) return false;
+    const post = r.cloneRange();
+    post.selectNodeContents(td); post.setStart(r.endContainer, r.endOffset);
+    return post.toString().length === 0;
+  }
+
+  grid.addEventListener('focusout', (e)=>{
+    const td = e.target.closest && e.target.closest('td[contenteditable]');
+    if(td) commitCell(td);
+  });
+
+  grid.addEventListener('keydown', (e)=>{
+    const td = e.target.closest && e.target.closest('td[contenteditable]');
+    if(!td) return;
+    const r = +td.dataset.r, c = +td.dataset.c;
+
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault(); commitCell(td); focusCell(r+1, c); return;
+    }
+    if(e.key === 'Enter' && e.shiftKey){
+      // salto de línea dentro de la celda: dejar comportamiento por defecto
+      return;
+    }
+    if(e.key === 'Tab'){
+      e.preventDefault(); commitCell(td);
+      focusCell(r, c + (e.shiftKey ? -1 : 1)); return;
+    }
+    if(e.key === 'Escape'){
+      td.textContent = data[r][c]; td.blur(); return;
+    }
+    if(e.key === 'ArrowDown' && caretAtEnd(td)){ e.preventDefault(); commitCell(td); focusCell(r+1,c); return; }
+    if(e.key === 'ArrowUp' && caretAtStart(td)){ e.preventDefault(); commitCell(td); focusCell(r-1,c); return; }
+    if(e.key === 'ArrowRight' && caretAtEnd(td)){ e.preventDefault(); commitCell(td); focusCell(r,c+1); return; }
+    if(e.key === 'ArrowLeft' && caretAtStart(td)){ e.preventDefault(); commitCell(td); focusCell(r,c-1); return; }
+  });
+
+  // pegado: siempre texto plano; si trae tabs/saltos (Excel, Sheets), expandir en bloque
+  grid.addEventListener('paste', (e)=>{
+    const td = e.target.closest && e.target.closest('td[contenteditable]');
+    if(!td) return;
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    if(!text) return;
+    const isBlock = /[\t\n\r]/.test(text);
+    if(!isBlock){
+      document.execCommand('insertText', false, text);
+      return;
+    }
+    // bloque TSV: expandir desde la celda activa
+    const r0 = +td.dataset.r, c0 = +td.dataset.c;
+    checkpoint();
+    const rows = text.replace(/\r\n?/g,'\n').replace(/\n$/,'').split('\n').map(l=>l.split('\t'));
+    const needRows = r0 + rows.length, needCols = c0 + Math.max(...rows.map(x=>x.length));
+    while(data.length < needRows) data.push(new Array(data[0].length).fill(''));
+    if(data[0].length < needCols){
+      const add = needCols - data[0].length;
+      data.forEach(row=>{ for(let k=0;k<add;k++) row.push(''); });
+    }
+    rows.forEach((row,i)=> row.forEach((v,j)=>{ data[r0+i][c0+j] = v; }));
+    save(); render(); focusCell(r0, c0);
+  });
+
+  // ---------- estructura ----------
+  // skipCp: el auto-grow tras editar es parte de la misma operación, no duplica snapshot
+  function addRow(rerender=true, skipCp=false){
+    if(!skipCp) checkpoint();
+    data.push(new Array(data[0].length).fill(''));
+    save(); if(rerender!==false) render(); else appendRowDOM();
+  }
+  // append incremental para no perder el foco durante auto-grow
+  function appendRowDOM(){
+    const r = data.length-1, C = data[0].length;
+    const tr = document.createElement('tr');
+    const th = document.createElement('th');
+    th.className='rowh'; th.textContent = hasHeader ? r : r+1;
+    const del = document.createElement('span');
+    del.className='del'; del.textContent='×'; del.title='eliminar fila'; del.dataset.delrow=r;
+    th.appendChild(del); tr.appendChild(th);
+    for(let c=0;c<C;c++){
+      const td=document.createElement('td');
+      td.setAttribute('contenteditable','true');
+      td.setAttribute('spellcheck','false');
+      td.dataset.r=r; td.dataset.c=c;
+      tr.appendChild(td);
+    }
+    const addTr = grid.querySelector('.addrow').parentElement;
+    grid.insertBefore(tr, addTr);
+  }
+  function addCol(){
+    checkpoint();
+    data.forEach(row=> row.push(''));
+    save(); render();
+  }
+  function delRow(r){
+    if(data.length<=1) return;
+    checkpoint();
+    data.splice(r,1); save(); render();
+  }
+  function delCol(c){
+    if(data[0].length<=1) return;
+    checkpoint();
+    data.forEach(row=> row.splice(c,1)); save(); render();
+  }
+
+  grid.addEventListener('click', (e)=>{
+    if(e.target.classList.contains('addrow')){ addRow(); return; }
+    if(e.target.classList.contains('addcol')){ addCol(); return; }
+    if(e.target.dataset.delrow !== undefined){ delRow(+e.target.dataset.delrow); return; }
+    if(e.target.dataset.delcol !== undefined){ delCol(+e.target.dataset.delcol); return; }
+  });
+
+  // ---------- encabezados ----------
+  hdrChk.addEventListener('change', ()=>{ checkpoint(); hasHeader = hdrChk.checked; save(); render(); });
+
+  // ---------- undo / redo ----------
+  function applyState(st){
+    data = st.data; hasHeader = st.hasHeader;
+    hdrChk.checked = hasHeader;
+    save(); render();
+  }
+  // Dos niveles: si hay una celda en edición con cambios sin commit,
+  // Ctrl+Z lo resuelve el undo nativo del contenteditable (tipeo).
+  // Si no, es undo estructural sobre el historial de snapshots.
+  function editingInProgress(){
+    const el = document.activeElement;
+    if(!el || !el.dataset || el.dataset.r === undefined) return false;
+    const r = +el.dataset.r, c = +el.dataset.c;
+    const v = cellText(el).replace(/\u00a0/g,' ').replace(/\n$/,'');
+    return v !== data[r][c];
+  }
+  document.addEventListener('keydown', (e)=>{
+    const mod = e.ctrlKey || e.metaKey;
+    if(!mod) return;
+    const k = e.key.toLowerCase();
+    const isUndo = k === 'z' && !e.shiftKey;
+    const isRedo = (k === 'z' && e.shiftKey) || k === 'y';
+    if(!isUndo && !isRedo) return;
+    if(editingInProgress()) return; // dejar actuar al undo nativo de la celda
+    e.preventDefault();
+    const st = isUndo ? history.undo({data, hasHeader}) : history.redo({data, hasHeader});
+    if(st){ applyState(st); flash(isUndo ? 'deshecho' : 'rehecho'); }
+    else flash(isUndo ? 'nada que deshacer' : 'nada que rehacer');
+  });
+
+  // ---------- export / import ----------
+  function exportCSV(){
+    const t = trimGrid(data, hasHeader);
+    if(!t.length){ flash('nada que exportar'); return; }
+    const blob = new Blob(['\ufeff'+toCSV(t)], {type:'text/csv;charset=utf-8'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'tabl3_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click(); URL.revokeObjectURL(a.href);
+  }
+
+  $('b-export').addEventListener('click', exportCSV);
+  $('b-import').addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const rd = new FileReader();
+    rd.onload = ()=>{
+      try{
+        const rows = parseCSV(String(rd.result).replace(/^\ufeff/,''));
+        if(!rows.length){ flash('archivo vacío'); return; }
+        checkpoint();
+        data = normalizeGrid(rows, 1, 1);
+        const m = viewportMins(); growTo(m.rows, m.cols);
+        save(); render(); flash(rows.length + ' filas importadas');
+      }catch(err){ flash('no se pudo parsear'); }
+      fileInput.value = '';
+    };
+    rd.onerror = ()=>{ flash('no se pudo leer el archivo'); fileInput.value=''; };
+    rd.readAsText(f, 'utf-8');
+  });
+
+  // ---------- borrar todo ----------
+  const veil = $('veil');
+  let onOk = null;
+  function modal(title, text, okLabel, cb){
+    $('m-title').textContent = title;
+    $('m-text').textContent = text;
+    $('m-ok').textContent = okLabel;
+    onOk = cb; veil.classList.add('on');
+  }
+  $('m-cancel').addEventListener('click', ()=> veil.classList.remove('on'));
+  $('m-ok').addEventListener('click', ()=>{ veil.classList.remove('on'); if(onOk) onOk(); });
+  veil.addEventListener('click', (e)=>{ if(e.target===veil) veil.classList.remove('on'); });
+
+  $('b-clear').addEventListener('click', ()=>{
+    modal('borrar todo', 'El tablero se vaciará. Puedes deshacer con Ctrl+Z mientras esta pestaña siga abierta.', 'borrar definitivamente', ()=>{
+      checkpoint();
+      const m = viewportMins();
+      data = normalizeGrid([], m.rows, m.cols);
+      hasHeader = true; hdrChk.checked = true;
+      save(); render();
+    });
+  });
+
+  // ---------- misc ----------
+  $('brand').addEventListener('click', ()=> location.reload());
+  $('b-addrow').addEventListener('click', ()=> addRow());
+  $('b-addcol').addEventListener('click', addCol);
+
+  let flashT;
+  function flash(msg){
+    clearTimeout(flashT);
+    const prev = countEl.innerHTML;
+    countEl.textContent = msg;
+    flashT = setTimeout(updateCount, 2200);
+  }
+
+  // guardar antes de cerrar (por si el debounce quedó pendiente)
+  window.addEventListener('beforeunload', ()=>{
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({data, hasHeader})); }catch(e){}
+  });
+
+  // ---------- init ----------
+  load();
+  hdrChk.checked = hasHeader;
+  render();
+  // ajustar al viewport una vez que hay layout real
+  {
+    const m = viewportMins();
+    if(growTo(m.rows, m.cols)){ save(); render(); }
+  }
+  // al agrandar la ventana, crecer (nunca recortar); debounce para no re-renderizar en ráfaga
+  let resizeT;
+  window.addEventListener('resize', ()=>{
+    clearTimeout(resizeT);
+    resizeT = setTimeout(()=>{
+      const m = viewportMins();
+      if(growTo(m.rows, m.cols)){ save(); render(); }
+    }, 200);
+  });
+})();
+</script>
+</body>
+</html>
