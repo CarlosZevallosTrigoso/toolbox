@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador Multi-Ronda</title>
+    <link id="favicon" rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPj/HwADBwIAMCbHYQAAAABJRU5ErkJggg==">
+    <style>
+        :root {
+            --color-100: #e8f5e9; --color-75: #f1f8e9; --color-50: #fff9c4; 
+            --color-25: #ffe0b2; --color-0: #ffcdd2; --text-color: #2c3e50;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; justify-content: center;
+            align-items: center; min-height: 100vh; width: 100vw;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--color-100); color: var(--text-color);
+            transition: background-color 1.5s ease; overflow-x: hidden;
+        }
+
+        /* Barra de progreso superior */
+        #progress-container { position: fixed; top: 0; left: 0; width: 100%; height: 8px; background: rgba(0, 0, 0, 0.05); z-index: 10; }
+        #progress-bar { height: 100%; width: 100%; background: var(--text-color); transition: width 1s linear; transform-origin: left; }
+
+        .main-container {
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #timer-title {
+            font-size: 1rem; font-weight: 500; text-transform: uppercase;
+            letter-spacing: 2px; margin-bottom: 5px; outline: none;
+            padding: 5px; opacity: 0.8;
+        }
+        
+        #round-title {
+            font-size: 1.2rem; font-weight: 700; color: var(--text-color);
+            margin-bottom: 0; min-height: 1.5rem;
+        }
+
+        #timer-display {
+            font-size: clamp(4rem, 12vw, 9rem);
+            font-weight: 800; line-height: 1.1;
+            margin: 10px 0 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .group { margin-bottom: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; width: 100%; }
+
+        button {
+            padding: 8px 16px; font-size: 0.8rem;
+            text-transform: uppercase; border: 1.5px solid var(--text-color);
+            background: rgba(255, 255, 255, 0.2); color: var(--text-color);
+            cursor: pointer; border-radius: 4px; font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        button:hover:not(:disabled) { background: var(--text-color); color: white; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .playback-controls button {
+            background: var(--text-color); color: white; border: none;
+            padding: 10px 24px; font-size: 0.9rem;
+        }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px 12px; border: 1.5px solid var(--text-color);
+            background: rgba(255, 255, 255, 0.4); color: var(--text-color);
+            border-radius: 4px; font-family: inherit; font-size: 0.8rem;
+            font-weight: 600; outline: none; transition: background 0.2s;
+        }
+        input[type="text"]:focus, input[type="number"]:focus { background: white; }
+        input::placeholder { color: rgba(44, 62, 80, 0.5); font-weight: 400; }
+        
+        #round-name { width: 160px; }
+        #round-mins { width: 80px; }
+
+        /* Lista de Rondas */
+        .queue-list {
+            list-style: none; padding: 0; margin: 20px 0; width: 100%; max-width: 400px;
+            text-align: left; font-size: 0.85rem; background: rgba(255,255,255,0.3);
+            border-radius: 8px; overflow: hidden;
+        }
+        .queue-list li {
+            padding: 10px 15px; border-bottom: 1px solid rgba(0,0,0,0.05);
+            display: flex; justify-content: space-between; align-items: center;
+            transition: all 0.3s ease;
+        }
+        .queue-list li:last-child { border-bottom: none; }
+        .queue-list li.active { font-weight: bold; background: rgba(0,0,0,0.08); border-left: 4px solid var(--text-color); padding-left: 11px; }
+        .queue-list li.done { text-decoration: line-through; opacity: 0.4; }
+        .delete-btn {
+            background: transparent; border: none; color: #e53935; padding: 2px 6px;
+            font-size: 1rem; cursor: pointer; border-radius: 3px;
+        }
+        .delete-btn:hover { background: rgba(229, 57, 53, 0.1); color: #e53935; }
+
+        /* Animación Final */
+        @keyframes pulse-red {
+            0% { background-color: var(--color-0); }
+            50% { background-color: #ff8a80; }
+            100% { background-color: var(--color-0); }
+        }
+        .finished { animation: pulse-red 1s infinite; }
+
+        .pct-75 { background-color: var(--color-75); }
+        .pct-50 { background-color: var(--color-50); }
+        .pct-25 { background-color: var(--color-25); }
+        .pct-0  { background-color: var(--color-0); }
+
+        /* Unit selector */
+        .unit-selector {
+            position: fixed; bottom: 16px; right: 16px;
+            display: flex; gap: 4px; opacity: 0.4;
+            transition: opacity 0.3s;
+        }
+        .unit-selector:hover { opacity: 1; }
+        .unit-selector label {
+            font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 1px; cursor: pointer; padding: 4px 8px;
+            border-radius: 3px; border: 1.5px solid var(--text-color);
+            user-select: none; transition: all 0.2s;
+            color: var(--text-color); background: transparent;
+        }
+        .unit-selector label.active {
+            background: var(--text-color); color: white;
+        }
+        .unit-selector input { display: none; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="progress-container"><div id="progress-bar"></div></div>
+
+    <div class="main-container">
+        <div id="timer-title" contenteditable="true">MI SESIÓN</div>
+        <div id="round-title">Configuración</div>
+        <div id="timer-display">00:00</div>
+
+        <div class="group" id="builder-controls">
+            <input type="text" id="round-name" placeholder="Nombre (ej. Trabajo)" autocomplete="off">
+            <input type="number" id="round-mins" placeholder="Min" min="0.1" step="0.1">
+            <button onclick="addRound()">+ Añadir</button>
+        </div>
+
+        <div class="group playback-controls">
+            <button id="btn-main" onclick="handleMainAction()" disabled>Añade rondas</button>
+            <button onclick="resetSystem()">Reiniciar Todo</button>
+        </div>
+        
+        <ul id="queue-list" class="queue-list"></ul>
+    </div>
+
+    <div class="unit-selector">
+        <label class="active" onclick="toggleUnit(this,'h')"><input type="checkbox" checked>h</label>
+        <label class="active" onclick="toggleUnit(this,'m')"><input type="checkbox" checked>m</label>
+        <label class="active" onclick="toggleUnit(this,'s')"><input type="checkbox" checked>s</label>
+        <label onclick="toggleUnit(this,'ms')"><input type="checkbox">ms</label>
+    </div>
+
+    <script>
+        // --- Estado Global ---
+        let queue = [];
+        let currentIndex = -1;
+        let sessionActive = false;
+        
+        let countdown;
+        let timeLeftMs = 0;
+        let totalTimeAtStart = 0;
+        let isPaused = true;
+        let lastTick = null;
+
+        // --- Alertas ---
+        let tabAlertInterval = null;
+        let tabAlertState = false;
+        const defaultTitle = 'Temporizador Multi-Ronda';
+
+        const showUnits = { h: true, m: true, s: true, ms: false };
+
+        // --- Nodos DOM ---
+        const display = document.querySelector('#timer-display');
+        const progressBar = document.querySelector('#progress-bar');
+        const btnMain = document.querySelector('#btn-main');
+        const builderControls = document.querySelector('#builder-controls');
+        const queueList = document.querySelector('#queue-list');
+        const roundTitle = document.querySelector('#round-title');
+        const body = document.body;
+        const faviconEl = document.querySelector('#favicon');
+
+        // --- Generación de Favicon ---
+        const favCanvas = document.createElement('canvas');
+        favCanvas.width = 32; favCanvas.height = 32;
+        const favCtx = favCanvas.getContext('2d');
+
+        function generateFavicon(color) {
+            favCtx.clearRect(0, 0, 32, 32);
+            favCtx.beginPath(); favCtx.arc(16, 16, 14, 0, Math.PI * 2);
+            favCtx.fillStyle = color; favCtx.fill();
+            return favCanvas.toDataURL('image/png');
+        }
+
+        const faviconNormal = generateFavicon('#2c3e50');
+        const faviconAlert = generateFavicon('#e53935');
+        const faviconBlank = generateFavicon('transparent');
+        faviconEl.href = faviconNormal;
+
+        // --- Lógica del Gestor de Cola ---
+        function addRound() {
+            const nameInput = document.getElementById('round-name');
+            const minsInput = document.getElementById('round-mins');
+            
+            const name = nameInput.value.trim() || `Ronda ${queue.length + 1}`;
+            const mins = parseFloat(minsInput.value);
+            
+            if (isNaN(mins) || mins <= 0) {
+                alert("Por favor, ingresa un tiempo válido en minutos.");
+                return;
+            }
+
+            queue.push({ name, ms: Math.floor(mins * 60000) });
+            nameInput.value = '';
+            minsInput.value = '';
+            
+            renderQueue();
+            updateUI();
+        }
+
+        function removeRound(index) {
+            if (sessionActive) return; // No permitir borrar si ya arrancó
+            queue.splice(index, 1);
+            renderQueue();
+            updateUI();
+        }
+
+        function renderQueue() {
+            queueList.innerHTML = '';
+            if (queue.length === 0) return;
+
+            queue.forEach((round, index) => {
+                const li = document.createElement('li');
+                const mins = (round.ms / 60000).toFixed(1).replace('.0', '');
+                
+                let text = `<span><strong>${index + 1}.</strong> ${round.name}</span> <span>${mins} min`;
+                if (!sessionActive) {
+                    text += ` <button class="delete-btn" onclick="removeRound(${index})">×</button>`;
+                }
+                text += `</span>`;
+                
+                li.innerHTML = text;
+
+                if (sessionActive) {
+                    if (index < currentIndex) li.classList.add('done');
+                    else if (index === currentIndex) li.classList.add('active');
+                }
+                
+                queueList.appendChild(li);
+            });
+        }
+
+        // --- Lógica del Temporizador ---
+        function handleMainAction() {
+            // Fase 1: Iniciar Sesión (Primera vez)
+            if (!sessionActive) {
+                if (queue.length === 0) return;
+                sessionActive = true;
+                builderControls.classList.add('hidden');
+                currentIndex = 0;
+                loadCurrentRound();
+                toggleTimer(); // Arranca inmediatamente
+                return;
+            }
+
+            // Fase 2: Finalizó la ronda actual y espera avanzar a la siguiente
+            if (timeLeftMs <= 0) {
+                if (currentIndex < queue.length - 1) {
+                    stopTabAlert();
+                    body.classList.remove('finished');
+                    currentIndex++;
+                    loadCurrentRound();
+                    toggleTimer(); // Arranca la siguiente
+                }
+                return;
+            }
+
+            // Fase 3: Pausa / Continuar en medio de una ronda
+            toggleTimer();
+        }
+
+        function loadCurrentRound() {
+            const current = queue[currentIndex];
+            roundTitle.textContent = `${currentIndex + 1}/${queue.length} - ${current.name}`;
+            timeLeftMs = current.ms;
+            totalTimeAtStart = current.ms;
+            renderQueue();
+            updateUI();
+        }
+
+        function toggleTimer() {
+            isPaused = !isPaused;
+            updateMainButtonText();
+            
+            if (!isPaused) {
+                lastTick = performance.now();
+                runTimer();
+            } else {
+                cancelAnimationFrame(countdown);
+                clearInterval(countdown);
+            }
+        }
+
+        function runTimer() {
+            cancelAnimationFrame(countdown);
+            clearInterval(countdown);
+
+            if (showUnits.ms) {
+                function tick() {
+                    const now = performance.now();
+                    timeLeftMs -= (now - lastTick);
+                    lastTick = now;
+
+                    if (checkEndCondition()) return;
+                    updateUI();
+                    countdown = requestAnimationFrame(tick);
+                }
+                lastTick = performance.now();
+                countdown = requestAnimationFrame(tick);
+            } else {
+                countdown = setInterval(() => {
+                    timeLeftMs -= 1000;
+                    if (checkEndCondition()) return;
+                    updateUI();
+                }, 1000);
+            }
+        }
+
+        function checkEndCondition() {
+            if (timeLeftMs <= 0) {
+                timeLeftMs = 0;
+                isPaused = true;
+                cancelAnimationFrame(countdown);
+                clearInterval(countdown);
+                body.classList.add('finished');
+                startTabAlert();
+                updateUI();
+                return true;
+            }
+            return false;
+        }
+
+        function resetSystem() {
+            cancelAnimationFrame(countdown);
+            clearInterval(countdown);
+            stopTabAlert();
+            
+            queue = [];
+            currentIndex = -1;
+            sessionActive = false;
+            timeLeftMs = 0;
+            totalTimeAtStart = 0;
+            isPaused = true;
+            
+            builderControls.classList.remove('hidden');
+            body.className = '';
+            roundTitle.textContent = 'Configuración';
+            
+            renderQueue();
+            updateUI();
+        }
+
+        // --- Alertas y Renderizado UI ---
+        function getSessionName() {
+            return document.querySelector('#timer-title').textContent.trim() || 'TIMER';
+        }
+
+        function startTabAlert() {
+            if (tabAlertInterval) return;
+            tabAlertState = false;
+            tabAlertInterval = setInterval(() => {
+                tabAlertState = !tabAlertState;
+                if (tabAlertState) {
+                    document.title = '🔴 ¡TIEMPO!';
+                    faviconEl.href = faviconAlert;
+                } else {
+                    document.title = '⚪ ' + getSessionName();
+                    faviconEl.href = faviconBlank;
+                }
+            }, 600);
+        }
+
+        function stopTabAlert() {
+            if (tabAlertInterval) {
+                clearInterval(tabAlertInterval);
+                tabAlertInterval = null;
+            }
+            faviconEl.href = faviconNormal;
+            document.title = defaultTitle;
+        }
+
+        function updateTabTitle(timeStr) {
+            if (tabAlertInterval) return; 
+            if (sessionActive && timeLeftMs > 0) {
+                document.title = `${timeStr} — ${queue[currentIndex].name}`;
+            } else {
+                document.title = defaultTitle;
+            }
+        }
+
+        function toggleUnit(label, unit) {
+            const cb = label.querySelector('input');
+            cb.checked = !cb.checked;
+            showUnits[unit] = cb.checked;
+            label.classList.toggle('active', cb.checked);
+            updateUI();
+            if (!isPaused && sessionActive) runTimer();
+        }
+
+        function updateMainButtonText() {
+            if (!sessionActive) {
+                btnMain.textContent = queue.length > 0 ? "Iniciar Sesión" : "Añade rondas";
+                btnMain.disabled = queue.length === 0;
+                return;
+            }
+
+            if (timeLeftMs <= 0) {
+                if (currentIndex < queue.length - 1) {
+                    btnMain.textContent = `Iniciar Siguiente: ${queue[currentIndex + 1].name}`;
+                    btnMain.disabled = false;
+                } else {
+                    btnMain.textContent = "Sesión Completada";
+                    btnMain.disabled = true;
+                }
+            } else {
+                btnMain.textContent = isPaused ? "Continuar" : "Pausar";
+                btnMain.disabled = false;
+            }
+        }
+
+        function updateUI() {
+            const totalSec = Math.max(0, timeLeftMs) / 1000;
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = Math.floor(totalSec % 60);
+            const ms = Math.floor((totalSec % 1) * 100);
+
+            const parts = [];
+            if (showUnits.h) parts.push(parts.length ? String(h).padStart(2, '0') : String(h));
+            if (showUnits.m) parts.push(parts.length ? String(m).padStart(2, '0') : String(m).padStart(2, '0'));
+            if (showUnits.s) parts.push(String(s).padStart(2, '0'));
+
+            let text = parts.join(':') || '00';
+            if (showUnits.ms) text += '.' + String(ms).padStart(2, '0');
+
+            if (!sessionActive && queue.length === 0) text = "00:00";
+            display.textContent = text;
+
+            updateTabTitle(text);
+            updateMainButtonText();
+
+            const pct = totalTimeAtStart > 0 ? (Math.max(0, timeLeftMs) / totalTimeAtStart) * 100 : 0;
+            progressBar.style.width = `${pct}%`;
+
+            if (!body.classList.contains('finished')) {
+                body.className = '';
+                if (sessionActive) {
+                    if (timeLeftMs <= 0 && totalTimeAtStart > 0) body.classList.add('pct-0');
+                    else if (pct <= 25) body.classList.add('pct-25');
+                    else if (pct <= 50) body.classList.add('pct-50');
+                    else if (pct <= 75) body.classList.add('pct-75');
+                }
+            }
+        }
+
+        // Inicialización
+        updateUI();
+    </script>
+</body>
+</html>
