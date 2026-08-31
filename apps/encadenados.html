@@ -53,9 +53,11 @@
   .history { display: flex; flex-direction: column; gap: 2rem; }
   .round-card {
     border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem;
-    background: #fafafa;
+    background: #fafafa; cursor: zoom-in;
     animation: slideDown 0.3s ease-out;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
+  .round-card:hover { border-color: var(--accent); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
   
   @keyframes slideDown {
     from { opacity: 0; transform: translateY(-10px); }
@@ -78,6 +80,8 @@
     display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;
   }
   .group { background: white; border: 1px solid var(--border); border-radius: 4px; padding: 1rem; min-height: 80px; }
+  .group.extras { border: 2px dashed #ccc; background: #f9f9f9; }
+  .group.extras .group-name { color: #888; }
   .group-name { font-size: 0.75rem; color: var(--gray); margin-bottom: 0.5rem; text-transform: uppercase; }
   
   .member { 
@@ -88,6 +92,34 @@
   .member.visible { opacity: 1; transform: translateY(0); }
   
   .stats { font-size: 0.8rem; color: var(--gray); margin-top: -10px; margin-bottom: 15px; }
+  .hint { font-size: 0.75rem; color: var(--gray); margin-top: -0.5rem; text-align: right; }
+
+  /* Lightbox */
+  .lightbox {
+    display: none; position: fixed; inset: 0; background: rgba(255, 255, 255, 0.98);
+    z-index: 1000; align-items: stretch; justify-content: stretch; padding: 0; cursor: zoom-out;
+  }
+  .lightbox.visible { display: flex; }
+  
+  .lightbox-content {
+    background: transparent; padding: 3rem 4rem; width: 100%; height: 100vh; overflow-y: auto; cursor: default;
+  }
+  .lightbox-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 2.5rem; padding-bottom: 1rem; border-bottom: 3px solid var(--accent);
+  }
+  .lightbox-title { font-size: 1.6rem; color: var(--accent); font-weight: bold; }
+  .lightbox-close {
+    background: white; border: 1px solid var(--border); font-size: 1.2rem; cursor: pointer;
+    padding: 0.4rem 0.8rem; border-radius: 4px; transition: all 0.2s;
+  }
+  .lightbox-close:hover { border-color: var(--accent); color: var(--accent); }
+  
+  .lightbox .groups-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+  .lightbox .group { padding: 1.5rem; border: 2px solid var(--border); }
+  .lightbox .group.extras { border: 2px dashed #bbb; }
+  .lightbox .group-name { font-size: 0.9rem; margin-bottom: 1rem; }
+  .lightbox .member { opacity: 1; transform: none; font-size: 1.4rem; padding: 0.4rem 0; }
 </style>
 </head>
 <body>
@@ -106,8 +138,7 @@ Gabriela
 Hugo
 Ines
 Juan
-Karla
-Luis</textarea>
+Karla</textarea>
     </div>
     <div class="row">
       <label>Integrantes por grupo:</label>
@@ -118,11 +149,26 @@ Luis</textarea>
     <button class="reset" onclick="resetSystem()">Resetear Historial</button>
   </div>
 
-  <div class="history" id="historyView"></div>
+  <div class="history">
+    <div class="hint">Clic en una ronda para ampliar</div>
+    <div id="historyView"></div>
+  </div>
+
+  <!-- Lightbox -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+    <div class="lightbox-content" onclick="event.stopPropagation()">
+      <div class="lightbox-header">
+        <span class="lightbox-title" id="lightboxTitle">Ronda</span>
+        <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+      </div>
+      <div class="groups-grid" id="lightboxGrid"></div>
+    </div>
+  </div>
 
 <script>
   let encounters = {}; 
   let roundCount = 0;
+  let roundsData = {}; // Almacena la data de cada ronda para el lightbox
 
   function getPairKey(a, b) {
     return [a, b].sort().join('|');
@@ -143,9 +189,16 @@ Luis</textarea>
       return;
     }
 
-    const maxRounds = Math.floor((n - 1) / (size - 1));
-    document.getElementById('mathStats').innerHTML = 
-      `Personas: <b>${n}</b> | Rondas máximas sin repetir pares: <b>${maxRounds}</b>`;
+    const fullGroups = Math.floor(n / size);
+    const peopleInGroups = fullGroups * size;
+    const maxRounds = Math.floor((peopleInGroups - 1) / (size - 1));
+    const extras = n % size;
+    
+    let text = `Personas: <b>${n}</b>`;
+    if (extras > 0) text += ` (Quedarán <b>${extras}</b> extras)`;
+    text += ` | Rondas ideales: <b>~${maxRounds}</b>`;
+    
+    document.getElementById('mathStats').innerHTML = text;
   }
 
   document.getElementById('namesInput').addEventListener('input', updateMathStats);
@@ -155,6 +208,7 @@ Luis</textarea>
   function resetSystem() {
     encounters = {};
     roundCount = 0;
+    roundsData = {};
     document.getElementById('historyView').innerHTML = '';
   }
 
@@ -172,15 +226,19 @@ Luis</textarea>
   }
 
   function chunkArray(arr, size) {
-    let result = [];
-    for (let i = 0; i < arr.length; i += size) {
-      result.push(arr.slice(i, i + size));
+    let groups = [];
+    let extras = [];
+    let numFullGroups = Math.floor(arr.length / size);
+    
+    for (let i = 0; i < numFullGroups * size; i += size) {
+      groups.push(arr.slice(i, i + size));
     }
-    if (result.length > 1 && result[result.length - 1].length === 1) {
-      const loner = result.pop()[0];
-      result[result.length - 1].push(loner);
+    
+    if (arr.length % size !== 0) {
+      extras = arr.slice(numFullGroups * size);
     }
-    return result;
+    
+    return { groups, extras };
   }
 
   const delay = ms => new Promise(res => setTimeout(res, ms));
@@ -194,8 +252,8 @@ Luis</textarea>
 
     // 1. Cálculo Instantáneo (Hill Climbing)
     let shuffled = [...names].sort(() => Math.random() - 0.5);
-    let bestGroups = chunkArray(shuffled, size);
-    let bestCost = calculateCost(bestGroups);
+    let bestResult = chunkArray(shuffled, size);
+    let bestCost = calculateCost(bestResult.groups);
 
     const MAX_ITERS = 5000; 
     for (let i = 0; i < MAX_ITERS; i++) {
@@ -205,20 +263,23 @@ Luis</textarea>
       let idx2 = Math.floor(Math.random() * currentArr.length);
       [currentArr[idx1], currentArr[idx2]] = [currentArr[idx2], currentArr[idx1]];
       
-      let currentGroups = chunkArray(currentArr, size);
-      let currentCost = calculateCost(currentGroups);
+      let currentResult = chunkArray(currentArr, size);
+      let currentCost = calculateCost(currentResult.groups);
 
       if (currentCost <= bestCost) {
         shuffled = currentArr;
-        bestGroups = currentGroups;
+        bestResult = currentResult;
         bestCost = currentCost;
       }
     }
 
     roundCount++;
+    
+    // Guardar para el Lightbox
+    roundsData[roundCount] = { ...bestResult };
 
-    // 2. Registrar en matriz histórica
-    for (let g of bestGroups) {
+    // 2. Registrar solo las parejas de los grupos completos en el historial
+    for (let g of bestResult.groups) {
       for (let i = 0; i < g.length; i++) {
         for (let j = i + 1; j < g.length; j++) {
           const key = getPairKey(g[i], g[j]);
@@ -227,66 +288,94 @@ Luis</textarea>
       }
     }
 
-    // 3. Ejecutar Revelación Sutil In Situ
-    await renderAnimatedRound(bestGroups, bestCost, roundCount);
+    // 3. Ejecutar Revelación Animada
+    await renderAnimatedRound(bestResult.groups, bestResult.extras, bestCost, roundCount);
     
     document.getElementById('btnGenerate').disabled = false;
   }
 
-  async function renderAnimatedRound(groups, cost, rCount) {
+  async function renderAnimatedRound(groups, extras, cost, rCount) {
     try {
       const view = document.getElementById('historyView');
       
       const card = document.createElement('div');
       card.className = 'round-card';
       card.id = `round-${rCount}`;
+      card.onclick = () => openLightbox(rCount);
       
-      let html = `
-        <div class="round-header">
-          <div class="round-title">Ronda ${rCount}</div>
-          <div class="round-status status-pending" id="status-${rCount}">Sorteando...</div>
-        </div>
-        <div class="groups-grid">
-      `;
+      const header = document.createElement('div');
+      header.className = 'round-header';
+      
+      const title = document.createElement('div');
+      title.className = 'round-title';
+      title.textContent = `Ronda ${rCount}`;
+      
+      const statusEl = document.createElement('div');
+      statusEl.className = 'round-status status-pending';
+      statusEl.textContent = 'Sorteando...';
+      
+      header.appendChild(title);
+      header.appendChild(statusEl);
+      card.appendChild(header);
 
-      groups.forEach((g, index) => {
-        html += `<div class="group"><div class="group-name">Grupo ${index + 1}</div></div>`;
-      });
-      html += `</div>`;
-      card.innerHTML = html;
+      const grid = document.createElement('div');
+      grid.className = 'groups-grid';
+
+      // Nodos contenedores
+      const groupContainers = [];
       
+      // Armar cascarones para grupos completos
+      groups.forEach((g, index) => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group';
+        const groupName = document.createElement('div');
+        groupName.className = 'group-name';
+        groupName.textContent = `Grupo ${index + 1}`;
+        groupDiv.appendChild(groupName);
+        grid.appendChild(groupDiv);
+        groupContainers.push(groupDiv);
+      });
+      
+      // Armar cascarón para extras si existen
+      if (extras.length > 0) {
+        const extraDiv = document.createElement('div');
+        extraDiv.className = 'group extras';
+        const extraName = document.createElement('div');
+        extraName.className = 'group-name';
+        extraName.textContent = `Sobrantes (Extras)`;
+        extraDiv.appendChild(extraName);
+        grid.appendChild(extraDiv);
+        groupContainers.push(extraDiv); // El último índice será el de extras
+      }
+      
+      card.appendChild(grid);
       view.insertBefore(card, view.firstChild);
 
-      // FIX: Capturar los nodos directamente después de insertarlos en el DOM
-      // Esto evita depender de la sincronización de IDs y evita el Unhandled Promise Rejection
-      const groupNodes = card.querySelectorAll('.group');
-
+      // Aplanar lista y barajar el orden de aparición
       let queue = [];
       groups.forEach((g, groupIndex) => {
         g.forEach(name => queue.push({ name, groupIndex }));
       });
-      
-      // Barajamos el orden visual de revelación
+      if (extras.length > 0) {
+        extras.forEach(name => queue.push({ name, groupIndex: groups.length })); // Apuntan al contenedor extra
+      }
       queue.sort(() => Math.random() - 0.5);
 
+      // Animación progresiva
       for (let item of queue) {
-        await delay(80);
+        await delay(60); // Un poco más rápido para dar fluidez
         
-        const groupContainer = groupNodes[item.groupIndex];
-        if (!groupContainer) continue; // Salto de seguridad
-        
+        const targetContainer = groupContainers[item.groupIndex];
         const memberSpan = document.createElement('span');
         memberSpan.className = 'member';
         memberSpan.textContent = item.name;
-        groupContainer.appendChild(memberSpan);
+        targetContainer.appendChild(memberSpan);
         
-        requestAnimationFrame(() => {
-          memberSpan.classList.add('visible');
-        });
+        void memberSpan.offsetWidth; 
+        memberSpan.classList.add('visible');
       }
 
       await delay(300);
-      const statusEl = document.getElementById(`status-${rCount}`);
       if (cost === 0) {
         statusEl.className = 'round-status status-perfect';
         statusEl.textContent = '✓ Pares 100% nuevos';
@@ -294,15 +383,56 @@ Luis</textarea>
         statusEl.className = 'round-status status-warning';
         statusEl.textContent = `⚠ Límite alcanzado (Fricción: ${cost})`;
       }
+      
     } catch (error) {
       console.error("Error durante la coreografía:", error);
-      const statusEl = document.getElementById(`status-${rCount}`);
-      if (statusEl) {
-        statusEl.className = 'round-status status-error';
-        statusEl.textContent = 'Error de renderizado';
+      const fallbackStatus = document.querySelector(`#round-${rCount} .round-status`);
+      if (fallbackStatus) {
+        fallbackStatus.className = 'round-status status-error';
+        fallbackStatus.textContent = 'Error de renderizado asíncrono';
       }
     }
   }
+
+  // --- LÓGICA DEL LIGHTBOX ---
+  function openLightbox(rCount) {
+    const data = roundsData[rCount];
+    if (!data) return;
+
+    const grid = document.getElementById('lightboxGrid');
+    grid.innerHTML = '';
+    
+    document.getElementById('lightboxTitle').textContent = `Ronda ${rCount}`;
+
+    // Dibujar Grupos
+    data.groups.forEach((g, i) => {
+      const card = document.createElement('div');
+      card.className = 'group';
+      card.innerHTML = `<div class="group-name">Grupo ${i + 1}</div>` + 
+                       g.map(n => `<span class="member">${n}</span>`).join('');
+      grid.appendChild(card);
+    });
+
+    // Dibujar Extras
+    if (data.extras && data.extras.length > 0) {
+      const extraCard = document.createElement('div');
+      extraCard.className = 'group extras';
+      extraCard.innerHTML = `<div class="group-name">Sobrantes (Extras)</div>` + 
+                            data.extras.map(n => `<span class="member">${n}</span>`).join('');
+      grid.appendChild(extraCard);
+    }
+
+    document.getElementById('lightbox').classList.add('visible');
+  }
+
+  function closeLightbox(e) {
+    if (e && e.target !== e.currentTarget) return;
+    document.getElementById('lightbox').classList.remove('visible');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeLightbox();
+  });
 </script>
 </body>
 </html>
