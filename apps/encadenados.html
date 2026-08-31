@@ -168,7 +168,7 @@ Karla</textarea>
 <script>
   let encounters = {}; 
   let roundCount = 0;
-  let roundsData = {}; // Almacena la data de cada ronda para el lightbox
+  let roundsData = {}; 
 
   function getPairKey(a, b) {
     return [a, b].sort().join('|');
@@ -195,7 +195,7 @@ Karla</textarea>
     const extras = n % size;
     
     let text = `Personas: <b>${n}</b>`;
-    if (extras > 0) text += ` (Quedarán <b>${extras}</b> extras)`;
+    if (extras > 0) text += ` (Quedarán <b>${extras}</b> sin grupo)`;
     text += ` | Rondas ideales: <b>~${maxRounds}</b>`;
     
     document.getElementById('mathStats').innerHTML = text;
@@ -250,7 +250,6 @@ Karla</textarea>
 
     document.getElementById('btnGenerate').disabled = true;
 
-    // 1. Cálculo Instantáneo (Hill Climbing)
     let shuffled = [...names].sort(() => Math.random() - 0.5);
     let bestResult = chunkArray(shuffled, size);
     let bestCost = calculateCost(bestResult.groups);
@@ -274,11 +273,8 @@ Karla</textarea>
     }
 
     roundCount++;
-    
-    // Guardar para el Lightbox
     roundsData[roundCount] = { ...bestResult };
 
-    // 2. Registrar solo las parejas de los grupos completos en el historial
     for (let g of bestResult.groups) {
       for (let i = 0; i < g.length; i++) {
         for (let j = i + 1; j < g.length; j++) {
@@ -288,7 +284,6 @@ Karla</textarea>
       }
     }
 
-    // 3. Ejecutar Revelación Animada
     await renderAnimatedRound(bestResult.groups, bestResult.extras, bestCost, roundCount);
     
     document.getElementById('btnGenerate').disabled = false;
@@ -321,10 +316,8 @@ Karla</textarea>
       const grid = document.createElement('div');
       grid.className = 'groups-grid';
 
-      // Nodos contenedores
       const groupContainers = [];
       
-      // Armar cascarones para grupos completos
       groups.forEach((g, index) => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'group';
@@ -336,34 +329,31 @@ Karla</textarea>
         groupContainers.push(groupDiv);
       });
       
-      // Armar cascarón para extras si existen
       if (extras.length > 0) {
         const extraDiv = document.createElement('div');
         extraDiv.className = 'group extras';
         const extraName = document.createElement('div');
         extraName.className = 'group-name';
-        extraName.textContent = `Sobrantes (Extras)`;
+        extraName.textContent = `Sin grupo`;
         extraDiv.appendChild(extraName);
         grid.appendChild(extraDiv);
-        groupContainers.push(extraDiv); // El último índice será el de extras
+        groupContainers.push(extraDiv); 
       }
       
       card.appendChild(grid);
       view.insertBefore(card, view.firstChild);
 
-      // Aplanar lista y barajar el orden de aparición
       let queue = [];
       groups.forEach((g, groupIndex) => {
         g.forEach(name => queue.push({ name, groupIndex }));
       });
       if (extras.length > 0) {
-        extras.forEach(name => queue.push({ name, groupIndex: groups.length })); // Apuntan al contenedor extra
+        extras.forEach(name => queue.push({ name, groupIndex: groups.length })); 
       }
       queue.sort(() => Math.random() - 0.5);
 
-      // Animación progresiva
       for (let item of queue) {
-        await delay(60); // Un poco más rápido para dar fluidez
+        await delay(60); 
         
         const targetContainer = groupContainers[item.groupIndex];
         const memberSpan = document.createElement('span');
@@ -394,7 +384,6 @@ Karla</textarea>
     }
   }
 
-  // --- LÓGICA DEL LIGHTBOX ---
   function openLightbox(rCount) {
     const data = roundsData[rCount];
     if (!data) return;
@@ -404,7 +393,6 @@ Karla</textarea>
     
     document.getElementById('lightboxTitle').textContent = `Ronda ${rCount}`;
 
-    // Dibujar Grupos
     data.groups.forEach((g, i) => {
       const card = document.createElement('div');
       card.className = 'group';
@@ -413,11 +401,10 @@ Karla</textarea>
       grid.appendChild(card);
     });
 
-    // Dibujar Extras
     if (data.extras && data.extras.length > 0) {
       const extraCard = document.createElement('div');
       extraCard.className = 'group extras';
-      extraCard.innerHTML = `<div class="group-name">Sobrantes (Extras)</div>` + 
+      extraCard.innerHTML = `<div class="group-name">Sin grupo</div>` + 
                             data.extras.map(n => `<span class="member">${n}</span>`).join('');
       grid.appendChild(extraCard);
     }
