@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador Multi-Ronda</title>
+    <link id="favicon" rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPj/HwADBwIAMCbHYQAAAABJRU5ErkJggg==">
+    <style>
+        :root {
+            --color-100: #e8f5e9; --color-75: #f1f8e9; --color-50: #fff9c4; 
+            --color-25: #ffe0b2; --color-0: #ffcdd2; --text-color: #2c3e50;
+        }
+
+        body {
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column; justify-content: flex-start;
+            align-items: center; min-height: 100vh; width: 100vw;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--color-100); color: var(--text-color);
+            transition: background-color 1.5s ease; overflow-x: hidden;
+            padding-top: 60px; /* Espacio para que el timer quede centrado ópticamente */
+        }
+
+        /* Barra de progreso superior */
+        #progress-container { position: fixed; top: 0; left: 0; width: 100%; height: 8px; background: rgba(0, 0, 0, 0.05); z-index: 10; }
+        #progress-bar { height: 100%; width: 100%; background: var(--text-color); transition: width 1s linear; transform-origin: left; }
+
+        .main-container {
+            text-align: center; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; width: 100%;
+            max-width: 600px; padding: 20px; box-sizing: border-box;
+        }
+
+        #timer-title {
+            font-size: 1rem; font-weight: 500; text-transform: uppercase;
+            letter-spacing: 2px; margin-bottom: 5px; outline: none;
+            padding: 5px; opacity: 0.8; border-bottom: 1px dashed transparent;
+        }
+        #timer-title:focus { border-bottom: 1px dashed var(--text-color); }
+        
+        #round-title {
+            font-size: 1.2rem; font-weight: 700; color: var(--text-color);
+            margin-bottom: 0; min-height: 1.5rem; display: flex; flex-direction: column;
+        }
+        #round-title small { font-size: 0.8rem; opacity: 0.7; font-weight: 500; text-transform: uppercase; letter-spacing: 1px; }
+
+        #timer-display {
+            font-size: clamp(4rem, 12vw, 9rem);
+            font-weight: 800; line-height: 1.1; margin: 10px 0 20px 0;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .group { margin-bottom: 12px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; width: 100%; }
+
+        button {
+            padding: 8px 16px; font-size: 0.8rem;
+            text-transform: uppercase; border: 1.5px solid var(--text-color);
+            background: rgba(255, 255, 255, 0.2); color: var(--text-color);
+            cursor: pointer; border-radius: 4px; font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        button:hover:not(:disabled) { background: var(--text-color); color: white; }
+        button:disabled { opacity: 0.4; cursor: not-allowed; }
+        
+        .playback-controls button { background: var(--text-color); color: white; border: none; padding: 10px 24px; font-size: 0.9rem; }
+        .playback-controls button.reset-btn { background: transparent; color: var(--text-color); border: 1.5px solid var(--text-color); }
+        .playback-controls button.reset-btn:hover { background: rgba(0,0,0,0.05); color: var(--text-color); }
+
+        input[type="text"], input[type="number"] {
+            padding: 8px 12px; border: 1.5px solid var(--text-color);
+            background: rgba(255, 255, 255, 0.4); color: var(--text-color);
+            border-radius: 4px; font-family: inherit; font-size: 0.8rem;
+            font-weight: 600; outline: none; transition: background 0.2s;
+        }
+        input[type="text"]:focus, input[type="number"]:focus { background: white; }
+        input::placeholder { color: rgba(44, 62, 80, 0.5); font-weight: 400; }
+        
+        /* UI Constructor de Fases */
+        #phase-adder-container { width: 100%; max-width: 500px; margin-bottom: 20px; }
+        #phase-adder-container input { width: 100%; flex: 1; }
+        
+        #builder-view, #runtime-view { width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 15px; margin-top: 20px;}
+        
+        .phase-card { background: rgba(255,255,255,0.4); border-radius: 8px; padding: 15px; text-align: left; border: 1px solid rgba(0,0,0,0.05); }
+        .phase-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid rgba(0,0,0,0.1); font-weight: bold; font-size: 1.1rem; }
+        
+        .round-form { display: flex; gap: 5px; margin-bottom: 12px; }
+        .round-form input[type="text"] { flex: 1; }
+        .round-form input[type="number"] { width: 70px; }
+        .round-form button { padding: 6px 12px; }
+
+        .round-list { list-style: none; padding: 0; margin: 0; font-size: 0.85rem; }
+        .round-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px dashed rgba(0,0,0,0.1); }
+        .round-item:last-child { border-bottom: none; }
+        
+        /* Lista de Reproducción (Runtime) */
+        #runtime-view { background: rgba(255,255,255,0.3); border-radius: 8px; overflow: hidden; padding: 0; }
+        .runtime-item { padding: 12px 15px; border-bottom: 1px solid rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; transition: all 0.3s ease; text-align: left; font-size: 0.9rem;}
+        .runtime-item:last-child { border-bottom: none; }
+        .runtime-item.active { font-weight: bold; background: rgba(0,0,0,0.08); border-left: 4px solid var(--text-color); padding-left: 11px; }
+        .runtime-item.done { text-decoration: line-through; opacity: 0.4; }
+        .phase-badge { font-size: 0.7rem; text-transform: uppercase; background: rgba(0,0,0,0.1); padding: 2px 6px; border-radius: 4px; margin-right: 8px; font-weight: 700;}
+
+        .delete-btn { background: transparent; border: none; color: #e53935; padding: 2px 6px; font-size: 1rem; cursor: pointer; border-radius: 3px; }
+        .delete-btn:hover { background: rgba(229, 57, 53, 0.1); color: #e53935; }
+
+        /* Animación Final */
+        @keyframes pulse-red { 0% { background-color: var(--color-0); } 50% { background-color: #ff8a80; } 100% { background-color: var(--color-0); } }
+        .finished { animation: pulse-red 1s infinite; }
+
+        .pct-75 { background-color: var(--color-75); }
+        .pct-50 { background-color: var(--color-50); }
+        .pct-25 { background-color: var(--color-25); }
+        .pct-0  { background-color: var(--color-0); }
+
+        .unit-selector { position: fixed; bottom: 16px; right: 16px; display: flex; gap: 4px; opacity: 0.4; transition: opacity 0.3s; }
+        .unit-selector:hover { opacity: 1; }
+        .unit-selector label { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; padding: 4px 8px; border-radius: 3px; border: 1.5px solid var(--text-color); user-select: none; transition: all 0.2s; color: var(--text-color); background: transparent; }
+        .unit-selector label.active { background: var(--text-color); color: white; }
+        .unit-selector input { display: none; }
+        
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div id="progress-container"><div id="progress-bar"></div></div>
+
+    <div class="main-container">
+        <div id="timer-title" contenteditable="true">MI SESIÓN</div>
+        <div id="round-title"><span>Configuración</span></div>
+        <div id="timer-display">00:00</div>
+
+        <!-- Controles de Reproducción -->
+        <div class="group playback-controls">
+            <button id="btn-main" onclick="handleMainAction()" disabled>Añade fases</button>
+            <button class="reset-btn" onclick="resetSystem()">Reiniciar</button>
+        </div>
+
+        <!-- Constructor de Fases -->
+        <div id="phase-adder-container" class="group">
+            <input type="text" id="new-phase-name" placeholder="Nombre de nueva fase (ej. Calentamiento)" autocomplete="off">
+            <button onclick="addPhase()">+ Añadir Fase</button>
+        </div>
+
+        <!-- Vista de Configuración Jerárquica -->
+        <div id="builder-view"></div>
+        
+        <!-- Vista de Ejecución Plana -->
+        <div id="runtime-view" class="hidden"></div>
+    </div>
+
+    <div class="unit-selector">
+        <label class="active" onclick="toggleUnit(this,'h')"><input type="checkbox" checked>h</label>
+        <label class="active" onclick="toggleUnit(this,'m')"><input type="checkbox" checked>m</label>
+        <label class="active" onclick="toggleUnit(this,'s')"><input type="checkbox" checked>s</label>
+        <label onclick="toggleUnit(this,'ms')"><input type="checkbox">ms</label>
+    </div>
+
+    <script>
+        // --- Estado del Constructor (Jerárquico) ---
+        let phases = []; 
+        
+        // --- Estado de Reproducción (Plano) ---
+        let executionQueue = []; 
+        let currentIndex = -1;
+        let sessionActive = false;
+        
+        let countdown;
+        let timeLeftMs = 0;
+        let totalTimeAtStart = 0;
+        let isPaused = true;
+        let lastTick = null;
+
+        // --- Alertas ---
+        let tabAlertInterval = null;
+        let tabAlertState = false;
+        const defaultTitle = 'Temporizador Multi-Ronda';
+        const showUnits = { h: true, m: true, s: true, ms: false };
+
+        // --- Nodos DOM ---
+        const display = document.querySelector('#timer-display');
+        const progressBar = document.querySelector('#progress-bar');
+        const btnMain = document.querySelector('#btn-main');
+        const roundTitle = document.querySelector('#round-title');
+        const builderView = document.querySelector('#builder-view');
+        const runtimeView = document.querySelector('#runtime-view');
+        const phaseAdder = document.querySelector('#phase-adder-container');
+        const body = document.body;
+        const faviconEl = document.querySelector('#favicon');
+
+        // --- Favicon ---
+        const favCanvas = document.createElement('canvas');
+        favCanvas.width = 32; favCanvas.height = 32;
+        const favCtx = favCanvas.getContext('2d');
+        function generateFavicon(color) {
+            favCtx.clearRect(0, 0, 32, 32);
+            favCtx.beginPath(); favCtx.arc(16, 16, 14, 0, Math.PI * 2);
+            favCtx.fillStyle = color; favCtx.fill();
+            return favCanvas.toDataURL('image/png');
+        }
+        const faviconNormal = generateFavicon('#2c3e50');
+        const faviconAlert = generateFavicon('#e53935');
+        const faviconBlank = generateFavicon('transparent');
+        faviconEl.href = faviconNormal;
+
+        // --- LÓGICA DEL CONSTRUCTOR (BUILDER) ---
+
+        function addPhase() {
+            const input = document.getElementById('new-phase-name');
+            const name = input.value.trim() || `Fase ${phases.length + 1}`;
+            phases.push({ name: name, rounds: [] });
+            input.value = '';
+            renderBuilder();
+            updateMainButtonText();
+        }
+
+        function removePhase(pIndex) {
+            phases.splice(pIndex, 1);
+            renderBuilder();
+            updateMainButtonText();
+        }
+
+        function addRoundToPhase(pIndex) {
+            const nameInput = document.getElementById(`round-name-${pIndex}`);
+            const minsInput = document.getElementById(`round-mins-${pIndex}`);
+            
+            const name = nameInput.value.trim() || `Ronda ${phases[pIndex].rounds.length + 1}`;
+            const mins = parseFloat(minsInput.value);
+            
+            if (isNaN(mins) || mins <= 0) {
+                alert("Por favor, ingresa un tiempo válido en minutos.");
+                return;
+            }
+
+            phases[pIndex].rounds.push({ name: name, ms: Math.floor(mins * 60000) });
+            renderBuilder();
+            updateMainButtonText();
+        }
+
+        function removeRoundFromPhase(pIndex, rIndex) {
+            phases[pIndex].rounds.splice(rIndex, 1);
+            renderBuilder();
+            updateMainButtonText();
+        }
+
+        function renderBuilder() {
+            builderView.innerHTML = '';
+            phases.forEach((phase, pIdx) => {
+                const card = document.createElement('div');
+                card.className = 'phase-card';
+                
+                // Cabecera de la fase
+                const header = document.createElement('div');
+                header.className = 'phase-header';
+                header.innerHTML = `<span>${phase.name}</span> <button class="delete-btn" onclick="removePhase(${pIdx})" title="Eliminar Fase">×</button>`;
+                card.appendChild(header);
+
+                // Formulario para añadir rondas a esta fase
+                const form = document.createElement('div');
+                form.className = 'round-form';
+                form.innerHTML = `
+                    <input type="text" id="round-name-${pIdx}" placeholder="Nombre (ej. Trabajo)" autocomplete="off">
+                    <input type="number" id="round-mins-${pIdx}" placeholder="Min" min="0.1" step="0.1">
+                    <button onclick="addRoundToPhase(${pIdx})">+ Ronda</button>
+                `;
+                card.appendChild(form);
+
+                // Lista de rondas de la fase
+                const ul = document.createElement('ul');
+                ul.className = 'round-list';
+                phase.rounds.forEach((round, rIdx) => {
+                    const li = document.createElement('li');
+                    li.className = 'round-item';
+                    const mins = (round.ms / 60000).toFixed(1).replace('.0', '');
+                    li.innerHTML = `
+                        <span>${rIdx + 1}. ${round.name}</span>
+                        <span>${mins} min <button class="delete-btn" onclick="removeRoundFromPhase(${pIdx}, ${rIdx})">×</button></span>
+                    `;
+                    ul.appendChild(li);
+                });
+                card.appendChild(ul);
+                builderView.appendChild(card);
+            });
+        }
+
+        function getTotalRounds() {
+            return phases.reduce((total, phase) => total + phase.rounds.length, 0);
+        }
+
+        // --- LÓGICA DE REPRODUCCIÓN (RUNTIME) ---
+
+        function buildExecutionQueue() {
+            executionQueue = [];
+            phases.forEach((phase) => {
+                phase.rounds.forEach((round) => {
+                    executionQueue.push({
+                        phaseName: phase.name,
+                        name: round.name,
+                        ms: round.ms
+                    });
+                });
+            });
+        }
+
+        function handleMainAction() {
+            // Fase 1: Iniciar Sesión (Transición de Configuración a Ejecución)
+            if (!sessionActive) {
+                if (getTotalRounds() === 0) return alert("Añade al menos una ronda a una fase para comenzar.");
+                
+                buildExecutionQueue(); // Aplanar estado
+                sessionActive = true;
+                
+                // Cambiar UI
+                phaseAdder.classList.add('hidden');
+                builderView.classList.add('hidden');
+                runtimeView.classList.remove('hidden');
+                
+                currentIndex = 0;
+                loadCurrentRound();
+                toggleTimer(); // Arranca inmediatamente
+                return;
+            }
+
+            // Fase 2: Finalizó la ronda actual y espera avanzar a la siguiente
+            if (timeLeftMs <= 0) {
+                if (currentIndex < executionQueue.length - 1) {
+                    stopTabAlert();
+                    body.classList.remove('finished');
+                    currentIndex++;
+                    loadCurrentRound();
+                    toggleTimer();
+                }
+                return;
+            }
+
+            // Fase 3: Pausa / Continuar en medio de una ronda
+            toggleTimer();
+        }
+
+        function loadCurrentRound() {
+            const current = executionQueue[currentIndex];
+            // Mostrar jerarquía en el título
+            roundTitle.innerHTML = `<small>${current.phaseName} (${currentIndex + 1}/${executionQueue.length})</small> <span>${current.name}</span>`;
+            timeLeftMs = current.ms;
+            totalTimeAtStart = current.ms;
+            renderRuntimeQueue();
+            updateUI();
+        }
+
+        function renderRuntimeQueue() {
+            runtimeView.innerHTML = '';
+            executionQueue.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'runtime-item';
+                if (index < currentIndex) div.classList.add('done');
+                else if (index === currentIndex) div.classList.add('active');
+                
+                const mins = (item.ms / 60000).toFixed(1).replace('.0', '');
+                div.innerHTML = `<span><span class="phase-badge">${item.phaseName}</span> ${item.name}</span> <span>${mins} min</span>`;
+                runtimeView.appendChild(div);
+            });
+        }
+
+        // --- MOTOR DE TIEMPO INTUCTO ---
+
+        function toggleTimer() {
+            isPaused = !isPaused;
+            updateMainButtonText();
+            
+            if (!isPaused) {
+                lastTick = performance.now();
+                runTimer();
+            } else {
+                cancelAnimationFrame(countdown);
+                clearInterval(countdown);
+            }
+        }
+
+        function runTimer() {
+            cancelAnimationFrame(countdown);
+            clearInterval(countdown);
+
+            if (showUnits.ms) {
+                function tick() {
+                    const now = performance.now();
+                    timeLeftMs -= (now - lastTick);
+                    lastTick = now;
+                    if (checkEndCondition()) return;
+                    updateUI();
+                    countdown = requestAnimationFrame(tick);
+                }
+                lastTick = performance.now();
+                countdown = requestAnimationFrame(tick);
+            } else {
+                countdown = setInterval(() => {
+                    timeLeftMs -= 1000;
+                    if (checkEndCondition()) return;
+                    updateUI();
+                }, 1000);
+            }
+        }
+
+        function checkEndCondition() {
+            if (timeLeftMs <= 0) {
+                timeLeftMs = 0;
+                isPaused = true;
+                cancelAnimationFrame(countdown);
+                clearInterval(countdown);
+                body.classList.add('finished');
+                startTabAlert();
+                updateUI();
+                return true;
+            }
+            return false;
+        }
+
+        function resetSystem() {
+            cancelAnimationFrame(countdown);
+            clearInterval(countdown);
+            stopTabAlert();
+            
+            // Volver a limpiar estado de ejecución, pero MANTENER el de construcción (UX)
+            // Si el usuario quiere borrar todo, debe borrar las fases manualmente.
+            executionQueue = [];
+            currentIndex = -1;
+            sessionActive = false;
+            timeLeftMs = 0;
+            totalTimeAtStart = 0;
+            isPaused = true;
+            
+            // Restaurar UI
+            phaseAdder.classList.remove('hidden');
+            builderView.classList.remove('hidden');
+            runtimeView.classList.add('hidden');
+            body.className = '';
+            roundTitle.innerHTML = '<span>Configuración</span>';
+            
+            renderBuilder();
+            updateUI();
+        }
+
+        // --- UTILIDADES Y UI ---
+
+        function getSessionName() { return document.querySelector('#timer-title').textContent.trim() || 'TIMER'; }
+
+        function startTabAlert() {
+            if (tabAlertInterval) return;
+            tabAlertState = false;
+            tabAlertInterval = setInterval(() => {
+                tabAlertState = !tabAlertState;
+                if (tabAlertState) {
+                    document.title = '🔴 ¡TIEMPO!';
+                    faviconEl.href = faviconAlert;
+                } else {
+                    document.title = '⚪ ' + getSessionName();
+                    faviconEl.href = faviconBlank;
+                }
+            }, 600);
+        }
+
+        function stopTabAlert() {
+            if (tabAlertInterval) { clearInterval(tabAlertInterval); tabAlertInterval = null; }
+            faviconEl.href = faviconNormal;
+            document.title = defaultTitle;
+        }
+
+        function updateTabTitle(timeStr) {
+            if (tabAlertInterval) return; 
+            if (sessionActive && timeLeftMs > 0) {
+                document.title = `${timeStr} — ${executionQueue[currentIndex].name}`;
+            } else {
+                document.title = defaultTitle;
+            }
+        }
+
+        function toggleUnit(label, unit) {
+            const cb = label.querySelector('input');
+            cb.checked = !cb.checked;
+            showUnits[unit] = cb.checked;
+            label.classList.toggle('active', cb.checked);
+            updateUI();
+            if (!isPaused && sessionActive) runTimer();
+        }
+
+        function updateMainButtonText() {
+            if (!sessionActive) {
+                const canStart = getTotalRounds() > 0;
+                btnMain.textContent = canStart ? "Iniciar Sesión" : "Añade fases";
+                btnMain.disabled = !canStart;
+                return;
+            }
+
+            if (timeLeftMs <= 0) {
+                if (currentIndex < executionQueue.length - 1) {
+                    btnMain.textContent = `Siguiente: ${executionQueue[currentIndex + 1].name}`;
+                    btnMain.disabled = false;
+                } else {
+                    btnMain.textContent = "Sesión Completada";
+                    btnMain.disabled = true;
+                }
+            } else {
+                btnMain.textContent = isPaused ? "Continuar" : "Pausar";
+                btnMain.disabled = false;
+            }
+        }
+
+        function updateUI() {
+            const totalSec = Math.max(0, timeLeftMs) / 1000;
+            const h = Math.floor(totalSec / 3600);
+            const m = Math.floor((totalSec % 3600) / 60);
+            const s = Math.floor(totalSec % 60);
+            const ms = Math.floor((totalSec % 1) * 100);
+
+            const parts = [];
+            if (showUnits.h) parts.push(parts.length ? String(h).padStart(2, '0') : String(h));
+            if (showUnits.m) parts.push(parts.length ? String(m).padStart(2, '0') : String(m).padStart(2, '0'));
+            if (showUnits.s) parts.push(String(s).padStart(2, '0'));
+
+            let text = parts.join(':') || '00';
+            if (showUnits.ms) text += '.' + String(ms).padStart(2, '0');
+
+            if (!sessionActive && getTotalRounds() === 0) text = "00:00";
+            display.textContent = text;
+
+            updateTabTitle(text);
+            updateMainButtonText();
+
+            const pct = totalTimeAtStart > 0 ? (Math.max(0, timeLeftMs) / totalTimeAtStart) * 100 : 0;
+            progressBar.style.width = `${pct}%`;
+
+            if (!body.classList.contains('finished')) {
+                body.className = '';
+                if (sessionActive) {
+                    if (timeLeftMs <= 0 && totalTimeAtStart > 0) body.classList.add('pct-0');
+                    else if (pct <= 25) body.classList.add('pct-25');
+                    else if (pct <= 50) body.classList.add('pct-50');
+                    else if (pct <= 75) body.classList.add('pct-75');
+                }
+            }
+        }
+
+        // Inicialización
+        renderBuilder();
+        updateUI();
+    </script>
+</body>
+</html>
