@@ -203,9 +203,9 @@ Karla</textarea>
       if (parseInt(r) === excludeRound) continue;
       const data = roundsData[r];
       const allGroups = [...data.groups];
-      if (data.extras && data.extras.length > 0) allGroups.push(data.extras); // Tratamos extras como grupo para el cálculo si interactúan, o los ignoramos. Generalmente, 'extras' no acumulan fricción, pero aquí los sumaremos por completitud.
+      if (data.extras && data.extras.length > 0) allGroups.push(data.extras); 
       
-      for (let g of data.groups) { // Solo evaluamos grupos completos
+      for (let g of data.groups) { 
         for (let i = 0; i < g.length; i++) {
           for (let j = i + 1; j < g.length; j++) {
             const key = getPairKey(g[i], g[j]);
@@ -267,14 +267,12 @@ Karla</textarea>
     const size = parseInt(document.getElementById('groupSize').value) || 2;
     if (names.length < size) return alert("Faltan nombres para armar al menos un grupo.");
 
-    // Construir matriz basada en el historial actual
     encounters = rebuildEncounters();
-    
     const optimization = optimizeGroups(names, size, encounters);
     
     roundCount++;
     roundsData[roundCount] = { ...optimization.result };
-    encounters = rebuildEncounters(); // Reconstruir incluyendo la nueva ronda
+    encounters = rebuildEncounters();
 
     renderRoundCard(roundCount, optimization.result, optimization.cost, false);
   }
@@ -349,7 +347,6 @@ Karla</textarea>
     const card = document.createElement('div');
     card.className = `group ${isExtra ? 'extras' : ''}`;
     
-    // Controles de cabecera
     const header = document.createElement('div');
     header.className = 'group-name';
     header.innerHTML = `<span>${title}</span>`;
@@ -366,7 +363,6 @@ Karla</textarea>
       header.appendChild(lockBtn);
     }
     
-    // Contenedor editable
     const memContainer = document.createElement('div');
     memContainer.className = 'members-container';
     
@@ -375,12 +371,10 @@ Karla</textarea>
       el.className = 'member';
       el.contentEditable = true;
       el.textContent = n;
-      // UX: Limpiar saltos de línea al pegar
       el.addEventListener('keydown', e => { if(e.key === 'Enter') e.preventDefault(); }); 
       memContainer.appendChild(el);
     });
 
-    // Permitir añadir nuevos vacíos para escribir
     const addBtn = document.createElement('button');
     addBtn.textContent = '+ Añadir';
     addBtn.style.marginTop = '10px';
@@ -407,13 +401,12 @@ Karla</textarea>
     currentEditingRound = null;
   }
 
-  // ACCIÓN: Re-sortear solo los libres dentro del Lightbox (Borrador)
+  // ACCIÓN: Re-sortear
   function rerollLightbox() {
     const size = parseInt(document.getElementById('groupSize').value) || 2;
     let lockedGroups = [];
     let freePool = [];
 
-    // Parsear el estado actual del DOM en el Lightbox
     document.querySelectorAll('#lightboxGrid .group').forEach(groupEl => {
       const isLocked = groupEl.classList.contains('is-locked');
       const isExtra = groupEl.classList.contains('extras');
@@ -429,19 +422,12 @@ Karla</textarea>
       }
     });
 
-    // Base matemática excluyendo esta ronda para que el costo evalúe bien
     const baseEncounters = rebuildEncounters(currentEditingRound);
-    
-    // Optimizar solo los libres
     const optimization = optimizeGroups(freePool, size, baseEncounters);
-
-    // Unir fijos con los nuevos generados
     const newGroups = [...lockedGroups, ...optimization.result.groups];
     
-    // Renderizar borrador en el Lightbox
     renderLightboxGrid(newGroups, optimization.result.extras);
 
-    // Re-aplicar clases locked a los primeros 'N' grupos que venían fijados
     const currentCards = document.querySelectorAll('#lightboxGrid .group:not(.extras)');
     for(let i=0; i < lockedGroups.length; i++) {
       currentCards[i].classList.add('is-locked');
@@ -449,10 +435,11 @@ Karla</textarea>
     }
   }
 
-  // ACCIÓN: Guardar el borrador a la base maestra y actualizar UI
+  // ACCIÓN: Guardar
   function saveLightbox() {
     let newGroups = [];
     let newExtras = [];
+    let allNamesInRound = []; 
 
     document.querySelectorAll('#lightboxGrid .group').forEach(groupEl => {
       const isExtra = groupEl.classList.contains('extras');
@@ -462,6 +449,8 @@ Karla</textarea>
 
       if (members.length === 0) return;
 
+      allNamesInRound.push(...members); 
+
       if (isExtra) {
         newExtras.push(...members);
       } else {
@@ -469,17 +458,21 @@ Karla</textarea>
       }
     });
 
-    // Actualizar fuente de verdad
+    // Actualizar fuente de verdad del historial
     roundsData[currentEditingRound] = { groups: newGroups, extras: newExtras };
     
     // Sincronizar matriz
     encounters = rebuildEncounters();
     
-    // Calcular costo específico de esta ronda para la tarjeta visual
+    // Sincronización bidireccional con la lista maestra
+    const uniqueNames = [...new Set(allNamesInRound)].sort();
+    document.getElementById('namesInput').value = uniqueNames.join('\n');
+    updateMathStats();
+    
+    // Calcular costo y refrescar UI
     const cost = calculateCost(newGroups, rebuildEncounters(currentEditingRound));
-
-    // Refrescar historial
     renderRoundCard(currentEditingRound, roundsData[currentEditingRound], cost, true);
+    
     closeLightbox();
   }
 </script>
