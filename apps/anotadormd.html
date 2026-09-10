@@ -62,11 +62,14 @@
   button{
     font-family:var(--mono); font-size:11px; letter-spacing:.03em; cursor:pointer;
     border-radius:var(--r); padding:6px 10px; border:1px solid var(--line);
-    background:var(--paper); color:var(--ink); transition:border-color .12s, color .12s;
+    background:var(--paper); color:var(--ink); transition:border-color .12s, color .12s, opacity .12s;
   }
   button:hover:not(:disabled){border-color:var(--moss); color:var(--moss)}
   button:disabled{opacity:.4; cursor:default}
   #contador{color:var(--ink-dim); font-size:10px; font-variant-numeric:tabular-nums; flex:none; min-width:9ch; text-align:right}
+
+  /* ---- estado inactivo para botones conmutadores ---- */
+  .acciones button.inactivo{ opacity:.55; text-decoration:line-through; }
 
   /* ---- cuerpo: toc + lectura + panel ---- */
   main{display:flex; flex:1; min-height:0}
@@ -89,6 +92,11 @@
   .toc-it.n2{padding-left:18px}
   .toc-it.n3{padding-left:30px; font-size:10.5px}
   body.editando #toc{display:none !important}
+  
+  /* ---- reglas de ocultamiento de paneles lateral e índice ---- */
+  body.no-toc #toc { display:none !important; }
+  body.no-panel #panel { display:none !important; }
+
   #read{
     flex:1; min-width:0; overflow-y:auto; position:relative;
     overscroll-behavior:contain;
@@ -180,13 +188,11 @@
   #fab:hover{background:var(--warm); border-color:var(--warm); color:#f3efe3}
 
   /* ---- modo tablet: fab como barra inferior fija + objetivos táctiles ---- */
-  /* modo tablet: no usamos el flotante (el SO lo tapa); «anotar» va en el panel */
   body.tablet #fab{ display:none !important; }
   body.tablet .acciones button{ padding:9px 12px; min-height:44px; }
   body.tablet .add-in{ min-height:42px; font-size:13px }
   body.tablet .add-btn{ min-height:42px; padding:9px 13px }
   #tablet.activo{ border-color:var(--moss); color:var(--moss) }
-  /* botón «anotar» del panel: solo visible en modo tablet */
   #anotarBtn{
     display:none; margin:8px; width:calc(100% - 16px);
     padding:13px 12px; font-size:14px; font-weight:600; border-radius:2px;
@@ -217,7 +223,6 @@
   body.editando #anchoCtl{display:none !important}
 
   /* ---- modo edición ---- */
-  /* mientras se edita, el panel de anotaciones se retira y el editor toma el ancho */
   body.editando #panel{display:none}
   #editor{
     display:block; width:100%; max-width:120ch; margin:0 auto;
@@ -264,6 +269,8 @@
       <button id="subir" disabled>subir</button>
       <button id="export" disabled>exportar .json</button>
       <button id="exportMd" disabled>exportar .md</button>
+      <button id="toggleToc" title="Mostrar u ocultar la tabla de contenidos (índice)">índice</button>
+      <button id="togglePanel" title="Mostrar u ocultar el panel lateral de anotaciones">anotaciones</button>
       <button id="tablet" title="Modo táctil: botón anotar fijo abajo y objetivos grandes">tablet</button>
       <button id="tema" title="Cambiar tema">oscuro</button>
     </div>
@@ -386,8 +393,6 @@
   }
 
   // ===== tabla de contenidos =====
-  // Se arma con referencias directas a los h1–h3 renderizados: cero mutación del DOM
-  // del documento, así que los offsets y Range de las anotaciones no se ven afectados.
   function buildToc(){
     const nav = $('toc'), tl = $('tocList');
     tl.innerHTML = '';
@@ -448,7 +453,6 @@
   }
 
   // ===== re-anclaje (para importar .json) =====
-  // mapa inverso: offset en docText -> punto (nodo de texto, offset) del DOM
   function pointFromOffset(target){
     target = Math.max(0, Math.min(target, docText.length));
     const walker = document.createTreeWalker(docEl, NodeFilter.SHOW_TEXT, null);
@@ -469,7 +473,6 @@
   }
   function commonSuffixLen(a, b){ let i=0; while(i<a.length && i<b.length && a[a.length-1-i]===b[b.length-1-i]) i++; return i; }
   function commonPrefixLen(a, b){ let i=0; while(i<a.length && i<b.length && a[i]===b[i]) i++; return i; }
-  // localiza el pasaje por su cita; si aparece varias veces, desambigua por contexto
   function findByQuote(exact, prefix, suffix){
     const hits = []; let i = docText.indexOf(exact);
     while (i !== -1){ hits.push(i); i = docText.indexOf(exact, i + 1); }
@@ -484,26 +487,18 @@
     }
     return { start: best, end: best + exact.length };
   }
-  // resuelve el ancla de una anotación importada contra el documento actual
   function resolveAnchor(obj){
     const exact = obj.exact || '';
     const tp = obj.textoPlano || {};
-    // 1) posición directa si el texto en esa posición coincide
     if (exact && Number.isInteger(tp.start) && Number.isInteger(tp.end) && docText.slice(tp.start, tp.end) === exact)
       return makeRange(tp.start, tp.end);
-    // 2) por cita + contexto
     if (exact){ const h = findByQuote(exact, obj.prefix || '', obj.suffix || ''); if (h) return makeRange(h.start, h.end); }
-    // 3) posición cruda como último recurso (rango válido aunque el texto haya cambiado)
     if (Number.isInteger(tp.start) && Number.isInteger(tp.end) && tp.end > tp.start && tp.end <= docText.length)
       return makeRange(tp.start, tp.end);
     return null;
   }
 
   // ===== modo edición =====
-  // Re-ancla TODAS las anotaciones contra el documento recién renderizado.
-  // Exige verificación estricta (el texto en la posición debe coincidir con la cita):
-  // esto descarta el anclaje por posición cruda, que tras una edición apuntaría a texto equivocado.
-  // Efecto lateral bienvenido: huérfanas previas se recuperan si su pasaje reaparece.
   function reanclar(){
     let ok = 0, huerf = 0;
     for (const a of annos){
@@ -514,7 +509,6 @@
       const valido = anc && a.exact && docText.slice(anc.start, anc.end) === a.exact;
       if (valido){
         a.start = anc.start; a.end = anc.end; a.range = anc.range; a.huerfana = false;
-        // refrescar contexto sobre el documento nuevo: mantiene sano el anclaje de ediciones futuras
         a.prefix = docText.slice(Math.max(0, a.start - CTX), a.start);
         a.suffix = docText.slice(a.end, a.end + CTX);
         ok++;
@@ -538,10 +532,8 @@
     updateChrome();
   }
 
-  // Sustituye el documento preservando y re-anclando las anotaciones.
-  // Compartido por el modo edición y la recarga desde URL.
   function aplicarNuevoTexto(nuevo, nombre){
-    const snapshot = annos;          // render() resetea annos; las preservamos para re-anclar
+    const snapshot = annos;
     render(nuevo, nombre);
     annos = snapshot;
     const r = reanclar();
@@ -564,12 +556,43 @@
       editor.focus();
     } else {
       const nuevo = editor.value;
-      if (nuevo === rawMd){ setEdicion(false); return; } // sin cambios: ranges intactos, no se re-renderiza
+      if (nuevo === rawMd){ setEdicion(false); return; }
       aplicarEdicion(nuevo);
     }
   });
-  // Escape sale del editor (escritorio), aplicando cambios como el botón
   document.addEventListener('keydown', e=>{ if (e.key === 'Escape' && editando){ e.preventDefault(); $('editar').click(); } });
+
+  // ===== alternar visibilidad de paneles (toc y panel) =====
+  function aplicarToc(visible){
+    document.body.classList.toggle('no-toc', !visible);
+    $('toggleToc').classList.toggle('inactivo', !visible);
+  }
+  function aplicarPanel(visible){
+    document.body.classList.toggle('no-panel', !visible);
+    $('togglePanel').classList.toggle('inactivo', !visible);
+  }
+
+  $('toggleToc').addEventListener('click', ()=>{
+    const visible = document.body.classList.contains('no-toc');
+    aplicarToc(visible);
+    try { localStorage.setItem('forja-anotador-toc', visible ? '1' : '0'); } catch(e){}
+  });
+
+  $('togglePanel').addEventListener('click', ()=>{
+    const visible = document.body.classList.contains('no-panel');
+    aplicarPanel(visible);
+    try { localStorage.setItem('forja-anotador-panel', visible ? '1' : '0'); } catch(e){}
+  });
+
+  (function(){
+    let pt = null, pp = null;
+    try {
+      pt = localStorage.getItem('forja-anotador-toc');
+      pp = localStorage.getItem('forja-anotador-panel');
+    } catch(e){}
+    aplicarToc(pt !== '0');
+    aplicarPanel(pp !== '0');
+  })();
 
   // ===== importar .json =====
   function importJSON(text, fname){
@@ -588,7 +611,6 @@
       if (annos.some(a => a.id === id)){ dup++; continue; }
       const anc = resolveAnchor(obj);
       const tp = obj.textoPlano || {};
-      // retrocompatibilidad: acepta lista de comentarios nueva o el campo "nota" antiguo
       let coments = [];
       if (Array.isArray(it.comentarios))
         coments = it.comentarios.filter(c => c && typeof c.texto === 'string' && c.texto.trim())
@@ -620,7 +642,7 @@
     fr.readAsText(file);
   }
 
-  // ===== resaltado (CSS Custom Highlight API — no muta el DOM) =====
+  // ===== resaltado =====
   const canHL = ('highlights' in CSS) && (typeof Highlight === 'function');
   function refreshHighlights(){
     if (!canHL) return;
@@ -641,7 +663,7 @@
       comentarios: [], creado: new Date().toISOString()
     }, pending);
     annos.push(a);
-    annos.sort(cmpAnnos);                    // orden de lectura
+    annos.sort(cmpAnnos);
     activeId = a.id; pending = null;
     hideFab();
     const sel = window.getSelection(); if (sel) sel.removeAllRanges();
@@ -679,7 +701,6 @@
     catch(e){ return d.toISOString().slice(0,16).replace('T',' '); }
   }
 
-  // un comentario ya existente (texto + fecha + borrar). Borra por referencia, no por índice.
   function commentNode(a, c){
     const row = document.createElement('div');
     row.className = 'coment';
@@ -715,12 +736,10 @@
       q.title = 'Ir al pasaje';
       q.addEventListener('click', ()=> gotoAnno(a.id));
 
-      // comentarios acumulados
       const coments = document.createElement('div');
       coments.className = 'coments';
       for (const c of a.comentarios) coments.appendChild(commentNode(a, c));
 
-      // campo para añadir uno nuevo (Enter guarda · Shift+Enter salto · botón)
       const add = document.createElement('div');
       add.className = 'add';
       const ta = document.createElement('textarea');
@@ -738,8 +757,8 @@
         updateChrome();
       };
       ta.addEventListener('keydown', e=>{
-        if (e.isComposing || e.keyCode === 229) return;                      // no cortar composición del teclado (IME/predictivo)
-        if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); doAdd(); } // Enter = guardar · Shift+Enter = salto de línea
+        if (e.isComposing || e.keyCode === 229) return;
+        if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); doAdd(); }
       });
       const btn = document.createElement('button');
       btn.className = 'add-btn'; btn.textContent = 'añadir';
@@ -770,7 +789,7 @@
     const vacio = annos.length === 0;
     $('export').disabled = vacio || editando;
     $('subir').disabled = vacio || editando;
-    $('exportMd').disabled = !rawMd || editando;  // en edición se exporta tras aplicar, nunca la fuente vieja
+    $('exportMd').disabled = !rawMd || editando;
     $('editar').disabled = !rawMd;
     $('recargar').disabled = !docUrl || editando;
     $('contador').textContent = annos.length ? (annos.length + (annos.length === 1 ? ' anotación' : ' anotaciones')) : '';
@@ -778,9 +797,7 @@
     updateStats();
   }
 
-  // ===== ancho de lectura configurable (persistente) =====
-  // Cambiar max-width solo reflowea: los Range apuntan a posiciones del DOM, no a coordenadas,
-  // así que los resaltados y anclajes sobreviven intactos a cualquier ancho.
+  // ===== ancho de lectura configurable =====
   function aplicarAncho(v){
     v = Math.max(60, Math.min(160, +v || 68));
     docEl.style.maxWidth = v + 'ch';
@@ -797,9 +814,6 @@
     if (a != null) aplicarAncho(a);
   })();
 
-  // contador inferior: palabras, caracteres y páginas (500 palabras/página).
-  // En lectura cuenta el texto visible; en edición, la fuente markdown en vivo.
-  // separador de miles determinista (sin depender de los datos de locale del entorno)
   function miles(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
   function updateStats(){
     const el = $('stats');
@@ -818,7 +832,7 @@
   function showFab(range){
     fab.classList.add('on');
     if (document.body.classList.contains('tablet')){
-      fab.style.left = ''; fab.style.top = ''; // el CSS lo fija como barra inferior
+      fab.style.left = ''; fab.style.top = '';
       return;
     }
     const rects = range.getClientRects();
@@ -826,13 +840,12 @@
     const fw = fab.offsetWidth || 96, fh = fab.offsetHeight || 40;
     const left = Math.max(8, Math.min(r.right, window.innerWidth - fw - 8));
     let top = r.bottom + 8;
-    if (top + fh > window.innerHeight - 8) top = Math.max(8, r.top - fh - 8); // si no cabe abajo, va arriba
+    if (top + fh > window.innerHeight - 8) top = Math.max(8, r.top - fh - 8);
     fab.style.left = left + 'px';
     fab.style.top = top + 'px';
   }
   function hideFab(){ fab.classList.remove('on'); }
 
-  // detección de selección: selectionchange cubre ratón Y táctil (mouseup no llega al seleccionar en tablet)
   function tabletOn(){ return document.body.classList.contains('tablet'); }
   function setAnotar(on){ const b = $('anotarBtn'); b.disabled = !on; b.classList.toggle('lista', on); }
   function tryShowFab(){
@@ -840,25 +853,25 @@
     const cap = captureSelection();
     if (!cap){ hideFab(); setAnotar(false); pending = null; return; }
     pending = cap;
-    if (tabletOn()) setAnotar(true);   // tablet: habilita el botón fijo del panel (no peleamos con el SO)
-    else showFab(cap.range);           // escritorio: botón flotante junto a la selección
+    if (tabletOn()) setAnotar(true);
+    else showFab(cap.range);
   }
   let selTimer = null;
-  function tryShowFabDebounced(){ clearTimeout(selTimer); selTimer = setTimeout(tryShowFab, 250); } // espera a soltar los tiradores
+  function tryShowFabDebounced(){ clearTimeout(selTimer); selTimer = setTimeout(tryShowFab, 250); }
   document.addEventListener('selectionchange', tryShowFabDebounced);
-  read.addEventListener('mouseup', tryShowFab);            // ratón: inmediato
-  read.addEventListener('touchend', tryShowFabDebounced);  // refuerzo táctil
+  read.addEventListener('mouseup', tryShowFab);
+  read.addEventListener('touchend', tryShowFabDebounced);
   fab.addEventListener('click', addAnno);
   $('anotarBtn').addEventListener('click', ()=>{ if (pending){ addAnno(); setAnotar(false); } });
-  document.addEventListener('pointerdown', e=>{ if (!fab.contains(e.target)) hideFab(); }); // ocultar flotante: ratón y táctil
+  document.addEventListener('pointerdown', e=>{ if (!fab.contains(e.target)) hideFab(); });
   read.addEventListener('scroll', ()=>{ if (!tabletOn()) hideFab(); });
 
-  // ===== modo tablet (táctil) =====
+  // ===== modo tablet =====
   function aplicarTablet(on){
     document.body.classList.toggle('tablet', on);
     $('tablet').classList.toggle('activo', on);
     $('tablet').textContent = on ? 'tablet ✓' : 'tablet';
-    hideFab(); tryShowFab(); // reevalúa la selección actual con el control del modo elegido
+    hideFab(); tryShowFab();
   }
   $('tablet').addEventListener('click', ()=>{
     const on = !document.body.classList.contains('tablet');
@@ -869,21 +882,19 @@
     let pref = null;
     try { pref = localStorage.getItem('forja-anotador-tablet'); } catch(e){}
     const touch = !!(window.matchMedia && matchMedia('(pointer: coarse)').matches);
-    aplicarTablet(pref != null ? pref === '1' : touch); // preferencia guardada, o autodetección táctil
+    aplicarTablet(pref != null ? pref === '1' : touch);
   })();
 
   // ===== exportar =====
   function hash32(s){ let h = 5381; for (let i=0;i<s.length;i++) h = ((h<<5) + h + s.charCodeAt(i)) | 0; return (h>>>0).toString(16); }
 
-  // Modelo W3C Web Annotation (subconjunto): exact + prefix/suffix (TextQuoteSelector)
-  // y start/end sobre el texto plano (TextPositionSelector). fuenteMd es cortesía adicional.
   function buildPayload(){
     return {
       forjaAnotador: '1',
       generado: new Date().toISOString(),
       documento: {
         nombre: docName,
-        hashMd: hash32(rawMd),          // para que la plataforma confirme mismo documento
+        hashMd: hash32(rawMd),
         longitudMd: rawMd.length,
         longitudPlano: docText.length
       },
@@ -917,7 +928,7 @@
   function exportarMd(){
     if (!rawMd) return;
     const base = docName.replace(/\.(md|markdown|txt)$/i, '');
-    const m = base.match(/^(.*)_r(\d+)$/);          // si el nombre ya trae _rN, continuamos desde N
+    const m = base.match(/^(.*)_r(\d+)$/);
     const raiz = m ? m[1] : base;
     revs[raiz] = Math.max(revs[raiz] || 0, m ? +m[2] : 0) + 1;
     const blob = new Blob([rawMd], { type:'text/markdown' });
@@ -968,8 +979,6 @@
   }));
 
   // ---- carga desde URL ----
-  // github.com/.../blob/... -> raw.githubusercontent.com (CORS: Access-Control-Allow-Origin: *).
-  // Otras URLs se intentan tal cual: funcionan solo si el host permite CORS.
   function aRaw(u){
     const m = u.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)\/blob\/([^?#]+)/);
     return m ? 'https://raw.githubusercontent.com/' + m[1] + '/' + m[2] + '/' + m[3] : u;
@@ -1003,17 +1012,13 @@
     }
   }
 
-  // aviso transitorio junto al nombre del documento
   function avisoDoc(msg){
     $('docname').textContent = msg ? (docName + '  ·  ' + msg) : docName;
     if (msg) setTimeout(()=>{ if (docName) $('docname').textContent = docName; }, 3500);
   }
 
-  // recarga el documento desde su URL de origen; si cambió, re-ancla las anotaciones (no las descarta)
   async function recargar(){
     if (!docUrl || editando) return;
-    // raw.githubusercontent cachea ~5 min en CDN; el query param fuerza contenido fresco (verificado: lo ignora).
-    // En otros hosts no tocamos la URL (podría estar firmada) y confiamos en cache:'no-store'.
     const u = /^https:\/\/raw\.githubusercontent\.com\//.test(docUrl)
       ? docUrl + (docUrl.includes('?') ? '&' : '?') + '_forja=' + Date.now()
       : docUrl;
@@ -1023,7 +1028,7 @@
       if (!res.ok){ avisoDoc('recarga falló (' + res.status + ')'); return; }
       const texto = await res.text();
       if (texto === rawMd){ avisoDoc('sin cambios'); return; }
-      const origen = docUrl;                 // render() lo limpia; lo restauramos
+      const origen = docUrl;
       const r = aplicarNuevoTexto(texto, docName);
       docUrl = origen; updateChrome();
       avisoDoc('actualizado' + (r.huerf ? (' · ' + r.huerf + (r.huerf === 1 ? ' anotación quedó huérfana' : ' anotaciones quedaron huérfanas')) : ''));
@@ -1032,10 +1037,8 @@
     }
   }
   $('recargar').addEventListener('click', recargar);
-  // estado vacío
   $('cargarUrl').addEventListener('click', ()=> cargarDesdeUrl($('urlIn').value, m=> $('urlEstado').textContent = m));
   $('urlIn').addEventListener('keydown', e=>{ if (e.key === 'Enter'){ e.preventDefault(); $('cargarUrl').click(); } });
-  // modal (accesible también con documento abierto)
   $('btnUrl').addEventListener('click', ()=>{ $('urlEstado2').textContent = ''; $('modalUrl').classList.remove('hide'); $('urlIn2').focus(); });
   $('urlCerrar').addEventListener('click', ()=> $('modalUrl').classList.add('hide'));
   $('modalUrl').addEventListener('mousedown', e=>{ if (e.target === $('modalUrl')) $('modalUrl').classList.add('hide'); });
@@ -1061,18 +1064,17 @@
     }
   });
 
-  // convención FORJA: clic en el título recarga
   $('marca').addEventListener('click', ()=> location.reload());
 
   // ===== tema claro/oscuro =====
   function aplicarTema(oscuro){
     document.body.classList.toggle('oscuro', oscuro);
-    $('tema').textContent = oscuro ? 'claro' : 'oscuro';  // el botón nombra el tema al que pasarás
+    $('tema').textContent = oscuro ? 'claro' : 'oscuro';
   }
   $('tema').addEventListener('click', ()=>{
     const o = !document.body.classList.contains('oscuro');
     aplicarTema(o);
-    try { localStorage.setItem('forja-anotador-tema', o ? 'oscuro' : 'claro'); } catch(e){} // privado/bloqueado: sin persistencia, sin error
+    try { localStorage.setItem('forja-anotador-tema', o ? 'oscuro' : 'claro'); } catch(e){}
   });
   (function(){
     let pref = null;
@@ -1082,7 +1084,6 @@
   })();
 
   if (!canHL){
-    // aviso discreto si el navegador no soporta resaltado nativo (todo lo demás funciona)
     $('contador').title = 'Este navegador no resalta en pantalla, pero las anotaciones y el export funcionan.';
   }
 })();
