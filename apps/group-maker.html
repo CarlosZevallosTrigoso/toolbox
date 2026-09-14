@@ -380,13 +380,46 @@
     font-weight: 500;
     color: #666;
     cursor: pointer;
-    padding: 0.65rem 0.7rem;
+    padding: 0.65rem 0.4rem;
     transition: all 0.15s;
     text-align: center;
   }
   .mode-tab + .mode-tab { border-left: 1px solid #d8d8d8; }
   .mode-tab.active { color: white; background: #5a7a3a; }
   .mode-tab:hover:not(.active) { color: #1a1a1a; background: #efefef; }
+
+  /* Composición explícita */
+  #compInput {
+    background: #fafafa;
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+    color: #1a1a1a;
+    font-family: inherit;
+    font-size: 1rem;
+    padding: 0.6rem 0.75rem;
+    outline: none;
+    width: 100%;
+  }
+  #compInput:focus { border-color: #5a7a3a; background: white; }
+  .comp-preview {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: #888;
+    min-height: 1.2rem;
+  }
+  .comp-preview.ok { color: #5a7a3a; }
+  .comp-preview.bad { color: #b8761a; }
+  .comp-suggest {
+    background: none;
+    border: none;
+    border-bottom: 1px dashed #5a7a3a;
+    color: #5a7a3a;
+    font-family: inherit;
+    font-size: 0.8rem;
+    padding: 0;
+    cursor: pointer;
+  }
+  .comp-suggest:hover { border-bottom-style: solid; }
 
   input[type="number"] {
     background: #fafafa;
@@ -408,7 +441,7 @@
   .name-count {
     font-size: 0.9rem;
     color: #888;
-    margin-top: 0.3rem;
+    margin-top: -0.55rem; /* compensa el gap de .input-right: queda pegado al control */
   }
 
   /* Toggle */
@@ -731,13 +764,19 @@
     <div class="input-right">
       <div class="mode-tabs" id="modeTabs">
         <button class="mode-tab active" data-mode="size" onclick="setMode('size')">por integrantes</button>
-        <button class="mode-tab" data-mode="count" onclick="setMode('count')">por n° de grupos</button>
+        <button class="mode-tab" data-mode="count" onclick="setMode('count')">n° de grupos</button>
+        <button class="mode-tab" data-mode="exact" onclick="setMode('exact')">composición</button>
       </div>
-      <div class="control-group">
+      <div class="control-group" id="numberControl">
         <label id="sizeLabel">personas por grupo</label>
         <input type="number" id="groupSize" min="2" value="3">
-        <div class="name-count" id="nameCount">0 nombres</div>
       </div>
+      <div class="control-group" id="compControl" style="display:none">
+        <label>composición</label>
+        <input type="text" id="compInput" placeholder="3x4, 2x3" oninput="updateCompPreview()" autocomplete="off">
+        <div class="comp-preview" id="compPreview">ej. 3x4, 2x3 &nbsp;·&nbsp; o 4,4,4,3,3</div>
+      </div>
+      <div class="name-count" id="nameCount">0 nombres</div>
       <div class="toggle-row">
         <label class="toggle">
           <input type="checkbox" id="verboseToggle" checked>
@@ -791,7 +830,8 @@ let groupNames = [];
 let isRunning = false;
 let logEntries = [];
 let logMeta = {};
-let currentMode = 'size'; // 'size' = by members, 'count' = by number of groups
+let currentMode = 'size'; // 'size' = por integrantes, 'count' = por n° de grupos, 'exact' = composición declarada
+let explicitSizes = [];   // tamaños declarados en modo 'exact', p.ej. [4,4,4,3,3]
 let currentAlgo = 'fisher-yates';
 
 const algoInfo = {
@@ -897,6 +937,120 @@ function fisherYatesShuffleGeneric(arr, rngFn) {
   return { shuffled: a, steps };
 }
 
+// ============================================================
+// PLAN DE TAMAÑOS — única fuente de verdad sobre cuántos grupos
+// y de qué tamaño. Todos los algoritmos consumen este array.
+// ============================================================
+
+// Reparte n en k grupos lo más parejos posible, los grandes primero.
+// balancedSizes(18, 5) -> [4,4,4,3,3]
+function balancedSizes(n, k) {
+  k = Math.max(1, Math.min(k, n));
+  const base = Math.floor(n / k), rem = n % k;
+  const sizes = [];
+  for (let i = 0; i < k; i++) sizes.push(base + (i < rem ? 1 : 0));
+  return sizes;
+}
+
+function computePlan(n, value, mode) {
+  if (mode === 'exact') {
+    const sizes = explicitSizes.slice();
+    const total = sizes.reduce((a, b) => a + b, 0);
+    if (sizes.length && total === n) return sizes;
+    // composición inválida: red de seguridad, reparto balanceado
+    return balancedSizes(n, sizes.length || 2);
+  }
+  let k;
+  if (mode === 'count') {
+    k = value;
+  } else {
+    k = Math.ceil(n / Math.max(2, value)); // ningún grupo mayor que lo pedido
+  }
+  // límite superior: con más de floor(n/2) grupos aparecerían grupos de 1
+  k = Math.max(1, Math.min(k, Math.max(1, Math.floor(n / 2))));
+  return balancedSizes(n, k);
+}
+
+// Corta una lista ya mezclada según el plan de tamaños.
+function sliceByPlan(list, sizes) {
+  const groups = [];
+  const order = [];
+  let gi = 0, filled = 0;
+  for (let i = 0; i < list.length; i++) {
+    while (gi < sizes.length - 1 && filled >= sizes[gi]) { gi++; filled = 0; }
+    if (!groups[gi]) groups[gi] = [];
+    groups[gi].push(list[i]);
+    filled++;
+    order.push({ name: list[i], groupIdx: gi });
+  }
+  return { groups, order };
+}
+
+// Acepta «3x4, 2x3», «3 de 4 + 2 de 3», «4,4,4,3,3» o «4 4 4 3 3».
+// Devuelve un array de tamaños, o null si no se entiende.
+function parseComposition(raw) {
+  const txt = (raw || '').toLowerCase().replace(/[×✕]/g, 'x');
+  const chunks = txt.split(/[,;+\n]+/).map(c => c.trim()).filter(Boolean);
+  const sizes = [];
+  for (const chunk of chunks) {
+    const m = chunk.match(/^(\d+)\s*(?:x|\*|de)\s*(\d+)$/);
+    if (m) {
+      const count = parseInt(m[1], 10), size = parseInt(m[2], 10);
+      if (!count || !size) return null;
+      for (let i = 0; i < count; i++) sizes.push(size);
+      continue;
+    }
+    for (const tok of chunk.split(/\s+/)) {
+      if (!/^\d+$/.test(tok)) return null;
+      const v = parseInt(tok, 10);
+      if (!v) return null;
+      sizes.push(v);
+    }
+  }
+  return sizes.length ? sizes : null;
+}
+
+function applyComposition(str) {
+  document.getElementById('compInput').value = str;
+  updateCompPreview();
+}
+
+function updateCompPreview() {
+  const el = document.getElementById('compPreview');
+  if (!el) return;
+  const raw = document.getElementById('compInput').value;
+  const n = parseNames(document.getElementById('namesList').value).length;
+  const sizes = parseComposition(raw);
+  explicitSizes = sizes || [];
+
+  if (!sizes) {
+    el.className = 'comp-preview' + (raw.trim() ? ' bad' : '');
+    el.innerHTML = raw.trim() ? 'no entiendo esa composición' : 'ej. 3x4, 2x3 &nbsp;·&nbsp; o 4,4,4,3,3';
+    return;
+  }
+
+  const total = sizes.reduce((a, b) => a + b, 0);
+
+  // un número suelto se lee como «quiero tantos grupos» y se ofrece el reparto parejo
+  if (sizes.length === 1 && n >= 2 && sizes[0] !== n && sizes[0] >= 2) {
+    const sug = balancedSizes(n, sizes[0]);
+    el.className = 'comp-preview';
+    el.innerHTML = '¿' + sizes[0] + ' grupos de ' + n + '? → <button type="button" class="comp-suggest" ' +
+      'onclick="applyComposition(\'' + sug.join(',') + '\')">' + sug.join(' + ') + '</button>';
+    return;
+  }
+
+  const label = sizes.length + (sizes.length === 1 ? ' grupo · ' : ' grupos · ') + sizes.join(' + ') + ' = ' + total;
+  if (total === n) {
+    el.className = 'comp-preview ok';
+    el.textContent = label + ' ✓';
+  } else {
+    el.className = 'comp-preview bad';
+    const diff = total > n ? 'sobran ' + (total - n) : 'faltan ' + (n - total);
+    el.textContent = label + ' · hay ' + n + ' nombres (' + diff + ')';
+  }
+}
+
 function parseNames(raw) {
   return raw.split(/\n/).map(n => n.trim()).filter(Boolean);
 }
@@ -905,6 +1059,7 @@ function updateCount() {
   const names = parseNames(document.getElementById('namesList').value);
   document.getElementById('nameCount').textContent =
     names.length + (names.length === 1 ? ' nombre' : ' nombres');
+  if (currentMode === 'exact') updateCompPreview();
 }
 
 function setMode(mode) {
@@ -912,6 +1067,19 @@ function setMode(mode) {
   document.querySelectorAll('.mode-tab').forEach(t => {
     t.classList.toggle('active', t.dataset.mode === mode);
   });
+  const numberControl = document.getElementById('numberControl');
+  const compControl = document.getElementById('compControl');
+
+  if (mode === 'exact') {
+    numberControl.style.display = 'none';
+    compControl.style.display = 'flex';
+    updateCompPreview();
+    document.getElementById('compInput').focus();
+    return;
+  }
+
+  numberControl.style.display = 'flex';
+  compControl.style.display = 'none';
   const label = document.getElementById('sizeLabel');
   const input = document.getElementById('groupSize');
   if (mode === 'size') {
@@ -943,14 +1111,8 @@ function sortRandomKeyShuffle(arr) {
 
 // --- Algorithm: Random bucket ---
 function randomBucketAssign(names, value, mode) {
-  let numGroups, groupCap;
-  if (mode === 'count') {
-    numGroups = Math.max(2, Math.min(value, names.length));
-    groupCap = Math.ceil(names.length / numGroups);
-  } else {
-    groupCap = value;
-    numGroups = Math.ceil(names.length / groupCap);
-  }
+  const sizes = computePlan(names.length, value, mode);
+  const numGroups = sizes.length;
 
   const groups = Array.from({ length: numGroups }, () => []);
   const order = [];
@@ -963,7 +1125,7 @@ function randomBucketAssign(names, value, mode) {
     // find groups with available space
     let available = [];
     for (let g = 0; g < numGroups; g++) {
-      if (groups[g].length < groupCap) available.push(g);
+      if (groups[g].length < sizes[g]) available.push(g);
     }
     if (available.length === 0) available = [numGroups - 1]; // fallback
 
@@ -972,8 +1134,8 @@ function randomBucketAssign(names, value, mode) {
     order.push({ name, groupIdx: g, picked: true });
   }
 
-  // merge lone group
-  if (groups.length > 1 && groups[groups.length - 1].length === 1) {
+  // merge lone group (no aplica si la composición fue declarada)
+  if (mode !== 'exact' && groups.length > 1 && groups[groups.length - 1].length === 1) {
     const loner = groups.pop()[0];
     groups[groups.length - 1].push(loner);
     const entry = order.find(o => o.name === loner);
@@ -985,12 +1147,8 @@ function randomBucketAssign(names, value, mode) {
 
 // --- Algorithm: Round-robin random pick ---
 function roundRobinAssign(names, value, mode) {
-  let numGroups;
-  if (mode === 'count') {
-    numGroups = Math.max(2, Math.min(value, names.length));
-  } else {
-    numGroups = Math.ceil(names.length / value);
-  }
+  const sizes = computePlan(names.length, value, mode);
+  const numGroups = sizes.length;
 
   const groups = Array.from({ length: numGroups }, () => []);
   const order = [];
@@ -1000,6 +1158,9 @@ function roundRobinAssign(names, value, mode) {
   while (pool.length > 0) {
     const idx = Math.floor(Math.random() * pool.length);
     const name = pool.splice(idx, 1)[0];
+    // los tamaños pueden ser desiguales: saltar los grupos ya completos
+    let guard = 0;
+    while (groups[g].length >= sizes[g] && guard++ < numGroups) g = (g + 1) % numGroups;
     groups[g].push(name);
     order.push({ name, groupIdx: g });
     g = (g + 1) % numGroups;
@@ -1073,41 +1234,15 @@ function rule30Assign(names, value, mode) {
   shuffled.push(pool[0]);
 
   // Now make groups from shuffled
-  let numGroups, size;
-  if (mode === 'count') {
-    numGroups = Math.max(2, Math.min(value, shuffled.length));
-    size = Math.ceil(shuffled.length / numGroups);
-  } else {
-    size = value;
-    numGroups = Math.ceil(shuffled.length / size);
-  }
-
-  const groups = [];
-  const order = [];
-  for (let i = 0; i < shuffled.length; i++) {
-    const g = Math.floor(i / size);
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(shuffled[i]);
-    order.push({ name: shuffled[i], groupIdx: g });
-  }
-  if (groups.length > 1 && groups[groups.length - 1].length === 1) {
-    const loner = groups.pop()[0];
-    groups[groups.length - 1].push(loner);
-    const entry = order.find(o => o.name === loner);
-    if (entry) { entry.groupIdx = groups.length - 1; entry.merged = true; }
-  }
+  const { groups, order } = sliceByPlan(shuffled, computePlan(shuffled.length, value, mode));
 
   return { groups, order, generations, width, centerBits: centerBits.slice(0, bitIdx) };
 }
 
 // --- Algorithm: Particle Clustering ---
 function particleClusterAssign(names, value, mode) {
-  let numGroups;
-  if (mode === 'count') {
-    numGroups = Math.max(2, Math.min(value, names.length));
-  } else {
-    numGroups = Math.ceil(names.length / value);
-  }
+  const sizes = computePlan(names.length, value, mode);
+  const numGroups = sizes.length;
 
   const W = 600, H = 280;
   // Init particles
@@ -1200,12 +1335,6 @@ function particleClusterAssign(names, value, mode) {
   }
 
   // Balanced assignment: respect group size while preferring proximity
-  let groupSize;
-  if (mode === 'count') {
-    groupSize = Math.ceil(names.length / numGroups);
-  } else {
-    groupSize = value;
-  }
 
   // Build all (particle, centroid, distance) pairs, sort by distance
   const pairs = [];
@@ -1224,7 +1353,7 @@ function particleClusterAssign(names, value, mode) {
 
   for (const pair of pairs) {
     if (balanced[pair.i] !== -1) continue;
-    if (groupCounts[pair.k] >= groupSize) continue;
+    if (groupCounts[pair.k] >= sizes[pair.k]) continue;
     balanced[pair.i] = pair.k;
     groupCounts[pair.k]++;
   }
@@ -1232,7 +1361,7 @@ function particleClusterAssign(names, value, mode) {
   for (let i = 0; i < balanced.length; i++) {
     if (balanced[i] === -1) {
       for (let k = 0; k < numGroups; k++) {
-        if (groupCounts[k] < groupSize) {
+        if (groupCounts[k] < sizes[k]) {
           balanced[i] = k;
           groupCounts[k]++;
           break;
@@ -1262,7 +1391,7 @@ function particleClusterAssign(names, value, mode) {
       return { ...o, groupIdx: newIdx };
     });
     // Merge lone last group
-    if (finalGroups.length > 1 && finalGroups[finalGroups.length - 1].length === 1) {
+    if (mode !== 'exact' && finalGroups.length > 1 && finalGroups[finalGroups.length - 1].length === 1) {
       const loner = finalGroups.pop()[0];
       finalGroups[finalGroups.length - 1].push(loner);
       const entry = reindex.find(o => o.name === loner);
@@ -1271,7 +1400,7 @@ function particleClusterAssign(names, value, mode) {
     return { groups: finalGroups, order: reindex, particles, snapshots, centroids, W, H };
   }
 
-  if (finalGroups.length > 1 && finalGroups[finalGroups.length - 1].length === 1) {
+  if (mode !== 'exact' && finalGroups.length > 1 && finalGroups[finalGroups.length - 1].length === 1) {
     const loner = finalGroups.pop()[0];
     finalGroups[finalGroups.length - 1].push(loner);
     const entry = order.find(o => o.name === loner);
@@ -1282,7 +1411,7 @@ function particleClusterAssign(names, value, mode) {
 }
 
 // --- Shared: balanced spatial assignment from positions + centroids ---
-function balancedSpatialAssign(agents, centroids, numGroups, groupSize) {
+function balancedSpatialAssign(agents, centroids, numGroups, sizes) {
   const pairs = [];
   for (let i = 0; i < agents.length; i++) {
     for (let k = 0; k < numGroups; k++) {
@@ -1297,14 +1426,14 @@ function balancedSpatialAssign(agents, centroids, numGroups, groupSize) {
 
   for (const p of pairs) {
     if (assigned[p.i] !== -1) continue;
-    if (counts[p.k] >= groupSize) continue;
+    if (counts[p.k] >= sizes[p.k]) continue;
     assigned[p.i] = p.k;
     counts[p.k]++;
   }
   for (let i = 0; i < assigned.length; i++) {
     if (assigned[i] === -1) {
       for (let k = 0; k < numGroups; k++) {
-        if (counts[k] < groupSize) { assigned[i] = k; counts[k]++; break; }
+        if (counts[k] < sizes[k]) { assigned[i] = k; counts[k]++; break; }
       }
       if (assigned[i] === -1) { assigned[i] = numGroups - 1; counts[numGroups - 1]++; }
     }
@@ -1318,7 +1447,7 @@ function balancedSpatialAssign(agents, centroids, numGroups, groupSize) {
   }
   // Remove empties + merge loners
   const final = groups.filter(g => g.length > 0);
-  if (final.length > 1 && final[final.length - 1].length === 1) {
+  if (currentMode !== 'exact' && final.length > 1 && final[final.length - 1].length === 1) {
     const loner = final.pop()[0];
     final[final.length - 1].push(loner);
     const e = order.find(o => o.name === loner);
@@ -1334,14 +1463,8 @@ function balancedSpatialAssign(agents, centroids, numGroups, groupSize) {
 
 // --- Algorithm: Gravity orbital ---
 function gravityAssign(names, value, mode) {
-  let numGroups, groupSize;
-  if (mode === 'count') {
-    numGroups = Math.max(2, Math.min(value, names.length));
-    groupSize = Math.ceil(names.length / numGroups);
-  } else {
-    groupSize = value;
-    numGroups = Math.ceil(names.length / groupSize);
-  }
+  const sizes = computePlan(names.length, value, mode);
+  const numGroups = sizes.length;
 
   const W = 600, H = 280;
   const palette = ['#7da252', '#72a0cc', '#d4a94e', '#cc7272', '#9a72cc', '#52a29a', '#cc9a52', '#7272cc'];
@@ -1384,7 +1507,7 @@ function gravityAssign(names, value, mode) {
 
       // Gravity from all open wells
       for (let k = 0; k < wells.length; k++) {
-        if (wells[k].captured >= groupSize) continue;
+        if (wells[k].captured >= sizes[k]) continue;
         const dx = wells[k].x - p.x, dy = wells[k].y - p.y;
         const dist = Math.max(10, Math.sqrt(dx * dx + dy * dy));
         const force = G / (dist * 0.1);
@@ -1409,7 +1532,7 @@ function gravityAssign(names, value, mode) {
 
       // Check capture
       for (let k = 0; k < wells.length; k++) {
-        if (wells[k].captured >= groupSize) continue;
+        if (wells[k].captured >= sizes[k]) continue;
         const dx = wells[k].x - p.x, dy = wells[k].y - p.y;
         if (Math.sqrt(dx * dx + dy * dy) < captureRadius) {
           p.captured = k;
@@ -1428,21 +1551,15 @@ function gravityAssign(names, value, mode) {
   // Force-assign any uncaptured via proximity
   const agents = particles.map(p => ({ name: p.name, x: p.x, y: p.y }));
   const centroidsForAssign = wells.map(w => ({ x: w.x, y: w.y }));
-  const { groups, order } = balancedSpatialAssign(agents, centroidsForAssign, numGroups, groupSize);
+  const { groups, order } = balancedSpatialAssign(agents, centroidsForAssign, numGroups, sizes);
 
   return { groups, order, particles, wells, snapshots, W, H, palette };
 }
 
 // --- Algorithm: Voronoi cristalización ---
 function voronoiAssign(names, value, mode) {
-  let numGroups, groupSize;
-  if (mode === 'count') {
-    numGroups = Math.max(2, Math.min(value, names.length));
-    groupSize = Math.ceil(names.length / numGroups);
-  } else {
-    groupSize = value;
-    numGroups = Math.ceil(names.length / groupSize);
-  }
+  const sizes = computePlan(names.length, value, mode);
+  const numGroups = sizes.length;
 
   const W = 600, H = 280;
   const palette = ['#7da252', '#72a0cc', '#d4a94e', '#cc7272', '#9a72cc', '#52a29a', '#cc9a52', '#7272cc'];
@@ -1515,21 +1632,15 @@ function voronoiAssign(names, value, mode) {
   // Balanced assignment
   const agents = points.map(p => ({ name: p.name, x: p.x, y: p.y }));
   const centroidsForAssign = seeds.map(s => ({ x: s.x, y: s.y }));
-  const { groups, order } = balancedSpatialAssign(agents, centroidsForAssign, numGroups, groupSize);
+  const { groups, order } = balancedSpatialAssign(agents, centroidsForAssign, numGroups, sizes);
 
   return { groups, order, points, seeds, growthFrames, gw, gh, gridScale, W, H, palette };
 }
 
 // --- Algorithm: Flocking (Boids) ---
 function boidsAssign(names, value, mode) {
-  let numGroups, groupSize;
-  if (mode === 'count') {
-    numGroups = Math.max(2, Math.min(value, names.length));
-    groupSize = Math.ceil(names.length / numGroups);
-  } else {
-    groupSize = value;
-    numGroups = Math.ceil(names.length / groupSize);
-  }
+  const sizes = computePlan(names.length, value, mode);
+  const numGroups = sizes.length;
 
   const W = 600, H = 280;
   const palette = ['#7da252', '#72a0cc', '#d4a94e', '#cc7272', '#9a72cc', '#52a29a', '#cc9a52', '#7272cc'];
@@ -1634,34 +1745,12 @@ function boidsAssign(names, value, mode) {
     }
   }
 
-  const { groups, order } = balancedSpatialAssign(agents, centroids, numGroups, groupSize);
+  const { groups, order } = balancedSpatialAssign(agents, centroids, numGroups, sizes);
   return { groups, order, boids, snapshots, centroids, W, H, palette };
 }
 
 function makeGroupsFromShuffled(shuffled, value, mode) {
-  let size;
-  if (mode === 'count') {
-    const numGroups = Math.max(2, Math.min(value, shuffled.length));
-    size = Math.ceil(shuffled.length / numGroups);
-  } else {
-    size = value;
-  }
-
-  const groups = [];
-  const order = [];
-  for (let i = 0; i < shuffled.length; i++) {
-    const g = Math.floor(i / size);
-    if (!groups[g]) groups[g] = [];
-    groups[g].push(shuffled[i]);
-    order.push({ name: shuffled[i], groupIdx: g });
-  }
-  if (groups.length > 1 && groups[groups.length - 1].length === 1) {
-    const loner = groups.pop()[0];
-    groups[groups.length - 1].push(loner);
-    order[order.length - 1].groupIdx = groups.length - 1;
-    order[order.length - 1].merged = true;
-  }
-  return { groups, order };
+  return sliceByPlan(shuffled, computePlan(shuffled.length, value, mode));
 }
 
 function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -1727,6 +1816,15 @@ async function generate() {
   const value = parseInt(document.getElementById('groupSize').value) || 3;
   if (names.length < 2) return;
 
+  if (currentMode === 'exact') {
+    const sizes = parseComposition(document.getElementById('compInput').value);
+    if (!sizes || sizes.reduce((a, b) => a + b, 0) !== names.length) {
+      updateCompPreview();          // muestra qué falta o sobra
+      return;                       // no se genera con una composición que no cuadra
+    }
+    explicitSizes = sizes;
+  }
+
   currentNames = names;
   const verbose = document.getElementById('verboseToggle').checked;
 
@@ -1791,8 +1889,10 @@ async function runAnimated(names, value) {
     timestamp: new Date().toISOString(),
     algorithm: info.name,
     prng: info.prng,
-    mode: currentMode === 'count' ? 'por número de grupos' : 'por número de integrantes',
-    modeValue: value,
+    mode: currentMode === 'exact' ? 'composición declarada'
+        : currentMode === 'count' ? 'por número de grupos'
+        : 'por número de integrantes',
+    modeValue: currentMode === 'exact' ? explicitSizes.join(' + ') : value,
     inputNames: [...names],
     swaps: [],
     shuffledOrder: [],
@@ -2527,6 +2627,9 @@ function clearAll() {
   currentNames = [];
   currentGroups = [];
   groupNames = [];
+  explicitSizes = [];
+  const compInput = document.getElementById('compInput');
+  if (compInput) { compInput.value = ''; updateCompPreview(); }
   logEntries = [];
   logMeta = {};
   updateCount();
@@ -2570,7 +2673,9 @@ function downloadLog() {
   lines.push(`Algoritmo:           ${logMeta.algorithm}`);
   lines.push(`Fuente PRNG:         ${logMeta.prng}`);
   lines.push(`Modo de agrupación:  ${logMeta.mode}`);
-  if (logMeta.mode.includes('integrantes')) {
+  if (logMeta.mode.includes('composición')) {
+    lines.push(`Composición pedida:  ${logMeta.modeValue}`);
+  } else if (logMeta.mode.includes('integrantes')) {
     lines.push(`Integrantes/grupo:   ${logMeta.modeValue}`);
   } else {
     lines.push(`Nro. grupos:         ${logMeta.modeValue}`);
