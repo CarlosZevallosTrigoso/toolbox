@@ -211,16 +211,30 @@
     font-variant-numeric:tabular-nums; letter-spacing:.02em; user-select:none;
   }
 
-  /* ---- control de ancho de lectura (esquina inferior izquierda) ---- */
-  #anchoCtl{
+  /* ---- controles visuales (esquina inferior izquierda) ---- */
+  #controlesVis{
     position:fixed; left:12px; bottom:12px; z-index:40; display:none;
-    align-items:center; gap:8px;
-    background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
-    color:var(--ink-dim); font-size:10px; padding:3px 8px; user-select:none;
   }
-  #anchoCtl input{width:130px; accent-color:var(--moss); margin:0}
-  #anchoCtl .val{color:var(--moss); font-variant-numeric:tabular-nums; min-width:3ch; text-align:right}
-  body.editando #anchoCtl{display:none !important}
+  body.editando #controlesVis{display:none !important}
+  
+  #btnAjustes{
+    box-shadow:0 2px 6px #0001;
+  }
+  
+  #ajustesPanel{
+    position:absolute; bottom:calc(100% + 8px); left:0;
+    background:var(--panel); border:1px solid var(--line); border-radius:var(--r);
+    padding:10px 12px; box-shadow:0 4px 12px #0002;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  #ajustesPanel.hide{display:none}
+  
+  .ajuste-row{
+    display:flex; align-items:center; gap:8px;
+    color:var(--ink-dim); font-size:10px; user-select:none;
+  }
+  .ajuste-row input{width:130px; accent-color:var(--moss); margin:0}
+  .ajuste-row .val{color:var(--moss); font-variant-numeric:tabular-nums; min-width:4ch; text-align:right}
 
   /* ---- modo edición ---- */
   body.editando #panel{display:none}
@@ -309,11 +323,24 @@
 
   <button id="fab" title="Crear anotación">＋ anotar</button>
   <div id="stats"></div>
-  <div id="anchoCtl">
-    <span>ancho</span>
-    <input type="range" id="ancho" min="60" max="160" step="2" value="68">
-    <span class="val" id="ancho-v">68</span>
+  
+  <!-- PANEL DE AJUSTES UNIFICADO -->
+  <div id="controlesVis">
+    <button id="btnAjustes" title="Ajustes de lectura">ajustes</button>
+    <div id="ajustesPanel" class="hide">
+      <div class="ajuste-row">
+        <span>ancho</span>
+        <input type="range" id="ancho" min="60" max="160" step="2" value="68">
+        <span class="val" id="ancho-v">68</span>
+      </div>
+      <div class="ajuste-row">
+        <span>negro</span>
+        <input type="range" id="tono" min="0" max="100" step="1" value="0">
+        <span class="val" id="tono-v">0%</span>
+      </div>
+    </div>
   </div>
+
   <input type="file" id="file" accept=".md,.markdown,text/markdown,text/plain" class="hide">
   <input type="file" id="fileJson" accept=".json,application/json" class="hide">
 
@@ -793,9 +820,23 @@
     $('editar').disabled = !rawMd;
     $('recargar').disabled = !docUrl || editando;
     $('contador').textContent = annos.length ? (annos.length + (annos.length === 1 ? ' anotación' : ' anotaciones')) : '';
-    $('anchoCtl').style.display = rawMd ? 'flex' : 'none';
+    
+    // Mostramos el contenedor de ajustes si hay documento cargado
+    $('controlesVis').style.display = rawMd ? 'block' : 'none';
+    
     updateStats();
   }
+
+  // ===== alternar menú de ajustes =====
+  $('btnAjustes').addEventListener('click', (e) => {
+    e.stopPropagation();
+    $('ajustesPanel').classList.toggle('hide');
+  });
+  document.addEventListener('click', (e) => {
+    if (!$('controlesVis').contains(e.target)) {
+      $('ajustesPanel').classList.add('hide');
+    }
+  });
 
   // ===== ancho de lectura configurable =====
   function aplicarAncho(v){
@@ -1065,6 +1106,53 @@
   });
 
   $('marca').addEventListener('click', ()=> location.reload());
+
+  // ===== control dinámico de porcentaje de negro =====
+  function aplicarTono(porcentaje){
+    porcentaje = Math.max(0, Math.min(100, +porcentaje || 0));
+    $('tono').value = porcentaje;
+    $('tono-v').textContent = porcentaje + '%';
+    
+    const root = document.documentElement;
+    
+    // Si estamos en 0% y no se ha forzado, limpiamos para volver al cálido original.
+    if (porcentaje === 0 && !localStorage.getItem('forja-anotador-tono-fijo')) {
+      root.style.removeProperty('--paper');
+      root.style.removeProperty('--panel');
+      root.style.removeProperty('--line');
+      root.style.removeProperty('--ink');
+      root.style.removeProperty('--ink-dim');
+      return;
+    }
+
+    // Cálculo: L = 100% es blanco puro, L = 0% es negro puro.
+    const L = 100 - porcentaje;
+    const textoClaro = L < 55; // Umbral de inversión
+    
+    root.style.setProperty('--paper', `hsl(0, 0%, ${L}%)`);
+    root.style.setProperty('--panel', `hsl(0, 0%, ${L > 50 ? L - 4 : L + 4}%)`);
+    root.style.setProperty('--line',  `hsl(0, 0%, ${L > 50 ? L - 12 : L + 12}%)`);
+
+    if (textoClaro) {
+      root.style.setProperty('--ink', '#ffffff');
+      root.style.setProperty('--ink-dim', '#a0a0a0');
+    } else {
+      root.style.setProperty('--ink', '#111111');
+      root.style.setProperty('--ink-dim', '#555555');
+    }
+  }
+
+  $('tono').addEventListener('input', ()=>{
+    localStorage.setItem('forja-anotador-tono-fijo', '1');
+    aplicarTono($('tono').value);
+    try { localStorage.setItem('forja-anotador-tono', $('tono').value); } catch(e){}
+  });
+
+  (function(){
+    let t = null;
+    try { t = localStorage.getItem('forja-anotador-tono'); } catch(e){}
+    if (t != null) aplicarTono(t);
+  })();
 
   // ===== tema claro/oscuro =====
   function aplicarTema(oscuro){
