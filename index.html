@@ -5,70 +5,253 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>toolbox</title>
 <style>
+  /* Reset y variables base */
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  
   body {
     font-family: 'Fira Code', 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
     background: #ffffff;
     color: #777;
     min-height: 100vh;
-    padding: 3rem 2.5rem;
+    padding: clamp(1.5rem, 5vw, 3rem) clamp(1.5rem, 5vw, 2.5rem);
     font-size: 0.85rem;
-    line-height: 1.8;
+    line-height: 1.6;
+    max-width: 1200px;
+    margin: 0 auto;
   }
+
+  /* Encabezado y buscador */
+  header {
+    margin-bottom: 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
   h1 {
     font-size: 0.85rem;
     font-weight: normal;
     color: #bbb;
-    margin-bottom: 1.5rem;
   }
-  ul { list-style: none; }
-  a { color: #2a2a2a; text-decoration: none; }
-  a:hover { color: #000; }
-  .desc { color: #aaa; }
+
+  #search-box {
+    width: 100%;
+    max-width: 350px;
+    padding: 0.5rem 0;
+    font-family: inherit;
+    font-size: 0.85rem;
+    color: #2a2a2a;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid #eaeaea;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+
+  #search-box:focus, #search-box:focus-visible {
+    border-bottom: 1px solid #2a2a2a;
+  }
+  
+  #search-box::placeholder {
+    color: #ccc;
+  }
+
+  /* Categorías y Grid */
+  .category {
+    margin-bottom: 3.5rem;
+  }
+
+  .category-title {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #5a7a3a;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #eaeaea;
+    font-weight: 600;
+  }
+
+  .tool-list { 
+    list-style: none; 
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+  
+  /* Tarjetas */
+  li {
+    transition: opacity 0.2s ease;
+  }
+
+  .card { 
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1.25rem;
+    border: 1px solid #eaeaea;
+    border-radius: 6px;
+    color: #777;
+    text-decoration: none; 
+    height: 100%;
+    transition: border-color 0.2s ease, transform 0.2s ease;
+    background: #fff;
+  }
+  
+  .card:hover, .card:focus-visible { 
+    border-color: #2a2a2a; 
+    transform: translateY(-2px);
+    outline: none;
+  }
+
+  .card .title { 
+    color: #2a2a2a; 
+    font-weight: bold;
+  }
+  
+  .card .desc { 
+    color: #999;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+
+  /* Utilidad para ocultar elementos mediante JS */
+  .hidden {
+    display: none !important;
+  }
 </style>
 </head>
 <body>
-<h1>toolbox/</h1>
-<ul>
-  <li>1. <a href="apps/timer.html">timer</a> <span class="desc">— temporizador visual con cuenta regresiva</span></li>
-  <li>2. <a href="apps/pdf-splitter.html">pdf-splitter</a> <span class="desc">— divide y extrae páginas de un pdf</span></li>
-  <li>3. <a href="apps/imageforge.html">imageforge</a> <span class="desc">— convierte y comprime imágenes</span></li>
-  <li>4. <a href="apps/ig-diff.html">ig-diff</a> <span class="desc">— compara listas de seguidores</span></li>
-  <li>5. <a href="apps/group-maker.html">group-maker</a> <span class="desc">— genera grupos de trabajo aleatorios</span></li>
-  <li>6. <a href="apps/qr-gen.html">qr-gen</a> <span class="desc">— genera códigos qr desde texto o url</span></li>
-  <li>7. <a href="apps/image-id.html">image-id</a> <span class="desc">— detección de objetos con ia en el navegador</span></li>
-  <li>8. <a href="apps/signforge.html">signforge</a> <span class="desc">— verificador de firmas digitales ed25519</span></li>
-  <li>9. <a href="apps/ziplock.html">ziplock</a> <span class="desc">— zip con contraseña aes-256, 100% local</span></li>
-  <li>10. <a href="https://n0t3.xyz/" target="_blank">n0t3.xyz</a> <span class="desc">— bloc de notas criptográfico ↗</span></li>
-  <li>11. <a href="apps/photocopy-filter.html">photocopy-filter</a> <span class="desc">— filtro de fotocopia con grano perlin y halftone</span></li>
-  <li>12. <a href="apps/canvas-builder.html">canvas-builder</a> <span class="desc">— editor visual freeform, exporta html estático y pdf</span></li>
-  <li>13. <a href="apps/rizo-lorem.html">rizo-lorem</a> <span class="desc">— generador de texto placeholder con markov y corpus propio</span></li>
-  <li>14. <a href="apps/crypta.html">crypta</a> <span class="desc">— cifrado simétrico con 8 algoritmos y modo verbose visual</span></li>
-  <li>15. <a href="apps/video-cutter.html">video-cutter</a> <span class="desc">— corta videos en el navegador con ffmpeg.wasm, sin servidor</span></li>
-  <li>16. <a href="apps/stegano.html">stegano</a> <span class="desc">— esteganografía lsb con cifrado aes-256 y embedding adaptativo</span></li>
-  <li>17. <a href="apps/pixel-msg.html">pixel-msg</a> <span class="desc">— cifra texto como grillas de píxeles cromáticos</span></li>
-  <li>18. <a href="apps/word-counter.html">word-counter</a> <span class="desc">— cuenta palabras en libros y documentos, con ocr para pdfs escaneados</span></li>
-  <li>19. <a href="apps/video-joiner.html">video-joiner</a> <span class="desc">— une varios videos en uno solo con ffmpeg.wasm, sin servidor</span></li>
-  <li>20. <a href="apps/bnpro-v2.html">bnpro</a> <span class="desc">— conversor b&n profesional con sistema de zonas, mezcla hsl, guided filter y grano espectral</span></li>
-  <li>21. <a href="apps/sequenciador-v3.html">sequenciador</a> <span class="desc">— secuenciador midi multi-modo con cuts y arrangement, exporta mp3/wav</span></li>
-  <li>22. <a href="apps/sesion.html">sesión</a> <span class="desc">— registro de sesiones de trabajo con tareas, pomodoro, gantt y export json/txt</span></li>
-  <li>23. <a href="apps/termica.html">termica</a> <span class="desc">— generador de imágenes para impresora térmica c17, textos largos en 384px continuo</span></li>
-  <li>24. <a href="apps/compositor.html">compositor</a> <span class="desc">— compositor de collages para impresora térmica c17, drag&drop con rotación y filtros</span></li>
-  <li>25. <a href="apps/textgen-ig.html">ig-text</a> <span class="desc">— generador tipográfico de imágenes para posts e historias de ig, con autoajuste, dithering y export jpg/png</span></li>
-  <li>26. <a href="apps/css-inject.html">css-inject</a> <span class="desc">— inyecta css en cualquier página vía bookmarklet, fuente y márgenes ajustables en vivo</span></li>
-  <li>27. <a href="apps/contacto.html">contacto</a> <span class="desc">— hoja de contactos a partir de video</span></li>
-  <li>28. <a href="apps/analisis.html">análisis</a> <span class="desc">— analiza los json exportados desde la app de sesión: resumen y tiempo por etiqueta</span></li>
-  <li>29. <a href="apps/anotadormd.html">anotador</a> <span class="desc">— anotador de markdown, selecciona texto y anota sobre el documento</span></li>
-  <li>30. <a href="apps/mdviz.html">mdviz</a> <span class="desc">— visualizador de markdown con temas tipográficos, imprime y exporta</span></li>
-  <li>31. <a href="apps/visor.html">visor</a> <span class="desc">— visualizador de corpus en masonry, exporta a jpg y pdf</span></li>
-  <li>32. <a href="apps/video-gif.html">video-gif</a> <span class="desc">— convierte video a gif en el navegador, con recorte, fps, dithering y sin servidor</span></li>
-  <li>33. <a href="apps/captura.html">captura</a> <span class="desc">— congela un momento y lo exporta a json: movimiento, gps, foto y audio, 100% local</span></li>
-  <li>34. <a href="apps/ojo.html">ojo</a> <span class="desc">— cámara de captura ciega: foto o video de 5s sin visor, con gps, guarda local y comparte al carrete</span></li>
-  <li>35. <a href="apps/tabl3.html">tabl3</a> <span class="desc">— hoja de cálculo en el navegador: grilla editable, importa/exporta csv, undo/redo y guardado local</span></li>
-  <li>36. <a href="apps/timer_multi.html">timer-multi</a> <span class="desc">— temporizador de múltiples rondas personalizables con esperas y alertas</span></li>
-  <li>37. <a href="apps/encadenados.html">encadenados</a> <span class="desc">— [añadir descripción]</span></li>
-  <li>38. <a href="apps/encadena2.html">encadena2</a> <span class="desc">— [añadir descripción]</span></li>
-  <li>39. <a href="apps/timer_multix.html">timer-multix</a> <span class="desc">— [añadir descripción]</span></li>
-</ul>
+
+<header>
+  <h1>toolbox/</h1>
+  <input type="search" id="search-box" placeholder="filtrar herramientas..." aria-label="Filtrar lista de herramientas" autocomplete="off">
+</header>
+
+<main>
+
+  <!-- Categoría 1 -->
+  <section class="category">
+    <h2 class="category-title">1. Productividad & Gestión del Tiempo</h2>
+    <ul class="tool-list">
+      <li><a href="apps/analisis.html" class="card"><span class="title">análisis</span> <span class="desc">Analiza JSONs exportados de la app de sesión. Calcula métricas de productividad, interrupciones y rachas. Renderiza distribuciones en gráficos de Gantt, sparklines y heatmaps dinámicos sin librerías externas.</span></a></li>
+      <li><a href="apps/encadena2.html" class="card"><span class="title">encadena2</span> <span class="desc">Variante avanzada de agrupamiento con optimización matemática de fricción. Mantiene un historial de encuentros en memoria y permite la edición manual en un lightbox, recalculando colisiones en vivo.</span></a></li>
+      <li><a href="apps/encadenados.html" class="card"><span class="title">encadenados</span> <span class="desc">Motor de agrupamiento secuencial preventivo. Utiliza un algoritmo iterativo de 5000 ciclos para mezclar grupos y evitar repeticiones basadas en el historial, operando de forma estrictamente automática.</span></a></li>
+      <li><a href="apps/group-maker.html" class="card"><span class="title">group-maker</span> <span class="desc">Generador visual de grupos con 10 algoritmos de asignación, desde Fisher-Yates hasta autómatas celulares y dinámicas físicas con clustering K-Means. Produce un registro exportable para auditar la aleatoriedad.</span></a></li>
+      <li><a href="apps/sesion.html" class="card"><span class="title">sesión</span> <span class="desc">Gestor integral del tiempo de trabajo. Mantiene el estado en localStorage y gestiona temporizadores paramétricos (Pomodoro/Ultradiano). Traza intervalos de tareas anidadas y exporta métricas a JSON/TXT.</span></a></li>
+      <li><a href="apps/tabl3.html" class="card"><span class="title">tabl3</span> <span class="desc">Hoja de cálculo en el navegador con edición fluida sobre atributos contenteditable. Implementa una arquitectura de historial puro mediante clonación de estados y parser propio de CSV (RFC 4180).</span></a></li>
+      <li><a href="apps/timer.html" class="card"><span class="title">timer</span> <span class="desc">Temporizador visual de precisión. Utiliza un bucle anclado a performance.now() vía requestAnimationFrame para eludir la latencia del navegador. Genera un favicon dinámico con &lt;canvas&gt; para alertas inactivas.</span></a></li>
+      <li><a href="apps/timer_multi.html" class="card"><span class="title">timer-multi</span> <span class="desc">Temporizador de múltiples rondas personalizables con ejecución secuencial. Mantiene una cola en memoria y avanza automáticamente de fase calculando el progreso visual relativo al bloque activo.</span></a></li>
+      <li><a href="apps/timer_multix.html" class="card"><span class="title">timer-multix</span> <span class="desc">Temporizador jerárquico que agrupa rondas en fases. Su constructor visual "aplana" el estado en un array lineal que es consumido asíncronamente por el motor de ejecución principal.</span></a></li>
+    </ul>
+  </section>
+
+  <!-- Categoría 2 -->
+  <section class="category">
+    <h2 class="category-title">2. Imagen, Video & Impresión</h2>
+    <ul class="tool-list">
+      <li><a href="apps/bnpro-v2.html" class="card"><span class="title">bnpro</span> <span class="desc">Conversor a blanco y negro de grado profesional. Implementa curvas spline para el Sistema de Zonas de Adams, mezcla de canales HSL, Guided Filter para contraste local y simulación de grano sobre ImageData.</span></a></li>
+      <li><a href="apps/compositor.html" class="card"><span class="title">compositor</span> <span class="desc">Editor visual de collages para impresión térmica. Incluye un motor de binarización propio y capacidad para segmentar lienzos verticales largos en múltiples archivos de imagen de salida.</span></a></li>
+      <li><a href="apps/contacto.html" class="card"><span class="title">contacto</span> <span class="desc">Generador de hojas de contacto a partir de video. Captura fotogramas mediante eventos asíncronos en un &lt;video&gt; oculto y lee los primeros bytes del archivo en un DataView para detectar códecs HEVC.</span></a></li>
+      <li><a href="apps/image-id.html" class="card"><span class="title">image-id</span> <span class="desc">Detector de objetos local en tiempo real. Ejecuta ONNX Runtime y Transformers.js descargando modelos ligeros (YOLOS-tiny) para procesar el feed de la webcam, pintando bounding boxes en un canvas.</span></a></li>
+      <li><a href="apps/imageforge.html" class="card"><span class="title">imageforge</span> <span class="desc">Conversor y compresor de imágenes por lotes. Detecta soporte de formatos modernos (AVIF, JXL) en el cliente e integra UTIF.js para decodificar archivos TIFF pesados sin pasar por un backend.</span></a></li>
+      <li><a href="apps/photocopy-filter.html" class="card"><span class="title">photocopy-filter</span> <span class="desc">Filtro visual que simula texturas de fotocopia o risografía. Aplica pre-desenfoque y umbrales sigmoideos, generando ruido híbrido con Math.random() y Perlin Noise para probabilidad espacial.</span></a></li>
+      <li><a href="apps/termica.html" class="card"><span class="title">termica</span> <span class="desc">Generador de layouts para impresoras térmicas de rollo continuo a 384px. Mide el texto dinámicamente para el quiebre de línea y aplica conversión a 1-bit mediante umbral estricto o dithering Floyd-Steinberg.</span></a></li>
+      <li><a href="apps/video-cutter.html" class="card"><span class="title">video-cutter</span> <span class="desc">Editor de video no destructivo en el navegador. Usa ffmpeg.wasm en modo single-thread para copiar streams a nivel de keyframes, o permite recodificación completa con filtros H.264/AAC.</span></a></li>
+      <li><a href="apps/video-gif.html" class="card"><span class="title">video-gif</span> <span class="desc">Codificador GIF 100% local. Intercepta eventos seeked en un reproductor de video para capturar fotogramas, aplicando una matriz de dithering de Bayer (4x4) antes de la cuantización de color con gifenc.</span></a></li>
+      <li><a href="apps/video-joiner.html" class="card"><span class="title">video-joiner</span> <span class="desc">Ensamblador multimedia que utiliza el sistema de archivos virtual de ffmpeg.wasm. Permite la concatenación directa sin pérdida o aplica gráficos de filtros complejos para normalizar resoluciones y framerates.</span></a></li>
+      <li><a href="apps/visor.html" class="card"><span class="title">visor</span> <span class="desc">Visualizador de corpus en disposición Masonry. Extrae directorios recursivamente, calcula dinámicamente la altura de columnas asimétricas y exporta a PDF inyectando jsPDF para paginar la grilla infinita.</span></a></li>
+    </ul>
+  </section>
+
+  <!-- Categoría 3 -->
+  <section class="category">
+    <h2 class="category-title">3. Texto, Documentos & Markdown</h2>
+    <ul class="tool-list">
+      <li><a href="apps/anotadormd.html" class="card"><span class="title">anotador</span> <span class="desc">Lector y anotador de Markdown basado en marked.js. Emplea la API nativa CSS.highlights para realizar selecciones visuales no destructivas y calcula offsets sobre el texto plano para exportar notas.</span></a></li>
+      <li><a href="apps/textgen-ig.html" class="card"><span class="title">ig-text</span> <span class="desc">Generador tipográfico para redes sociales. Implementa un algoritmo propio de text-wrap: balance mediante búsqueda binaria de anchos en Canvas y control táctil sobre coordenadas relativas normalizadas.</span></a></li>
+      <li><a href="apps/mdviz.html" class="card"><span class="title">mdviz</span> <span class="desc">Visualizador inmersivo de Markdown optimizado para impresión. Sanea el DOM con un TreeWalker para eliminar nodos peligrosos y ajusta el layout dinámicamente mediante variables CSS ajustables.</span></a></li>
+      <li><a href="apps/pdf-splitter.html" class="card"><span class="title">pdf-splitter</span> <span class="desc">Fragmentador de documentos PDF pesados. Utiliza pdf-lib.js para cargar el ArrayBuffer, parsear comandos de rangos del usuario y reconstruir asíncronamente nuevos blobs PDF en memoria.</span></a></li>
+      <li><a href="apps/pegarmd.html" class="card"><span class="title">pegarmd</span> <span class="desc">Ensamblador de archivos Markdown en lote. Intercepta la API Drag & Drop, ordena los objetos File alfabéticamente y concatena sus contenidos forzando la descarga local de un Blob unificado.</span></a></li>
+      <li><a href="apps/rizo-lorem.html" class="card"><span class="title">rizo-lorem</span> <span class="desc">Generador paramétrico de corpus textual. Tokeniza oraciones base e implementa cuatro motores de generación, incluyendo shuffle de arrays y cadenas de Markov con profundidad de orden variable.</span></a></li>
+      <li><a href="apps/word-counter.html" class="card"><span class="title">word-counter</span> <span class="desc">Contador heurístico avanzado. Extrae texto de DOCX (mammoth.js) y PDF (pdfjs-dist). Si detecta un escaneo por baja densidad, inyecta un Web Worker de tesseract.js para ejecutar OCR local.</span></a></li>
+    </ul>
+  </section>
+
+  <!-- Categoría 4 -->
+  <section class="category">
+    <h2 class="category-title">4. Criptografía & Esteganografía</h2>
+    <ul class="tool-list">
+      <li><a href="apps/crypta.html" class="card"><span class="title">crypta</span> <span class="desc">Suite de cifrado simétrico multiprotocolo. Integra Web Crypto API y tweetnacl.js con derivación PBKDF2. Empaqueta cabeceras binarias y cuenta con un visualizador hexadecimal de difusión de bytes.</span></a></li>
+      <li><a href="https://n0t3.xyz/" target="_blank" class="card"><span class="title">n0t3.xyz ↗</span> <span class="desc">Bloc de notas criptográfico de extremo a extremo. Cifra el texto directamente en el navegador antes de cualquier transmisión de datos.</span></a></li>
+      <li><a href="apps/pixel-msg.html" class="card"><span class="title">pixel-msg</span> <span class="desc">Encriptador visual esteganográfico. Deriva un keystream de la contraseña y cifra caracteres mapeándolos a píxeles RGB usando la distribución del ángulo áureo en espacios de color HSL.</span></a></li>
+      <li><a href="apps/signforge.html" class="card"><span class="title">signforge</span> <span class="desc">Suite criptográfica para firmas Ed25519. Embebe tweetnacl.js forzando una estricta Política de Seguridad de Contenido (connect-src 'none') para firmar y verificar integridad de archivos offline.</span></a></li>
+      <li><a href="apps/stegano.html" class="card"><span class="title">stegano</span> <span class="desc">Esteganografía LSB con cifrado AES-256-GCM. Su modo adaptativo calcula la varianza de textura para ocultar datos exclusivamente en áreas de alto ruido visual, evadiendo análisis estadísticos.</span></a></li>
+      <li><a href="apps/ziplock.html" class="card"><span class="title">ziplock</span> <span class="desc">Compresor ZIP cifrado localmente. Mapea recursivamente carpetas arrastradas mediante webkitGetAsEntry y ensambla el ZIP con cifrado AES-256 en modo STORE directamente en la memoria.</span></a></li>
+    </ul>
+  </section>
+
+  <!-- Categoría 5 -->
+  <section class="category">
+    <h2 class="category-title">5. Hardware & Sensores</h2>
+    <ul class="tool-list">
+      <li><a href="apps/captura.html" class="card"><span class="title">captura</span> <span class="desc">Agregador de telemetría de hardware. Captura geolocalización, aceleración espacial, audio y frames de video, persistiendo el estado del bloque JSON de manera transaccional en IndexedDB.</span></a></li>
+      <li><a href="apps/ojo.html" class="card"><span class="title">ojo</span> <span class="desc">Cámara "ciega" de captura rápida. Enmascara el feed de video, activa el WakeLock para evitar bloqueos de pantalla e inyecta telemetría GPS directa a la captura guardada en IndexedDB.</span></a></li>
+    </ul>
+  </section>
+
+  <!-- Categoría 6 -->
+  <section class="category">
+    <h2 class="category-title">6. Desarrollo & Utilidades Web</h2>
+    <ul class="tool-list">
+      <li><a href="apps/canvas-builder.html" class="card"><span class="title">canvas-builder</span> <span class="desc">Maquetador visual de posicionamiento absoluto. Permite la edición freeform de elementos del DOM y soporta la exportación a HTML estático auto-contenido o captura a PDF vía jsPDF.</span></a></li>
+      <li><a href="apps/chixi.html" class="card"><span class="title">ch'ixi</span> <span class="desc">Generador de ruido aleatorio determinista (mulberry32). Opera a la resolución nativa física del dispositivo, manipulando directamente arrays de píxeles para generar texturas de alto rendimiento.</span></a></li>
+      <li><a href="apps/css-inject.html" class="card"><span class="title">css-inject</span> <span class="desc">Bookmarklet inyector de estilos en vivo. Sobrescribe la paleta tipográfica del sitio anfitrión mediante directivas !important y mantiene persistencia de los ajustes del usuario en localStorage.</span></a></li>
+      <li><a href="apps/ig-diff.html" class="card"><span class="title">ig-diff</span> <span class="desc">Comparador asimétrico de listas. Utiliza la estructura nativa Set de JavaScript para operaciones de diferencia eficientes O(n), limpiando las entradas mediante regex para exportaciones limpias.</span></a></li>
+      <li><a href="apps/qr-gen.html" class="card"><span class="title">qr-gen</span> <span class="desc">Interfaz de control estático sobre qrcode.js. Ajusta la resolución del lienzo y el nivel de corrección de errores Reed-Solomon (L, M, Q, H), renderizando el código final para previsualización o PNG.</span></a></li>
+      <li><a href="apps/sequenciador-v3.html" class="card"><span class="title">sequenciador</span> <span class="desc">Secuenciador MIDI multi-modo. Utiliza Tone.js para la síntesis de instrumentos y patrones algorítmicos. Exporta el arreglo completo a WAV/MP3 renderizando buffers en un OfflineAudioContext.</span></a></li>
+    </ul>
+  </section>
+
+</main>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const searchBox = document.getElementById('search-box');
+    const categories = document.querySelectorAll('.category');
+    
+    if (!searchBox || categories.length === 0) return;
+
+    searchBox.addEventListener('input', (e) => {
+      const searchTerm = e.target.value.toLowerCase().trim();
+
+      requestAnimationFrame(() => {
+        categories.forEach(category => {
+          const listItems = category.querySelectorAll('li');
+          let hasVisibleItems = false;
+
+          listItems.forEach(item => {
+            // Evaluamos texto dentro del enlace (título y descripción)
+            const text = item.textContent.toLowerCase();
+            
+            if (text.includes(searchTerm)) {
+              item.classList.remove('hidden');
+              hasVisibleItems = true;
+            } else {
+              item.classList.add('hidden');
+            }
+          });
+
+          // Si la categoría no tiene elementos visibles, la ocultamos por completo
+          if (hasVisibleItems) {
+            category.classList.remove('hidden');
+          } else {
+            category.classList.add('hidden');
+          }
+        });
+      });
+    });
+  });
+</script>
 </body>
 </html>
