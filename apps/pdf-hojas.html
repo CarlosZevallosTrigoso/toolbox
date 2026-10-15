@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF + hojas — insertar imágenes como páginas de un PDF</title>
+<style>
+:root{
+  --bg:#ffffff; --ink:#111111; --mute:#6b6b63; --line:#dcdcd4; --soft:#f3f3ee;
+  --moss:#586a45; --moss2:#8fa676; --steel:#4f6b82; --orange:#b06a36; --err:#a02a1a;
+  --r:2px; --mono:"Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:12.5px/1.45 var(--mono)}
+body{display:grid;grid-template-rows:auto 1fr}
+header{display:flex;align-items:center;gap:14px;padding:10px 16px;border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:15px;letter-spacing:.12em;font-weight:600;user-select:none;cursor:pointer}
+header h1:hover{color:var(--moss)}
+header .sub{color:var(--mute)}
+header .spacer{flex:1}
+.layout{display:grid;grid-template-columns:320px 1fr;min-height:0}
+aside{border-right:1px solid var(--line);overflow-y:auto;padding:4px 14px 40px}
+main{position:relative;min-height:0;overflow:auto;padding:20px;background:var(--soft)}
+main.hot{outline:2px dashed var(--moss);outline-offset:-8px}
+section.grupo{border-bottom:1px solid var(--line);padding:12px 0 14px}
+section.grupo:last-child{border-bottom:0}
+section.grupo>h2{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 8px;font-weight:600;display:flex;justify-content:space-between;align-items:baseline}
+section.grupo>h2 small{letter-spacing:0;text-transform:none;font-weight:400}
+.fila{display:grid;grid-template-columns:118px 1fr 58px;align-items:center;gap:8px;margin:5px 0}
+.fila>label{color:#333}
+.fila output{text-align:right;color:var(--mute);font-variant-numeric:tabular-nums}
+.fila.ancha>:nth-child(2){grid-column:2 / 4}
+.fila[hidden]{display:none}
+input[type=range]{width:100%;accent-color:var(--moss);margin:0}
+select,input[type=number],button{font:inherit;border:1px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink);padding:4px 7px;min-width:0;width:100%}
+input[type=color]{width:100%;height:26px;border:1px solid var(--line);border-radius:var(--r);padding:0;background:none;cursor:pointer}
+button{cursor:pointer;width:auto}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+button.prim{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.prim:hover:not(:disabled){background:var(--moss);border-color:var(--moss)}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--steel);outline-offset:1px}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.btns.grow button{flex:1}
+.nota{color:var(--mute);font-size:11px;margin:8px 0 0}
+.doc{color:var(--mute);font-size:11px;word-break:break-all;margin:4px 0 0}
+/* tira de hojas */
+#tira{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;align-content:start;touch-action:none}
+.ficha{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:6px 6px 4px;cursor:grab;user-select:none;outline:2px solid transparent}
+.ficha:focus-visible,.ficha.sel{outline-color:var(--moss)}
+.ficha.img{border-color:var(--moss2)}
+.ficha.arrastrando{opacity:.35}
+.ficha .marco{height:150px;display:flex;align-items:center;justify-content:center;background:var(--soft)}
+.ficha .marco img,.ficha .marco canvas{max-width:100%;max-height:100%;display:block;box-shadow:0 1px 3px rgba(0,0,0,.2);pointer-events:none}
+.ficha .pie{display:flex;align-items:center;gap:4px;margin-top:5px;font-size:11px}
+.ficha .n{color:var(--ink);font-weight:600;min-width:2ch}
+.ficha .nom{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mute)}
+.ficha .pie button{padding:0 5px;line-height:1.5;border-color:transparent;background:transparent;font-size:12px}
+.ficha .pie button:hover{border-color:var(--line)}
+.ficha .tipo{position:absolute;top:8px;left:8px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;padding:1px 5px;background:var(--moss);color:#fff;border-radius:var(--r)}
+.hueco{border:2px dashed var(--moss);border-radius:var(--r);background:rgba(88,106,69,.07);min-height:120px}
+#vacio{color:var(--mute);text-align:center;max-width:40ch;margin:18vh auto 0}
+#vacio b{color:var(--ink)}
+#estado{position:sticky;bottom:0;left:0;margin-top:14px;display:inline-block;color:var(--mute);font-size:11px;background:rgba(243,243,238,.92);padding:2px 6px;border-radius:var(--r)}
+#estado.error{color:var(--err)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+@media (max-width:820px){
+  html,body{height:auto}
+  body{display:block}
+  header{flex-wrap:wrap}
+  .layout{display:flex;flex-direction:column}
+  main{order:-1;min-height:40vh;padding:12px}
+  aside{border-right:0;overflow:visible}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1 id="titulo" title="Recargar">PDF + HOJAS</h1>
+  <span class="sub">inserta imágenes como páginas nuevas, en el orden que quieras · todo en tu navegador</span>
+  <span class="spacer"></span>
+  <button id="btnExportTop" class="prim" disabled>Exportar PDF</button>
+</header>
+<div class="layout">
+<aside>
+  <section class="grupo">
+    <h2>Documento</h2>
+    <div class="btns grow"><button id="btnPdf">Abrir PDF…</button></div>
+    <p class="doc" id="docInfo">Abre un PDF, o empieza solo con imágenes para armar un PDF nuevo.</p>
+  </section>
+  <section class="grupo">
+    <h2>Imágenes</h2>
+    <div class="btns grow"><button id="btnImg">Añadir imágenes…</button></div>
+    <div class="fila" style="margin-top:8px"><label for="despues">Tras la hoja</label><input id="despues" type="number" min="0" value="0"><span></span></div>
+    <p class="nota">0 = al inicio. Por defecto van al final. Luego puedes arrastrar cada hoja a su sitio, o moverla con ← → al tenerla seleccionada. JPG y PNG se incrustan sin recodificar.</p>
+  </section>
+  <section class="grupo">
+    <h2>Hoja nueva <small>tamaño de las páginas de imagen</small></h2>
+    <div class="fila ancha"><label for="modo">Tamaño</label><select id="modo">
+      <option value="vecina">como la página vecina</option>
+      <option value="imagen">el de la imagen (ppp)</option>
+      <option value="a4">A4</option>
+      <option value="carta">Carta</option>
+    </select></div>
+    <div class="fila" id="f-ppp" hidden><label for="ppp">Resolución</label><input id="ppp" type="range" min="72" max="600" step="1" value="150"><output id="o-ppp">150 ppp</output></div>
+    <div class="fila" id="f-margen"><label for="margen">Margen</label><input id="margen" type="range" min="0" max="25" step="0.5" value="0"><output id="o-margen">0 %</output></div>
+    <div class="fila" id="f-fondo"><label for="fondo">Fondo</label><input id="fondo" type="color" value="#ffffff"><span></span></div>
+    <p class="nota" id="modoNota">La imagen se ajusta dentro de la hoja conservando su proporción, centrada. Si la hoja vecina está rotada, se toma su tamaño tal como se ve.</p>
+  </section>
+  <section class="grupo">
+    <h2>Exportar</h2>
+    <div class="btns grow"><button id="btnExport" class="prim" disabled>Exportar PDF</button></div>
+    <p class="nota">El original no se modifica; se descarga una copia con las hojas en el orden de la tira. Las páginas originales se copian intactas.</p>
+  </section>
+</aside>
+<main id="escenario">
+  <div id="vacio"><b>Suelta aquí un PDF o imágenes</b><br>Cada imagen se convierte en una hoja. Arrástralas en la tira para ordenarlas.</div>
+  <div id="tira"></div>
+  <div id="estado" role="status" aria-live="polite"></div>
+</main>
+</div>
+<input type="file" id="filePdf" accept="application/pdf,.pdf" class="sr" tabindex="-1">
+<input type="file" id="fileImg" accept="image/*" class="sr" tabindex="-1" multiple>
+
+<script type="module">
+import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs';
+import { PDFDocument, rgb } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs';
+
+/*CORE-START*/
+// Tamaño de la hoja nueva y rectángulo de la imagen dentro, en puntos.
+// img: {w, h} en píxeles. vecina: {w, h} de la página vecina tal como se ve, o null.
+// opts: {modo:'vecina'|'imagen'|'a4'|'carta', ppp, margen (fracción 0–0.25)}
+const TAMANOS = { a4: [595.28, 841.89], carta: [612, 792] };
+function hojaParaImagen(img, vecina, opts) {
+  let W, H;
+  if (opts.modo === 'imagen') { W = img.w * 72 / opts.ppp; H = img.h * 72 / opts.ppp; }
+  else {
+    let base = opts.modo === 'vecina' && vecina ? [vecina.w, vecina.h] : TAMANOS[opts.modo] || TAMANOS.a4;
+    // A4/Carta (o A4 por defecto sin vecina): se orientan como la imagen
+    if (!(opts.modo === 'vecina' && vecina) && (img.w > img.h) !== (base[0] > base[1])) base = [base[1], base[0]];
+    [W, H] = base;
+  }
+  const m = opts.modo === 'imagen' ? 0 : Math.min(W, H) * opts.margen;
+  const k = Math.min((W - 2 * m) / img.w, (H - 2 * m) / img.h);
+  const w = img.w * k, h = img.h * k;
+  return { W, H, x: (W - w) / 2, y: (H - h) / 2, w, h };
+}
+/*CORE-END*/
+
+const $ = s => document.querySelector(s);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// ---------- estado ----------
+let pdfBytes = null, pdfDoc = null, pdfNombre = '';
+// hojas: [{id, tipo:'pdf', indice, w, h, thumb} | {id, tipo:'img', nombre, fmt, bytes, url, w, h}]
+let hojas = [], sel = null, uid = 0;
+function estado(msg, error) { const e = $('#estado'); e.textContent = msg; e.classList.toggle('error', !!error); }
+function leerOpts() { return { modo: $('#modo').value, ppp: +$('#ppp').value, margen: +$('#margen').value / 100 }; }
+
+// ---------- PDF ----------
+async function abrirPdf(file) {
+  if (!file) return;
+  if (!(file.type === 'application/pdf' || /\.pdf$/i.test(file.name))) { estado('Eso no parece un PDF.', true); return; }
+  if (pdfDoc && !confirm('Ya hay un PDF abierto. ¿Reemplazarlo? Las imágenes añadidas se conservan.')) return;
+  estado('Leyendo PDF…');
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const doc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+    if (pdfDoc) pdfDoc.destroy();
+    pdfBytes = bytes; pdfDoc = doc; pdfNombre = file.name;
+    hojas = hojas.filter(h => h.tipo !== 'pdf');
+    const nuevas = [];
+    for (let i = 0; i < doc.numPages; i++) {
+      const page = await doc.getPage(i + 1);
+      const base = page.getViewport({ scale: 1 });
+      nuevas.push({ id: ++uid, tipo: 'pdf', indice: i, w: base.width, h: base.height, page });
+    }
+    hojas = nuevas.concat(hojas); // el PDF va primero; las imágenes previas, detrás
+    $('#docInfo').textContent = `${file.name} · ${doc.numPages} ${doc.numPages === 1 ? 'página' : 'páginas'} · ${(file.size / 1048576).toFixed(2)} MB`;
+    $('#despues').value = hojas.length;
+    construir(); await miniaturas();
+  } catch (e) {
+    estado(e && e.name === 'PasswordException' ? 'El PDF tiene contraseña: no se puede abrir aquí.' : 'No se pudo leer el PDF: ' + (e.message || e), true);
+  }
+}
+// miniaturas de páginas PDF, en serie, sin bloquear
+let miniToken = 0;
+async function miniaturas() {
+  const token = ++miniToken;
+  const pend = hojas.filter(h => h.tipo === 'pdf' && !h.thumb);
+  for (let k = 0; k < pend.length; k++) {
+    if (token !== miniToken) return;
+    const h = pend[k];
+    const vp = h.page.getViewport({ scale: Math.min(150 / h.w, 150 / h.h) * 2 });
+    const c = document.createElement('canvas'); c.width = Math.ceil(vp.width); c.height = Math.ceil(vp.height);
+    try { await h.page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; } catch (e) { /* miniatura en blanco */ }
+    h.thumb = c;
+    const marco = document.querySelector(`.ficha[data-id="${h.id}"] .marco`); if (marco) { marco.textContent = ''; marco.append(c); }
+    if (k % 5 === 4) estado(`miniaturas ${k + 1}/${pend.length}…`);
+  }
+  resumen();
+}
+
+// ---------- imágenes ----------
+async function cargarImagen(file) {
+  if (!file || !/^image\//.test(file.type)) throw new Error(`${file ? file.name : 'eso'} no es una imagen`);
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error('no se pudo abrir ' + file.name)); img.src = url; });
+  let fmt, bytes;
+  if (file.type === 'image/jpeg') { fmt = 'jpg'; bytes = new Uint8Array(await file.arrayBuffer()); }
+  else if (file.type === 'image/png') { fmt = 'png'; bytes = new Uint8Array(await file.arrayBuffer()); }
+  else {
+    const c = document.createElement('canvas'); c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0);
+    const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+    if (!blob) throw new Error('no se pudo convertir ' + file.name);
+    fmt = 'png'; bytes = new Uint8Array(await blob.arrayBuffer());
+  }
+  return { id: ++uid, tipo: 'img', nombre: file.name, fmt, bytes, url, w: img.naturalWidth, h: img.naturalHeight };
+}
+async function cargarImagenes(files) {
+  const nuevas = [];
+  for (const f of files) { try { nuevas.push(await cargarImagen(f)); } catch (e) { estado(e.message, true); } }
+  if (!nuevas.length) return;
+  let pos = Math.round(+$('#despues').value); if (!(pos >= 0)) pos = hojas.length; pos = Math.min(pos, hojas.length);
+  hojas.splice(pos, 0, ...nuevas);
+  sel = nuevas[nuevas.length - 1].id;
+  $('#despues').value = pos + nuevas.length;
+  construir();
+}
+function quitar(id) {
+  const i = hojas.findIndex(h => h.id === id); if (i < 0) return;
+  if (hojas[i].tipo === 'img') URL.revokeObjectURL(hojas[i].url);
+  hojas.splice(i, 1); if (sel === id) sel = null; construir();
+}
+function mover(id, delta) {
+  const i = hojas.findIndex(h => h.id === id), j = i + delta;
+  if (i < 0 || j < 0 || j >= hojas.length) return;
+  [hojas[i], hojas[j]] = [hojas[j], hojas[i]]; construir();
+  const el = document.querySelector(`.ficha[data-id="${id}"]`); if (el) el.focus();
+}
+
+// ---------- tira ----------
+function construir() {
+  const tira = $('#tira'); tira.textContent = '';
+  $('#vacio').style.display = hojas.length ? 'none' : '';
+  $('#btnExport').disabled = $('#btnExportTop').disabled = !hojas.length;
+  $('#despues').max = hojas.length;
+  hojas.forEach((h, i) => {
+    const el = document.createElement('div');
+    el.className = 'ficha ' + h.tipo + (h.id === sel ? ' sel' : ''); el.dataset.id = h.id; el.tabIndex = 0;
+    el.setAttribute('aria-label', `hoja ${i + 1}: ${h.tipo === 'pdf' ? 'página original ' + (h.indice + 1) : h.nombre}`);
+    const marco = document.createElement('div'); marco.className = 'marco';
+    if (h.tipo === 'img') { const im = document.createElement('img'); im.src = h.url; im.alt = ''; marco.append(im); }
+    else if (h.thumb) marco.append(h.thumb);
+    const pie = document.createElement('div'); pie.className = 'pie';
+    pie.innerHTML = `<span class="n">${i + 1}</span><span class="nom" title="${esc(h.tipo === 'pdf' ? 'página original ' + (h.indice + 1) : h.nombre)}">${h.tipo === 'pdf' ? 'orig. p. ' + (h.indice + 1) : esc(h.nombre)}</span><button type="button" data-q="1" aria-label="Quitar hoja ${i + 1}">✕</button>`;
+    el.append(marco, pie);
+    if (h.tipo === 'img') { const t = document.createElement('span'); t.className = 'tipo'; t.textContent = 'imagen'; el.append(t); }
+    tira.append(el);
+  });
+  resumen();
+}
+function resumen() {
+  const n = hojas.length, ni = hojas.filter(h => h.tipo === 'img').length;
+  if (!n) { estado(''); return; }
+  estado(`${n} ${n === 1 ? 'hoja' : 'hojas'} · ${n - ni} del PDF · ${ni} de imágenes`);
+}
+const tira = $('#tira');
+tira.addEventListener('click', e => {
+  const el = e.target.closest('.ficha'); if (!el) return;
+  if (e.target.dataset.q) { quitar(+el.dataset.id); return; }
+  sel = +el.dataset.id; tira.querySelectorAll('.ficha').forEach(f => f.classList.toggle('sel', +f.dataset.id === sel));
+});
+tira.addEventListener('keydown', e => {
+  const el = e.target.closest('.ficha'); if (!el) return;
+  const id = +el.dataset.id;
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { mover(id, -1); e.preventDefault(); }
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { mover(id, +1); e.preventDefault(); }
+  else if (e.key === 'Delete' || e.key === 'Backspace') { quitar(id); e.preventDefault(); }
+});
+// arrastre para reordenar (pointer events: ratón y táctil)
+let drag = null;
+tira.addEventListener('pointerdown', e => {
+  const el = e.target.closest('.ficha'); if (!el || e.target.dataset.q) return;
+  drag = { id: +el.dataset.id, el, movido: false, x: e.clientX, y: e.clientY };
+  tira.setPointerCapture(e.pointerId);
+});
+tira.addEventListener('pointermove', e => {
+  if (!drag) return;
+  if (!drag.movido) { if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 6) return; drag.movido = true; drag.el.classList.add('arrastrando'); }
+  const bajo = document.elementFromPoint(e.clientX, e.clientY);
+  const dest = bajo && bajo.closest('.ficha'); if (!dest || dest === drag.el) return;
+  const r = dest.getBoundingClientRect();
+  const i = hojas.findIndex(h => h.id === drag.id), j = hojas.findIndex(h => h.id === +dest.dataset.id);
+  // antes o después según el lado por el que entra el puntero
+  const despues = e.clientX > r.left + r.width / 2;
+  let k = despues ? j + 1 : j; if (i < k) k--;
+  if (k === i) return;
+  const [h] = hojas.splice(i, 1); hojas.splice(k, 0, h);
+  construir(); drag.el = document.querySelector(`.ficha[data-id="${drag.id}"]`); drag.el.classList.add('arrastrando');
+});
+const soltar = () => { if (drag && drag.el) drag.el.classList.remove('arrastrando'); drag = null; };
+tira.addEventListener('pointerup', soltar); tira.addEventListener('pointercancel', soltar);
+
+// ---------- opciones de hoja ----------
+function sincOpts() {
+  const m = $('#modo').value;
+  $('#f-ppp').hidden = m !== 'imagen'; $('#f-margen').hidden = m === 'imagen'; $('#f-fondo').hidden = m === 'imagen';
+  $('#modoNota').textContent = m === 'imagen'
+    ? 'La hoja mide exactamente lo que mide la imagen a esa resolución: 150 ppp es una buena media para fotos; 300 para escaneos de documentos.'
+    : m === 'vecina' ? 'La imagen se ajusta dentro de la hoja conservando su proporción, centrada. Si la hoja vecina está rotada, se toma su tamaño tal como se ve.'
+    : 'La hoja se orienta como la imagen (vertical u horizontal) y la imagen se ajusta dentro, centrada.';
+}
+$('#modo').addEventListener('change', sincOpts);
+$('#ppp').addEventListener('input', e => $('#o-ppp').value = e.target.value + ' ppp');
+$('#margen').addEventListener('input', e => $('#o-margen').value = e.target.value + ' %');
+
+// ---------- exportación ----------
+function hex(h) { const n = parseInt(h.slice(1), 16); return rgb(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); }
+async function exportar() {
+  if (!hojas.length) return;
+  estado('Generando PDF…'); $('#btnExport').disabled = $('#btnExportTop').disabled = true;
+  try {
+    const opts = leerOpts(), fondo = $('#fondo').value;
+    const out = await PDFDocument.create();
+    let src = null, copias = new Map();
+    const idxPdf = hojas.filter(h => h.tipo === 'pdf').map(h => h.indice);
+    if (idxPdf.length) {
+      src = await PDFDocument.load(pdfBytes);
+      const cp = await out.copyPages(src, idxPdf);
+      idxPdf.forEach((ix, k) => copias.set(ix, cp[k]));
+    }
+    const cache = new Map();
+    for (let i = 0; i < hojas.length; i++) {
+      const h = hojas[i];
+      if (h.tipo === 'pdf') { out.addPage(copias.get(h.indice)); continue; }
+      let im = cache.get(h.bytes);
+      if (!im) { im = h.fmt === 'jpg' ? await out.embedJpg(h.bytes) : await out.embedPng(h.bytes); cache.set(h.bytes, im); }
+      // vecina: la hoja anterior del PDF; si no hay, la siguiente
+      let vec = null;
+      for (let k = i - 1; k >= 0 && !vec; k--) if (hojas[k].tipo === 'pdf') vec = hojas[k];
+      for (let k = i + 1; k < hojas.length && !vec; k++) if (hojas[k].tipo === 'pdf') vec = hojas[k];
+      const g = hojaParaImagen({ w: h.w, h: h.h }, vec && { w: vec.w, h: vec.h }, opts);
+      const page = out.addPage([g.W, g.H]);
+      if (opts.modo !== 'imagen' && fondo.toLowerCase() !== '#ffffff') page.drawRectangle({ x: 0, y: 0, width: g.W, height: g.H, color: hex(fondo) });
+      page.drawImage(im, { x: g.x, y: g.y, width: g.w, height: g.h });
+    }
+    const bytes = await out.save();
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = (pdfNombre ? pdfNombre.replace(/\.pdf$/i, '') + '_con-hojas' : 'hojas') + '.pdf';
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    estado(`PDF exportado · ${hojas.length} hojas · ${(bytes.length / 1048576).toFixed(2)} MB`);
+  } catch (e) {
+    estado(/encrypted/i.test(e.message || '') ? 'El PDF está cifrado: pdf-lib no puede copiar sus páginas.' : 'Error al exportar: ' + (e.message || e), true);
+  } finally { $('#btnExport').disabled = $('#btnExportTop').disabled = !hojas.length; }
+}
+$('#btnExport').addEventListener('click', exportar);
+$('#btnExportTop').addEventListener('click', exportar);
+
+// ---------- archivos ----------
+$('#btnPdf').addEventListener('click', () => $('#filePdf').click());
+$('#btnImg').addEventListener('click', () => $('#fileImg').click());
+$('#filePdf').addEventListener('change', e => { abrirPdf(e.target.files[0]); e.target.value = ''; });
+$('#fileImg').addEventListener('change', e => { cargarImagenes([...e.target.files]); e.target.value = ''; });
+const esc_ = $('#escenario');
+['dragenter', 'dragover'].forEach(ev => esc_.addEventListener(ev, e => { e.preventDefault(); esc_.classList.add('hot'); }));
+esc_.addEventListener('dragleave', e => { if (!esc_.contains(e.relatedTarget)) esc_.classList.remove('hot'); });
+esc_.addEventListener('drop', async e => {
+  e.preventDefault(); esc_.classList.remove('hot');
+  const fs = [...e.dataTransfer.files];
+  const pdf = fs.find(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name));
+  const imgs = fs.filter(f => /^image\//.test(f.type));
+  if (pdf) await abrirPdf(pdf);
+  if (imgs.length) await cargarImagenes(imgs);
+  if (!pdf && !imgs.length) estado('Suelta un PDF o imágenes.', true);
+});
+$('#titulo').addEventListener('click', () => location.reload());
+window.addEventListener('beforeunload', e => { if (hojas.some(h => h.tipo === 'img')) { e.preventDefault(); e.returnValue = ''; } });
+sincOpts(); construir();
+</script>
+</body>
+</html>
