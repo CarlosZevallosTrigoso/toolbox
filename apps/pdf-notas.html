@@ -32,7 +32,7 @@ section.grupo>h2 small{letter-spacing:0;text-transform:none;font-weight:400}
 .fila.ancha>:nth-child(2){grid-column:2 / 4}
 .fila[hidden]{display:none}
 input[type=range]{width:100%;accent-color:var(--moss);margin:0}
-select,input[type=number],button{font:inherit;border:1px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink);padding:4px 7px;min-width:0;width:100%}
+select,input[type=number],input[type=text],button{font:inherit;border:1px solid var(--line);border-radius:var(--r);background:#fff;color:var(--ink);padding:4px 7px;min-width:0;width:100%}
 input[type=checkbox]{accent-color:var(--moss);margin:0}
 button{cursor:pointer;width:auto}
 button:hover:not(:disabled){border-color:var(--ink)}
@@ -109,6 +109,8 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
     <div class="fila" id="f-paso"><label for="paso">Paso</label><input id="paso" type="range" min="3" max="12" step="0.5" value="5"><output id="o-paso">5 mm</output></div>
     <div class="fila" id="f-margen"><label for="margen">Margen</label><input id="margen" type="range" min="0" max="30" step="1" value="10"><output id="o-margen">10 mm</output></div>
     <div class="fila" id="f-tono"><label for="tono">Tono</label><input id="tono" type="range" min="40" max="90" step="1" value="72"><output id="o-tono">72 %</output></div>
+    <div class="fila"><label for="rotulo">Rótulo</label><input id="rotulo" type="text" value="notas p." maxlength="40" placeholder="(sin rótulo)"><span></span></div>
+    <p class="nota">Se escribe en la cabecera de la zona de notas seguido del número de página del original: "notas p. 13". Déjalo vacío para omitirlo.</p>
   </section>
   <section class="grupo">
     <h2>Exportar</h2>
@@ -196,17 +198,24 @@ const Core = (() => {
     return doc.save();
   }
 
+  // posición del rótulo "notas p. N": en el margen superior de la zona, alineado a su borde izquierdo
+  function rotulo(notas, opts) {
+    const size = 8, m = opts.margen || 0;
+    return { x: notas.x + Math.max(m, 12), y: notas.y + notas.h - Math.max(m * 0.55, 12), size };
+  }
+
   const tick = () => new Promise(r => setTimeout(r, 0));
 
   // compone el PDF de salida. opts: ver geometria + {notas, paso, margen, tono, separador, desde, hasta (1-based)}
   async function componer(libs, srcBytes, opts, progreso) {
-    const { PDFDocument, rgb, degrees } = libs;
+    const { PDFDocument, rgb, degrees, StandardFonts } = libs;
     const src = await PDFDocument.load(srcBytes);
     const out = await PDFDocument.create();
     const n = src.getPageCount();
     const desde = Math.max(1, opts.desde || 1), hasta = Math.min(n, opts.hasta || n);
     const zonas = new Map();
     const gris = rgb(0.55, 0.55, 0.55);
+    const fuente = opts.rotulo ? await out.embedFont(StandardFonts.Courier) : null;
     for (let i = desde - 1; i < hasta; i++) {
       const p = src.getPage(i), cb = p.getCropBox(), r = p.getRotation().angle;
       const vis = visible(cb.width, cb.height, r);
@@ -223,12 +232,13 @@ const Core = (() => {
         page.drawPage(z, { x: g.notas.x, y: g.notas.y, width: g.notas.w, height: g.notas.h });
       }
       if (opts.separador) page.drawLine({ start: { x: g.W / 2, y: 0 }, end: { x: g.W / 2, y: g.H }, thickness: 0.3, color: gris });
+      if (fuente) { const t = rotulo(g.notas, opts); page.drawText(opts.rotulo + ' ' + (i + 1), { x: t.x, y: t.y, size: t.size, font: fuente, color: gris }); }
       if (progreso && (i - desde) % 10 === 9) { progreso(i - desde + 2, hasta - desde + 1); await tick(); }
     }
     return out.save();
   }
 
-  return { MM, HOJAS, visible, geometria, anclaje, rejilla, zonaNotas, componer };
+  return { MM, HOJAS, visible, geometria, anclaje, rejilla, rotulo, zonaNotas, componer };
 })();
 if (typeof module !== 'undefined') module.exports = Core;
 /*CORE-END*/
@@ -236,11 +246,11 @@ if (typeof module !== 'undefined') module.exports = Core;
 
 <script type="module">
 import * as pdfjsLib from 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.min.mjs';
-import { PDFDocument, rgb, degrees } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
+import { PDFDocument, rgb, degrees, StandardFonts } from 'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.esm.min.js';
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.4.299/legacy/build/pdf.worker.min.mjs';
 
 const $ = s => document.querySelector(s);
-const libs = { PDFDocument, rgb, degrees };
+const libs = { PDFDocument, rgb, degrees, StandardFonts };
 
 let pdfBytes = null, pdfDoc = null, pdfNombre = '', numPaginas = 0, pagina = 1, renderToken = 0;
 function estado(msg, error) { const e = $('#estado'); e.textContent = msg; e.classList.toggle('error', !!error); }
@@ -249,7 +259,7 @@ function leerOpts() {
   const t = +$('#tono').value / 100;
   return {
     hoja: $('#hoja').value, lado: $('#lado').value, margenHoja: +$('#margenHoja').value * Core.MM,
-    separador: $('#separador').checked,
+    separador: $('#separador').checked, rotulo: $('#rotulo').value.trim(),
     notas: $('#notas').value, paso: +$('#paso').value * Core.MM, margen: +$('#margen').value * Core.MM, tono: t,
     desde: Math.round(+$('#desde').value) || 1, hasta: Math.round(+$('#hasta').value) || numPaginas
   };
@@ -314,6 +324,11 @@ async function render() {
     }
   }
   if (opts.separador) { ctx.strokeStyle = '#8c8c8c'; ctx.lineWidth = Math.max(0.5, 0.3 * s); ctx.beginPath(); ctx.moveTo(g.W / 2 * s, 0); ctx.lineTo(g.W / 2 * s, g.H * s); ctx.stroke(); }
+  if (opts.rotulo) {
+    const t = Core.rotulo(g.notas, opts);
+    ctx.fillStyle = '#8c8c8c'; ctx.font = `${t.size * s}px Courier, monospace`; ctx.textBaseline = 'alphabetic';
+    ctx.fillText(opts.rotulo + ' ' + pagina, t.x * s, (g.H - t.y) * s);
+  }
   const mm = v => Math.round(v / Core.MM);
   estado(`hoja ${pagina}/${numPaginas} · ${mm(g.W)}×${mm(g.H)} mm · página ${g.izq ? 'a la izquierda' : 'a la derecha'}${g.k !== 1 ? ' · escala ' + Math.round(g.k * 100) + ' %' : ''}`);
 }
@@ -334,7 +349,7 @@ $('#sig').addEventListener('click', () => irA(pagina + 1));
 $('#pag').addEventListener('change', e => irA(+e.target.value));
 const espejo = [['margenHoja', ' mm'], ['paso', ' mm'], ['margen', ' mm'], ['tono', ' %']];
 espejo.forEach(([id, u]) => $('#' + id).addEventListener('input', e => { $('#o-' + id).value = e.target.value + u; }));
-['#hoja', '#lado', '#separador', '#notas', '#margenHoja', '#paso', '#margen', '#tono', '#desde', '#hasta'].forEach(s => {
+['#hoja', '#lado', '#separador', '#rotulo', '#notas', '#margenHoja', '#paso', '#margen', '#tono', '#desde', '#hasta'].forEach(s => {
   $(s).addEventListener('input', () => { sincronizar(); render(); });
   $(s).addEventListener('change', () => { sincronizar(); render(); });
 });
