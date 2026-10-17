@@ -58,6 +58,7 @@ ul.lista li input[type=checkbox]{margin:0}
 #svg .halo{fill:none;stroke:none;pointer-events:none;vector-effect:non-scaling-stroke}
 #svg .item.sel .halo{stroke:var(--naranja);stroke-width:1.5px;stroke-dasharray:4 3}
 #svg .hit{fill:none;stroke:none;pointer-events:all}
+#svg .asa{cursor:nwse-resize;pointer-events:all}
 #svg line.hit{pointer-events:stroke;stroke:transparent}
 #svg text{font-family:var(--mono);user-select:none;pointer-events:none}
 #svg .item text{pointer-events:auto}
@@ -492,6 +493,10 @@ const renderItem = (it, pl, z) => {
       break;
     }
   }
+  if ((it.tipo === 'imagen' || it.tipo === 'zona') && it.id === S.sel && S.modo === 'editor') {
+    const a = 12 / z;
+    g.appendChild(svgEl('rect', { class: 'asa', x: it.x + it.w - a / 2, y: it.y + it.h - a / 2, width: a, height: a, fill: '#b06a36', stroke: '#fff', 'stroke-width': 1.5 / z }));
+  }
   if (S.modo === 'lectura' && it.href) { // enlace nativo en el visor
     const a = svgEl('a', { href: it.href, target: '_blank', rel: 'noopener' }); a.appendChild(g); const t = svgEl('title', {}, it.href); a.appendChild(t); return a;
   }
@@ -606,8 +611,8 @@ const renderProps = () => {
   if (S.modo === 'editor') {
     h += campo('label', it.tipo === 'texto' ? 'textarea' : 'text', 'etiqueta');
     h += campo('nota', 'textarea', 'nota');
-    if (it.tipo === 'texto') h += campo('tam', 'number', 'tamaño (px de imagen)', 'min="4" step="1"');
-    if (it.tipo === 'imagen') h += `<div class="fila">${campo('w', 'number', 'ancho', 'min="1"')}${campo('h', 'number', 'alto', 'min="1"')}</div>`;
+    if (it.tipo === 'texto') h += campo('tam', 'number', 'tamaño (px de imagen)', 'min="4" step="any"');
+    if (it.tipo === 'imagen' || it.tipo === 'zona') h += `<div class="fila">${campo('w', 'number', 'ancho (px)', 'min="1" step="any"')}${campo('h', 'number', 'alto (px)', 'min="1" step="any"')}</div>${it.tipo === 'imagen' ? '<div class="dato">proporción fija; arrastra la esquina naranja (Shift = libre)</div>' : ''}`;
     h += `<label>color</label><div class="swatches">${COLORES.map(c => `<span data-color="${c}" class="${(it.color || COLORES[0]) === c ? 'activo' : ''}" style="background:${c}"></span>`).join('')}</div>`;
     h += `<label>capa</label><select data-k="capa">${pl.capas.map(c => `<option value="${c.id}" ${c.id === it.capa ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}</select>`;
     h += campo('href', 'url', 'enlace externo', 'placeholder="https://…"');
@@ -624,7 +629,7 @@ const renderProps = () => {
   if (S.modo === 'editor') h += `<div class="btns"><button data-acc="duplicar">duplicar</button><button data-acc="centrar">centrar</button>${it.destino ? '<button data-acc="ir">→ probar enlace</button>' : ''}<button data-acc="borrar" class="peligro">borrar</button></div>`;
   el.props.innerHTML = h;
   // valores (sin inyectar en el HTML)
-  $$('[data-k]', el.props).forEach(inp => { const k = inp.dataset.k; if (k in it) inp.value = it[k] ?? ''; });
+  $$('[data-k]', el.props).forEach(inp => { const k = inp.dataset.k; if (k in it) inp.value = typeof it[k] === 'number' ? Math.round(it[k] * 10) / 10 : (it[k] ?? ''); });
   $$('[data-k]', el.props).forEach(inp => {
     const k = inp.dataset.k;
     let snapHecho = false;
@@ -633,7 +638,14 @@ const renderProps = () => {
       if (!snapHecho) { snap(); snapHecho = true; }
       if (k === 'destinoPlano') { it.destino = inp.value ? { plano: inp.value, item: null } : null; renderPaneles(); }
       else if (k === 'destinoItem') { if (it.destino) it.destino.item = inp.value || null; }
-      else if (k === 'tam' || k === 'w' || k === 'h') { const v = parseFloat(inp.value); if (v > 0) it[k] = v; }
+      else if (k === 'tam' || k === 'w' || k === 'h') {
+        const v = parseFloat(inp.value); if (!(v > 0)) return;
+        if (it.tipo === 'imagen' && (k === 'w' || k === 'h')) {
+          const otro = k === 'w' ? 'h' : 'w'; const ratio = it[otro] / it[k];
+          it[k] = v; it[otro] = v * ratio;
+          const inpOtro = $(`[data-k="${otro}"]`, el.props); if (inpOtro) inpOtro.value = Math.round(it[otro] * 10) / 10;
+        } else it[k] = v;
+      }
       else if (k === 'href') { it.href = inp.value.trim() || null; }
       else it[k] = inp.value;
       renderSvg(); autosave();
@@ -736,6 +748,10 @@ el.lienzo.addEventListener('pointerdown', (e) => {
   const esSelect = S.tool === 'select' || S.modo === 'lectura';
   const mueve = esSelect && id && S.modo === 'editor' && e.button === 0;
   S.arrastre = { x0: e.clientX, y0: e.clientY, p0: p, view0: { ...S.view }, movido: false, id: esSelect ? id : null, pan: !mueve, snap: false };
+  if (mueve && e.target.classList && e.target.classList.contains('asa')) {
+    const it = plano().items.find(i => i.id === id);
+    if (it) { snap(); S.arrastre.redim = { it, w0: it.w, h0: it.h }; S.arrastre.pan = false; }
+  }
   if (S.tool === 'zona' && S.modo === 'editor' && plano()) { S.draft = { tool: 'zona', puntos: [p] }; S.arrastre.zona = true; }
   if (esSelect && id && S.modo === 'editor') { S.sel = id; renderPaneles(); renderSvg(); }
 });
@@ -747,6 +763,12 @@ el.lienzo.addEventListener('pointermove', (e) => {
     if (!a.movido && Math.hypot(e.clientX - a.x0, e.clientY - a.y0) > 3) a.movido = true;
     if (!a.movido) return;
     if (a.zona) { S.draft.puntos = [a.p0]; renderSvg(); return; }
+    if (a.redim) {
+      const it = a.redim.it; const min = 4 / S.view.zoom;
+      let nw = Math.max(min, p.x - it.x), nh = Math.max(min, p.y - it.y);
+      if (it.tipo === 'imagen' && !e.shiftKey) nh = nw * a.redim.h0 / a.redim.w0;
+      it.w = nw; it.h = nh; renderSvg(); return;
+    }
     if (a.pan) { S.view = { ...a.view0, vx: a.view0.vx - (e.clientX - a.x0) / a.view0.zoom, vy: a.view0.vy - (e.clientY - a.y0) / a.view0.zoom }; el.lienzo.classList.add('arrastrando'); aplicarVista(); return; }
     if (a.id && S.modo === 'editor') {
       const pl = plano(); const it = pl.items.find(i => i.id === a.id); if (!it) return;
@@ -761,6 +783,7 @@ const finPuntero = (e) => {
   try { el.lienzo.releasePointerCapture(e.pointerId); } catch (err) {}
   const p = posImagen(e);
   if (a.zona) { const pts = [a.p0, p]; S.draft = null; if (a.movido && Math.abs(p.x - a.p0.x) > 2 && Math.abs(p.y - a.p0.y) > 2) { const b = G.bbox(pts); agregarItem({ tipo: 'zona', x: b.x, y: b.y, w: b.w, h: b.h }); } else renderSvg(); return; }
+  if (a.redim) { autosave(); renderPaneles(); return; }
   if (a.movido) { if (a.snap) { autosave(); renderPaneles(); } return; }
   if (e.button === 1) return;
   // clic sin movimiento
