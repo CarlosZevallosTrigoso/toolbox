@@ -87,6 +87,7 @@ aside h3:first-child{margin-top:0;padding-top:0;border-top:none}
 .btns{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
 .seg{display:flex;gap:2px}
 .seg button{flex:1;padding:4px 2px}
+[data-tamr] button{white-space:nowrap;padding:4px 9px;flex:0 0 auto}
 .swatches{display:flex;gap:4px;margin-top:2px}
 .swatches span{width:22px;height:22px;border:1px solid var(--linea);border-radius:var(--r);cursor:pointer}
 .swatches span.activo{outline:2px solid var(--ink);outline-offset:1px}
@@ -156,6 +157,7 @@ footer{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 10px;
     <div class="grupo">obras</div>
     <button data-tool="cuadro" title="Cuadro: dos clics sobre el muro donde cuelga (C)"><span class="ic">▬</span><span class="tx">Cuadro</span><kbd>C</kbd></button>
     <button data-tool="obra" title="Obra en planta: lazo poligonal (B)"><span class="ic">⬠</span><span class="tx">Obra</span><kbd>B</kbd></button>
+    <button data-tool="proyeccion" title="Proyección: imagen sobre el muro y lugar del proyector (Y)"><span class="ic">◭</span><span class="tx">Proyección</span><kbd>Y</kbd></button>
     <button data-tool="region" title="Región o núcleo curatorial: lazo poligonal (G)"><span class="ic">⬚</span><span class="tx">Región</span><kbd>G</kbd></button>
     <div class="grupo">anotar</div>
     <button data-tool="texto" title="Texto (T)"><span class="ic">T</span><span class="tx">Texto</span><kbd>T</kbd></button>
@@ -250,6 +252,7 @@ footer{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 10px;
       <tr><td><kbd>N</kbd> Ventana</td><td>Dos clics sobre el muro, en los extremos de la ventana. En el panel ajustas el ancho y el espesor del muro.</td></tr>
       <tr><td><kbd>C</kbd> Cuadro</td><td>Dos clics sobre el muro o panel donde cuelga (o escribe el ancho y ⏎). Queda adosado, hacia dentro de la sala, con su número. «Cambiar de cara» lo pasa al otro lado.</td></tr>
       <tr><td><kbd>B</kbd> Obra</td><td>Lazo poligonal para esculturas, instalaciones o vitrinas: clic punto a punto y cierra en el primer punto, con doble clic o <kbd>⏎</kbd>. Ficha en el panel.</td></tr>
+      <tr><td><kbd>Y</kbd> Proyección</td><td>Dos clics marcan el ancho de la imagen sobre el muro o la pantalla; el tercero, la lente del proyector (o escribe la distancia y <kbd>⏎</kbd>). En el panel: formato, ancho y alto de imagen, distancia, relación de tiro y tamaño del cuerpo. Escribe el tiro de tu proyector y se coloca a la distancia justa.</td></tr>
       <tr><td><kbd>G</kbd> Región</td><td>Lazo poligonal para un núcleo o zona curatorial. Muestra su nombre y cuántas obras caen dentro.</td></tr>
       <tr><td>Lista</td><td>Sin nada elegido, el panel lista las obras; clic en una para ir a ella. «Lista de obras (CSV)» descarga la checklist de montaje.</td></tr>
       <tr><td><kbd>T</kbd> Texto</td><td>Clic y escribe en el panel derecho.</td></tr>
@@ -340,7 +343,7 @@ const G = (() => {
     if (e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro') return [[e.a, e.b, 0]];
     return [];
   };
-  const verticesIman = (e) => (e.tipo === 'linea' ? e.pts : e.tipo === 'circulo' ? [e.c] : e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro' ? [e.a, e.b] : esPoligono(e) ? e.pts : []);
+  const verticesIman = (e) => (e.tipo === 'linea' ? e.pts : e.tipo === 'circulo' ? [e.c] : e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro' || e.tipo === 'proyeccion' ? [e.a, e.b] : esPoligono(e) ? e.pts : []);
   // Imán: vértice > punto medio > sobre un tramo > rejilla > libre
   const imanar = (p, o) => {
     const ents = o.entidades || [], tol = o.tol || 0.1, ex = o.excluir || null;
@@ -454,6 +457,24 @@ const G = (() => {
     return (Math.sign(dot(perp(unit(sub(b, a))), host.hn)) || 1) * lado;
   };
   const esObra = (e) => e.tipo === 'obra' || e.tipo === 'cuadro';
+  // ── proyección: imagen a–b sobre un muro o pantalla, proyector con la lente en p
+  const FORMATOS = { '16:9': 16 / 9, '16:10': 16 / 10, '4:3': 4 / 3, '1:1': 1 };
+  const proyGeom = (e, ents = [], k = 0) => {
+    const w = dist(e.a, e.b); const mid = medio(e.a, e.b); const d = unit(sub(e.b, e.a)); const nl = perp(d);
+    const lado = Math.sign(dot(sub(e.p, e.a), nl)) || 1;                       // la imagen mira hacia el proyector
+    const pant = cuadroGeom({ a: e.a, b: e.b, lado, fondo: Math.max(0.03, k * 3) }, ents, k);
+    const dIst = Math.abs(dot(sub(e.p, e.a), nl));                               // distancia perpendicular lente–imagen
+    const eje = dist(e.p, mid) > 1e-9 ? unit(sub(mid, e.p)) : mul(nl, -lado);
+    const L = e.largo > 0 ? e.largo : 0.4, W = e.anchoCuerpo > 0 ? e.anchoCuerpo : 0.3; const q = perp(eje);
+    const atras = sub(e.p, mul(eje, L));
+    const cuerpo = [add(atras, mul(q, W / 2)), add(e.p, mul(q, W / 2)), sub(e.p, mul(q, W / 2)), sub(atras, mul(q, W / 2))];
+    const asp = e.formato === 'libre' ? (e.alto > 0 ? w / e.alto : 16 / 9) : FORMATOS[e.formato] || 16 / 9;
+    const alto = e.formato === 'libre' && e.alto > 0 ? e.alto : w / asp;
+    return { w, mid, d, nl, lado, pant, dist: dIst, tiro: w > 0 ? dIst / w : 0, eje, cuerpo, atras, alto, asp, frenteA: pant.esquinas[3], frenteB: pant.esquinas[2] };
+  };
+  // cambiar la distancia: el proyector se mueve en perpendicular a la imagen, sin desplazarse de lado
+  const proyConDistancia = (e, D) => { const g = proyGeom(e); const n = mul(g.nl, g.lado); const actual = dot(sub(e.p, e.a), n); return add(e.p, mul(n, D - actual)); };
+  const proyConAncho = (e, w) => { const g = proyGeom(e); return { a: sub(g.mid, mul(g.d, w / 2)), b: add(g.mid, mul(g.d, w / 2)) }; };
   const etqRegion = (e) => (e.etq && Number.isFinite(e.etq.x) ? e.etq : centroide(e.pts));
   const enEtqRegion = (e, p, h = 0.2) => { const c = etqRegion(e); const w = Math.max(3, String(e.nombre || '').length) * h * 1.5 * 0.62; return Math.abs(p.x - c.x) <= w / 2 && Math.abs(p.y - c.y) <= h * 1.3; };
   const puntoObra = (e, ents) => (e.tipo === 'obra' ? centroide(e.pts) : cuadroGeom(e, ents).centro);
@@ -580,6 +601,10 @@ const G = (() => {
         if (enEtqRegion(e, p, o_h || 0.2)) return 0;
         return d;
       }
+      case 'proyeccion': {
+        const g = proyGeom(e, o_ents); if (puntoEnPoligono(p, g.cuerpo)) return 0;
+        return Math.min(proyectar(p, e.a, e.b).d, proyectar(p, e.p, g.frenteA).d, proyectar(p, e.p, g.frenteB).d, ...g.cuerpo.map((c, i) => proyectar(p, c, g.cuerpo[(i + 1) % 4]).d));
+      }
       case 'cuadro': { const g = cuadroGeom(e, o_ents); if (puntoEnPoligono(p, g.esquinas)) return 0; return Math.min(proyectar(p, e.a, e.b).d, dist(p, g.frente)); }
       case 'texto': { const c = textoCaja(e); const l = rotar(sub(p, e), -(e.rot || 0)); const dx = Math.max(0, Math.abs(l.x) - c.w / 2), dy = Math.max(0, Math.abs(l.y) - c.h / 2); return Math.hypot(dx, dy); }
       case 'cota': { const g = cotaGeom(e); return Math.min(proyectar(p, g.qmin, g.qmax).d, ...g.tramos.map((t) => dist(p, t.m))); }
@@ -599,6 +624,7 @@ const G = (() => {
     else if (e.tipo === 'circulo') e.c = m(e.c);
     else if (e.tipo === 'cota') { e.pts = cotaPts(e).map(m); delete e.a; delete e.b; }
     else if (esPoligono(e)) { e.pts = e.pts.map(m); if (e.etq) e.etq = m(e.etq); }
+    else if (e.tipo === 'proyeccion') { e.a = m(e.a); e.b = m(e.b); e.p = m(e.p); }
     else if (e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro') { e.a = m(e.a); e.b = m(e.b); }
     else if (e.tipo === 'texto') { const q = m(e); e.x = q.x; e.y = q.y; }
     return e;
@@ -606,6 +632,7 @@ const G = (() => {
   const asas = (e) => {
     if (e.tipo === 'linea' || esPoligono(e)) return e.pts.map((p) => ({ x: p.x, y: p.y }));
     if (e.tipo === 'cuadro') return [{ x: e.a.x, y: e.a.y }, { x: e.b.x, y: e.b.y }];
+    if (e.tipo === 'proyeccion') return [{ x: e.a.x, y: e.a.y }, { x: e.b.x, y: e.b.y }, { x: e.p.x, y: e.p.y }];
     if (e.tipo === 'circulo') return [{ x: e.c.x, y: e.c.y }, { x: e.c.x + e.r, y: e.c.y }];
     if (e.tipo === 'cota') return cotaPts(e).map((p) => ({ x: p.x, y: p.y }));
     if (e.tipo === 'puerta' || e.tipo === 'ventana') return [{ x: e.a.x, y: e.a.y }, { x: e.b.x, y: e.b.y }];
@@ -615,6 +642,7 @@ const G = (() => {
     const q = { x: r6(p.x), y: r6(p.y) };
     if (e.tipo === 'linea' || esPoligono(e)) e.pts[i] = q;
     else if (e.tipo === 'cuadro') e[i === 0 ? 'a' : 'b'] = q;
+    else if (e.tipo === 'proyeccion') e[['a', 'b', 'p'][i]] = q;
     else if (e.tipo === 'circulo') { if (i === 0) e.c = q; else e.r = Math.max(0.01, r6(dist(e.c, q))); }
     else if (e.tipo === 'cota') { e.pts = cotaPts(e).slice(); e.pts[i] = q; delete e.a; delete e.b; }
     else if (e.tipo === 'puerta' || e.tipo === 'ventana') e[i === 0 ? 'a' : 'b'] = q;
@@ -678,6 +706,7 @@ const G = (() => {
       else if (e.tipo === 'texto') { const c = textoCaja(e); inc(e, Math.max(c.w, c.h) / 2); }
       else if (esPoligono(e)) { e.pts.forEach((p) => inc(p)); if (e.tipo === 'region') { const c = etqRegion(e); inc(c, String(e.nombre || '').length * h * 0.5); } }
       else if (e.tipo === 'cuadro') { const g = cuadroGeom(e, ents); g.esquinas.forEach((p) => inc(p)); inc(g.frente, h * 1.6); }
+      else if (e.tipo === 'proyeccion') { const g = proyGeom(e, ents); [e.a, e.b, ...g.cuerpo].forEach((p) => inc(p)); inc(g.atras, h * 2.5); }
     }
     return x1 >= x0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null;
   };
@@ -756,10 +785,16 @@ const G = (() => {
     // giro manual: el texto se lee con ese ángulo y las líneas se apilan hacia «abajo» del texto
     const giroManual = (e, key) => { const g = e.etiq && e.etiq[key] && e.etiq[key].ang; return Number.isFinite(g) ? g : null; };
     const abajo = (ang) => { const r = ang * Math.PI / 180; return { x: -Math.sin(r), y: Math.cos(r) }; };
-    const pedir = (e, key, lineas, ang, f, cands, op = {}) => {
+    // tamaño propio: factor sobre el tamaño de rótulos de la sala
+    const escala = (e, key) => { const v = e.etiq && e.etiq[key] && e.etiq[key].esc; return v > 0 && v !== 1 ? v : null; };
+    const escalar = (lineas, esc) => (esc ? lineas.map((l) => ({ ...l, tam: l.tam * esc })) : lineas);
+    const pedir = (e, key, lineas0, ang, f, cands0, op = {}) => {
       const ov = e.etiq && e.etiq[key] && Number.isFinite(e.etiq[key].u) ? e.etiq[key] : null;
+      const esc = escala(e, key); const lineas = escalar(lineas0, esc);
+      // al crecer, el rótulo se aparta lo que crece su media altura
+      const cands = esc && !op.fijo ? cands0.map((c) => ({ u: c.u, v: c.v + (Math.sign(c.v) || 0) * (esc - 1) * lineas0[0].tam * 0.6 })) : cands0;
       const gm = giroManual(e, key);
-      pedidos.push({ id: e.id, key, lineas, ang: gm ?? (ang || 0), f, cands: ov ? [ov] : cands, fijo: !!(ov || op.fijo), movible: op.movible !== false, manual: !!(ov || gm !== null), apila: gm !== null && lineas.length > 1 ? abajo(gm) : op.apila || null });
+      pedidos.push({ id: e.id, key, lineas, ang: gm ?? (ang || 0), f, cands: ov ? [ov] : cands, fijo: !!(ov || op.fijo), movible: op.movible !== false, manual: !!(ov || gm !== null || esc), apila: gm !== null && lineas.length > 1 ? abajo(gm) : op.apila || null, esc: esc || 1 });
     };
     // posiciones candidatas a lo largo de un tramo de largo L: deslizar y alejar; las del otro lado al final
     const variantes = (L, w, u0, vs) => {
@@ -782,7 +817,7 @@ const G = (() => {
       if (e.relleno === 'rayado') { usados.add(e.color); return `fill="url(#ry${e.color.slice(1)})"`; }
       return 'fill="none"';
     };
-    const capa = (e) => (e.tipo === 'region' ? -1 : e.tipo === 'puerta' || e.tipo === 'ventana' || esObra(e) ? 1 : e.tipo === 'cota' || e.tipo === 'texto' ? 2 : 0);
+    const capa = (e) => (e.tipo === 'region' ? -1 : e.tipo === 'puerta' || e.tipo === 'ventana' || esObra(e) || e.tipo === 'proyeccion' ? 1 : e.tipo === 'cota' || e.tipo === 'texto' ? 2 : 0);
     const orden = [-1, 0, 1, 2].flatMap((n) => doc.entidades.filter((e) => capa(e) === n));
     for (const e of orden) {
       const col = e.color || COLORES[0];
@@ -897,8 +932,8 @@ const G = (() => {
           const bb = cajaDePuntos(e.pts); const R = Math.min(bb.x1 - bb.x0, bb.y1 - bb.y0) / 2;
           for (const f of [0.18, 0.36, 0.54, 0.72]) for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; const q = { u: Math.cos(a) * R * f * 1.6, v: Math.sin(a) * R * f }; if (puntoEnPoligono(add(c, { x: q.u, y: q.v }), e.pts)) cands.push(q); }
         }
-        const gR = giroManual(e, 'R');
-        pedidos.push({ id: e.id, key: 'R', lineas, ang: gR ?? 0, f: marcoFijo(add(c, { x: 0, y: info ? -h * 0.45 : 0 })), cands, fijo: !!e.etq, movible: false, apila: gR !== null ? abajo(gR) : null });
+        const gR = giroManual(e, 'R'); const eR = escala(e, 'R');
+        pedidos.push({ id: e.id, key: 'R', lineas: escalar(lineas, eR), esc: eR || 1, ang: gR ?? 0, f: marcoFijo(add(c, { x: 0, y: info ? -h * 0.45 : 0 })), cands, fijo: !!e.etq, movible: false, apila: gR !== null ? abajo(gR) : null });
       } else if (e.tipo === 'obra') {
         if (e.pts.length < 3) continue;
         const dd = 'M' + e.pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L') + ' Z';
@@ -906,8 +941,8 @@ const G = (() => {
         obsCajas.push(cajaDePuntos(e.pts));
         const c = centroide(e.pts); const tit = e.verTitulo && e.titulo ? e.titulo : '';
         const lineas = [{ texto: String(e.num ?? ''), tam: h * 1.15, color: col, peso: '700' }]; if (tit) lineas.push({ texto: tit, tam: h * 0.75, color: '#333333' });
-        const gN = giroManual(e, 'N');
-        pedidos.push({ id: e.id, key: 'N', lineas, ang: gN ?? 0, f: marcoFijo(gN !== null ? c : add(c, { x: 0, y: tit ? -h * 0.4 : 0 })), cands: [{ u: 0, v: 0 }], fijo: true, movible: false, apila: gN !== null ? abajo(gN) : null });
+        const gN = giroManual(e, 'N'); const eN = escala(e, 'N');
+        pedidos.push({ id: e.id, key: 'N', lineas: escalar(lineas, eN), esc: eN || 1, ang: gN ?? 0, f: marcoFijo(gN !== null ? c : add(c, { x: 0, y: tit ? -h * 0.4 : 0 })), cands: [{ u: 0, v: 0 }], fijo: true, movible: false, apila: gN !== null ? abajo(gN) : null });
       } else if (e.tipo === 'cuadro') {
         const g = cuadroGeom(e, doc.entidades, k); if (!(g.w > 0)) continue;
         cuerpo += `<polygon points="${g.esquinas.map((p) => C(p.x) + ',' + C(p.y)).join(' ')}" fill="${col}" fill-opacity="0.9" stroke="${col}" stroke-width="${sw('fino')}"/>`;
@@ -921,6 +956,27 @@ const G = (() => {
         const paso = Math.max(w, h * 1.6);
         const cands = vs.flatMap((v) => [0, -0.6, 0.6, -1, 1, -2, 2, -3, 3].map((m) => ({ u: c0.u + m * paso, v })));
         pedir(e, 'N', lineas, ang, f, cands, { apila: g.n });
+      } else if (e.tipo === 'proyeccion') {
+        const g = proyGeom(e, doc.entidades, k); if (!(g.w > 0)) continue;
+        const pts = (P) => P.map((p) => C(p.x) + ',' + C(p.y)).join(' ');
+        if (e.verHaz !== false) {
+          cuerpo += `<polygon points="${pts([e.p, g.frenteA, g.frenteB])}" fill="${col}" fill-opacity="0.08" stroke="none"/>`;
+          for (const f of [g.frenteA, g.frenteB]) cuerpo += `<line x1="${C(e.p.x)}" y1="${C(e.p.y)}" x2="${C(f.x)}" y2="${C(f.y)}" stroke="${col}" stroke-width="${sw('fino')}"${trazo('discontinua', 'fino')}/>`;
+        }
+        cuerpo += `<polygon points="${pts(g.pant.esquinas)}" fill="${col}" fill-opacity="0.85" stroke="${col}" stroke-width="${sw('fino')}"/>`;
+        cuerpo += `<polygon points="${pts(g.cuerpo)}" fill="#ffffff" stroke="${col}" stroke-width="${sw('medio')}"/>`;
+        const lente = [add(e.p, mul(perp(g.eje), Math.min(0.08, (e.anchoCuerpo > 0 ? e.anchoCuerpo : 0.3) / 3))), sub(e.p, mul(perp(g.eje), Math.min(0.08, (e.anchoCuerpo > 0 ? e.anchoCuerpo : 0.3) / 3))), sub(e.p, mul(g.eje, 0.07))];
+        cuerpo += `<polygon points="${pts(lente)}" fill="${col}"/>`;
+        // para los rótulos, la geometría real (independiente del zoom)
+        const gr = proyGeom(e, doc.entidades, 0);
+        obsCajas.push(cajaDePuntos(gr.cuerpo)); obsCajas.push(cajaDePuntos(gr.pant.esquinas));
+        if (e.verHaz !== false) { obsSegs.push([e.p, gr.frenteA]); obsSegs.push([e.p, gr.frenteB]); }
+        const lineas = [{ texto: e.nombre || 'P', tam: h * 0.95, color: col, peso: '700' }];
+        if (e.verDatos !== false) { lineas.push({ texto: fmtNum(gr.w) + ' × ' + fmtNum(gr.alto) + ' m', tam: h * 0.75, color: '#333333' }); lineas.push({ texto: 'tiro ' + fmtNum(gr.tiro) + ' · ' + fmtM(gr.dist), tam: h * 0.75, color: '#333333' }); }
+        const f = marcoDe(gr.atras, e.p); const off = h * 0.9; const wl = Math.max(...lineas.map((l) => anchoTxt(l.texto, l.tam)));
+        const Lc = e.largo > 0 ? e.largo : 0.4, Wc = e.anchoCuerpo > 0 ? e.anchoCuerpo : 0.3;
+        const tras = -(off + lineas.length * h * 0.5), lado = Wc / 2 + off + wl / 2;
+        pedir(e, 'P', lineas, 0, f, [{ u: tras, v: 0 }, { u: Lc / 2, v: lado }, { u: Lc / 2, v: -lado }, { u: tras * 1.8, v: 0 }, { u: tras, v: wl * 0.7 }, { u: tras, v: -wl * 0.7 }, { u: Lc / 2, v: lado * 1.6 }, { u: Lc / 2, v: -lado * 1.6 }]);
       } else if (e.tipo === 'texto') {
         cuerpo += svgTexto(e.x, e.y, e.texto || ' ', e.tam, col, e.rot || 0, halo);
         const c = textoCaja(e); obsCajas.push(cajaRotada(e, c.w, c.h, e.rot || 0));
@@ -973,7 +1029,7 @@ const G = (() => {
         if (n === 0) break;
       }
       if (!mejor) continue;
-      colocados.push({ id: p.id, key: p.key, caja: mejor.dsp.caja, cajas: mejor.dsp.cajas, f: p.f, u: mejor.c.u, v: mejor.c.v, x: mejor.pos.x, y: mejor.pos.y, ang: p.ang, texto: p.lineas[0].texto, movible: p.movible, manual: p.manual });
+      colocados.push({ id: p.id, key: p.key, caja: mejor.dsp.caja, cajas: mejor.dsp.cajas, f: p.f, u: mejor.c.u, v: mejor.c.v, x: mejor.pos.x, y: mejor.pos.y, ang: p.ang, esc: p.esc || 1, texto: p.lineas[0].texto, movible: p.movible, manual: p.manual });
       p.lineas.forEach((l, i) => { const c = mejor.dsp.centros[i]; rot += svgTexto(c.x, c.y, l.texto, l.tam, l.color, p.ang, halo, 'middle', l.peso || ''); });
     }
     let defs = '';
@@ -1034,7 +1090,7 @@ const G = (() => {
 
   return { U, GROSOR, TRAZO, COLORES, ESCALAS, clamp, r6, dist, sub, add, mul, dot, unit, perp, medio, rotar, parseNum, fmtNum, fmtM, fmtM2, esc,
     snapGrid, snapAngulo, proyectar, segmentos, imanar, areaFirmada, area, longitudLinea, puntoEnPoligono, anguloLegible, etiquetasTramos,
-    esRectangulo, puertaGeom, ventanaGeom, siguienteGiro, esPoligono, centroide, etqRegion, enEtqRegion, lineaBajo, cuadroGeom, ladoCuadro, esObra, puntoObra, obrasEn, regionDe, numSiguiente, ordenNatural, csvObras, alturaTramo, tieneAlturas, etiquetasAltura, cotaGeom, cotaPts, estirarCota, contornoDe, ladoFuera, bandaMuro, desplazarPolilinea, contornoBanda, anfitrion, textoCaja, distanciaA, tocar, mover, asas, fijarAsa, insertarVertice, borrarVertice, estirarTramo, rectPts,
+    esRectangulo, puertaGeom, ventanaGeom, siguienteGiro, FORMATOS, proyGeom, proyConDistancia, proyConAncho, esPoligono, centroide, etqRegion, enEtqRegion, lineaBajo, cuadroGeom, ladoCuadro, esObra, puntoObra, obrasEn, regionDe, numSiguiente, ordenNatural, csvObras, alturaTramo, tieneAlturas, etiquetasAltura, cotaGeom, cotaPts, estirarCota, contornoDe, ladoFuera, bandaMuro, desplazarPolilinea, contornoBanda, anfitrion, textoCaja, distanciaA, tocar, mover, asas, fijarAsa, insertarVertice, borrarVertice, estirarTramo, rectPts,
     calcoCentro, localAMundo, mundoALocal, calibrarCalco, esquinasCalco, caja, unirCajas, cajaPuntos, longitudBonita, papelPara,
     C, svgDibujo, svgCalco, marcoDe, enMarco, deMarco, cajasChocan, segCruzaCaja, construirSVG, nuevoId };
 })();
@@ -1051,7 +1107,7 @@ const MAX_UNDO = 60, MAX_LADO_CALCO = 3000;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 const esc = G.esc, C = G.C;
-const DIBUJO = ['linea', 'rect', 'circulo', 'puerta', 'ventana', 'texto', 'cota', 'calibrar', 'cuadro', 'obra', 'region'];
+const DIBUJO = ['linea', 'rect', 'circulo', 'puerta', 'ventana', 'texto', 'cota', 'calibrar', 'cuadro', 'obra', 'region', 'proyeccion'];
 const POLI = ['linea', 'obra', 'region'];
 const esPoli = (t) => POLI.includes(t);
 const COLORES_REGION = ['#4f6b82', '#586a45', '#b06a36', '#b03a2e', '#8a8a8a'];
@@ -1194,13 +1250,17 @@ const renderDraft = (z) => {
       s += `<polygon points="${g.esquinas.map((q) => C(q.x) + ',' + C(q.y)).join(' ')}" fill="#b06a36" fill-opacity="0.7"/>`;
       s += `<line x1="${C(p0.x)}" y1="${C(p0.y)}" x2="${C(cur.x)}" y2="${C(cur.y)}" ${st('#b06a36')}/>`;
       etiqueta = G.fmtM(G.dist(p0, cur));
-    } else if (d.tool === 'puerta' || d.tool === 'ventana' || d.tool === 'calibrar' || (d.tool === 'cota' && d.puntos.length === 1)) {
+    } else if (d.tool === 'puerta' || d.tool === 'ventana' || d.tool === 'calibrar' || (d.tool === 'proyeccion' && d.puntos.length === 1) || (d.tool === 'cota' && d.puntos.length === 1)) {
       const col = d.tool === 'calibrar' ? '#b03a2e' : '#111111';
       s += `<line x1="${C(p0.x)}" y1="${C(p0.y)}" x2="${C(cur.x)}" y2="${C(cur.y)}" ${st(col)}/>`;
       for (const p of [p0, cur]) s += `<circle cx="${C(p.x)}" cy="${C(p.y)}" r="${C(3.5 / z)}" fill="${col}"/>`;
       if (d.tool === 'ventana' && G.dist(p0, cur) > 0) { const g = G.ventanaGeom({ a: p0, b: cur, esp: 0.15 }); s += `<polygon points="${g.esquinas.map((q) => C(q.x) + ',' + C(q.y)).join(' ')}" ${st('#8a8a8a')}/>`; }
       if (d.tool === 'puerta' && G.dist(p0, cur) > 0) { const g = G.puertaGeom({ a: p0, b: cur, lado: 1, bisagra: 'a' }); s += `<path d="M${C(g.hoja.x)} ${C(g.hoja.y)} A${C(g.w)} ${C(g.w)} 0 0 ${g.sweep} ${C(g.otro.x)} ${C(g.otro.y)}" ${st('#8a8a8a')}/>`; }
       etiqueta = d.tool === 'calibrar' && !S.doc.calco?.calibrado ? 'mide sobre la imagen' : G.fmtM(G.dist(p0, cur));
+    } else if (d.tool === 'proyeccion' && d.puntos.length === 2) {
+      const tmp = { id: '_p', tipo: 'proyeccion', a: d.puntos[0], b: d.puntos[1], p: cur, nombre: '', formato: '16:9', color: '#b06a36', verHaz: true, verDatos: false };
+      s += G.svgDibujo({ entidades: [...S.doc.entidades.filter((x) => x.tipo === 'linea'), tmp], rotulo: S.doc.rotulo }, { k: 1 / z }).cuerpo.replace(/<text[\s\S]*?<\/text>/g, '');
+      const g = G.proyGeom(tmp); etiqueta = G.fmtM(g.dist) + ' · tiro ' + G.fmtNum(g.tiro);
     } else if (d.tool === 'cota' && d.puntos.length === 2) {
       const tmp = { tipo: 'cota', pts: [d.puntos[0], d.puntos[1]], desp: d.desp || 0, color: '#b06a36' };
       s += G.svgDibujo({ entidades: [tmp], rotulo: S.doc.rotulo }, { k: 1 / z }).cuerpo;
@@ -1252,17 +1312,18 @@ const estiloHtml = (e) => `<label>peso de línea</label>${segBtns('grosor', [['f
   <label>color</label>${swatches(e.color)}`;
 const rellenoHtml = (e) => `<label>relleno</label>${segBtns('relleno', [['ninguno', 'ninguno'], ['tenue', 'tenue'], ['rayado', 'rayado']], e.relleno || 'ninguno')}`;
 // botones de giro de un rótulo concreto (clave) de la pieza elegida
+const tamBotones = (key) => `<label>tamaño</label><div class="fila" style="align-items:center"><div class="seg" data-tamr="${key}" style="flex:0 0 auto"><button data-t="-" title="más chico">−</button><button data-t="1" title="tamaño de la sala">100 %</button><button data-t="+" title="más grande">+</button></div><div><input type="text" inputmode="decimal" data-tamexacto="${key}" aria-label="tamaño en porcentaje"></div><span style="flex:0 0 auto">%</span></div>`;
 const giroBotones = (key, titulo, auto = 'como su muro') => `<label>${titulo}</label><div class="seg" data-giro="${key}"><button data-g="-90">⟲ 90°</button><button data-g="0">horizontal</button><button data-g="v">vertical</button><button data-g="auto">${auto}</button></div>`;
 const panelRotulo = (e, key, ra) => {
   const ov = e.etiq && e.etiq[key];
   let h = `<h3>rótulo · ${esc(ra.texto)}</h3>`;
-  h += giroBotones(key, 'giro');
+  h += giroBotones(key, 'giro') + tamBotones(key);
   h += `<div class="fila"><div><label>giro exacto (°)</label><input type="text" inputmode="decimal" data-giroexacto="${key}" value="${G.fmtNum(ra.ang || 0, 0)}"></div></div>`;
-  h += `<div class="nota">Arrástralo para moverlo. Doble clic lo devuelve a su sitio y giro automáticos.</div>`;
-  if (ov) h += `<div class="btns"><button data-acc="etqUna" data-key="${key}">posición y giro automáticos</button></div>`;
+  h += `<div class="nota">Arrástralo para moverlo. Doble clic lo devuelve a su sitio, giro y tamaño automáticos.</div>`;
+  if (ov) h += `<div class="btns"><button data-acc="etqUna" data-key="${key}">todo automático</button></div>`;
   return h;
 };
-const NOMBRES = { linea: 'muro / línea', circulo: 'círculo', puerta: 'puerta', ventana: 'ventana', texto: 'texto', cota: 'cota', cuadro: 'cuadro en muro', obra: 'obra en planta', region: 'región' };
+const NOMBRES = { proyeccion: 'proyección', linea: 'muro / línea', circulo: 'círculo', puerta: 'puerta', ventana: 'ventana', texto: 'texto', cota: 'cota', cuadro: 'cuadro en muro', obra: 'obra en planta', region: 'región' };
 
 const renderPanel = () => {
   const e = ent(); let h = '';
@@ -1313,12 +1374,24 @@ const renderPanel = () => {
       if (e.tipo === 'cuadro') {
         h += `<label>ancho en el muro (m)</label><input type="text" inputmode="decimal" data-num="ancho" value="${G.fmtNum(G.dist(e.a, e.b))}">`;
         h += check('medidas', 'mostrar el ancho', e.medidas) + `<div class="btns"><button data-acc="cara">⇄ cambiar de cara del muro</button></div>`;
-      } else h += `<div class="dato">ocupa en planta: <b>${G.fmtM2(G.area(e.pts))}</b></div>` + giroBotones('N', 'giro del número', 'sin giro');
+      } else h += `<div class="dato">ocupa en planta: <b>${G.fmtM2(G.area(e.pts))}</b></div>` + giroBotones('N', 'giro del número', 'sin giro') + tamBotones('N');
       const r = G.regionDe(S.doc, e); h += `<div class="dato">región: <b>${r ? esc(r.nombre) : '—'}</b></div>`;
+      h += `<label>color</label>${swatches(e.color)}`;
+    } else if (e.tipo === 'proyeccion') {
+      const g = G.proyGeom(e, S.doc.entidades);
+      const num = (k, label, v, dec = 2) => `<div><label>${label}</label><input type="text" inputmode="decimal" data-num="${k}" value="${G.fmtNum(v, dec)}"></div>`;
+      h += `<label>nombre</label><input type="text" data-k="nombre" value="${esc(e.nombre || '')}">`;
+      h += `<label>formato de imagen</label>${segBtns('formato', [['16:9', '16:9'], ['16:10', '16:10'], ['4:3', '4:3'], ['1:1', '1:1'], ['libre', 'libre']], e.formato || '16:9')}`;
+      h += `<div class="fila">${num('pAncho', 'ancho imagen (m)', g.w)}${num('pAlto', 'alto imagen (m)', g.alto)}</div>`;
+      h += `<div class="fila">${num('pDist', 'distancia (m)', g.dist)}${num('pTiro', 'relación de tiro', g.tiro)}</div>`;
+      h += `<div class="nota">Tiro = distancia ÷ ancho de imagen. Escribe el de tu proyector y se coloca a la distancia justa para este ancho.</div>`;
+      h += `<label>cuerpo del proyector</label><div class="fila">${num('pLargo', 'largo (m)', e.largo > 0 ? e.largo : 0.4)}${num('pCuerpo', 'ancho (m)', e.anchoCuerpo > 0 ? e.anchoCuerpo : 0.3)}</div>`;
+      h += check('verHaz', 'mostrar el haz', e.verHaz !== false) + check('verDatos', 'mostrar medidas y tiro', e.verDatos !== false);
+      h += `<label>nota</label><textarea data-k="nota" rows="2" placeholder="modelo, altura de montaje…">${esc(e.nota || '')}</textarea>`;
       h += `<label>color</label>${swatches(e.color)}`;
     } else if (e.tipo === 'region') {
       h += `<label>nombre</label><input type="text" data-k="nombre" value="${esc(e.nombre || '')}">`;
-      h += giroBotones('R', 'giro del nombre', 'sin giro');
+      h += giroBotones('R', 'giro del nombre', 'sin giro') + tamBotones('R');
       h += check('conteo', 'mostrar el número de obras', e.conteo !== false) + check('verArea', 'mostrar el área', e.verArea);
       if (e.etq) h += `<div class="btns"><button data-acc="etqCentro">centrar el nombre</button></div>`; else h += `<div class="nota">Arrastra el nombre en el plano para moverlo a un lugar libre.</div>`;
       const os = G.obrasEn(S.doc, e).sort(G.ordenNatural);
@@ -1376,7 +1449,11 @@ const enlazarPanel = (e) => {
   const unaVez = () => { if (!snapCampo) { snap(); snapCampo = true; } };
   $$('input,textarea,select', P).forEach((i) => i.addEventListener('focus', () => { snapCampo = false; }));
   // estilo
-  $$('[data-seg]', P).forEach((g) => $$('button', g).forEach((b) => b.addEventListener('click', () => { if (!e) return; snap(); e[g.dataset.seg] = b.dataset.v; cambio(); })));
+  $$('[data-seg]', P).forEach((g) => $$('button', g).forEach((b) => b.addEventListener('click', () => {
+    if (!e) return; snap();
+    if (g.dataset.seg === 'formato' && b.dataset.v === 'libre' && e.tipo === 'proyeccion') e.alto = G.r6(G.proyGeom(e).alto);
+    e[g.dataset.seg] = b.dataset.v; cambio();
+  })));
   $$('.swatches span', P).forEach((s) => s.addEventListener('click', () => { if (!e) return; snap(); e.color = s.dataset.color; cambio(); }));
   $$('input[type=checkbox][data-k]', P).forEach((i) => i.addEventListener('change', () => {
     snap(); const k = i.dataset.k; e[k] = i.checked;
@@ -1421,7 +1498,7 @@ const enlazarPanel = (e) => {
     const aplicar = () => {
       const v = G.parseNum(i.value); const k = i.dataset.num;
       if (k === 'altura' && String(i.value).trim() === '') { snap(); delete e.altura; cambio(); return; }
-      if (!Number.isFinite(v) || (k === 'altura' && v < 0) || ((k === 'diametro' || k === 'ancho' || k === 'tam' || k === 'largo' || k === 'esp') && !(v > 0)) || (k === 'espesor' && v < 0)) { mensaje('Medida no válida', true); renderPanel(); return; }
+      if (!Number.isFinite(v) || (k === 'altura' && v < 0) || ((k === 'diametro' || k === 'ancho' || k === 'tam' || k === 'largo' || k === 'esp' || /^p[A-Z]/.test(k)) && !(v > 0)) || (k === 'espesor' && v < 0)) { mensaje('Medida no válida', true); renderPanel(); return; }
       snap();
       if (k === 'diametro') e.r = v / 2;
       else if (k === 'ancho' || k === 'largo') { const d = G.unit(G.sub(e.b, e.a)); e.b = { x: G.r6(e.a.x + d.x * v), y: G.r6(e.a.y + d.y * v) }; }
@@ -1429,6 +1506,12 @@ const enlazarPanel = (e) => {
       else if (k === 'rot') e.rot = v;
       else if (k === 'desp') e.desp = v;
       else if (k === 'esp') e.esp = v;
+      else if (k === 'pAncho') Object.assign(e, G.proyConAncho(e, v));
+      else if (k === 'pAlto') { const g = G.proyGeom(e); if (e.formato === 'libre') e.alto = v; else Object.assign(e, G.proyConAncho(e, v * g.asp)); }
+      else if (k === 'pDist') e.p = G.proyConDistancia(e, v);
+      else if (k === 'pTiro') e.p = G.proyConDistancia(e, v * G.proyGeom(e).w);
+      else if (k === 'pLargo') e.largo = v;
+      else if (k === 'pCuerpo') e.anchoCuerpo = v;
       else if (k === 'altura') { if (v > 0) e.altura = v; else delete e.altura; }
       else if (k === 'espesor') { e.espesor = v; if (v > 0) { e.cara ||= 'fuera'; e.muroRelleno ||= 'gris'; } }
       cambio();
@@ -1466,6 +1549,25 @@ const enlazarPanel = (e) => {
     const key = g.dataset.giro; const v = b.dataset.g;
     if (v === 'auto') fijarGiro(key, null); else if (v === 'v') fijarGiro(key, -90); else if (v === '0') fijarGiro(key, 0); else fijarGiro(key, giroActual(key) - 90);
   })));
+  // tamaño por rótulo
+  const PASOS_T = [0.5, 0.6, 0.75, 0.9, 1, 1.25, 1.5, 1.75, 2, 2.5, 3];
+  const escActual = (key) => { const v = e.etiq && e.etiq[key] && e.etiq[key].esc; return v > 0 ? v : 1; };
+  const fijarEsc = (key, v) => {
+    snap(); e.etiq = { ...(e.etiq || {}) }; const prev = { ...(e.etiq[key] || {}) };
+    if (!(v > 0) || Math.abs(v - 1) < 1e-9) delete prev.esc; else prev.esc = G.clamp(v, 0.3, 5);
+    if (Object.keys(prev).length) e.etiq[key] = prev; else delete e.etiq[key];
+    if (!Object.keys(e.etiq).length) delete e.etiq; cambio();
+  };
+  $$('[data-tamr]', P).forEach((g) => $$('button', g).forEach((b) => b.addEventListener('click', () => {
+    const key = g.dataset.tamr; const t = b.dataset.t; const v = escActual(key);
+    if (t === '1') fijarEsc(key, 1);
+    else if (t === '+') fijarEsc(key, PASOS_T.find((x) => x > v + 1e-9) || v * 1.25);
+    else fijarEsc(key, [...PASOS_T].reverse().find((x) => x < v - 1e-9) || v / 1.25);
+  })));
+  $$('[data-tamexacto]', P).forEach((i) => {
+    i.value = G.fmtNum(escActual(i.dataset.tamexacto) * 100, 0);
+    i.addEventListener('change', () => { const v = G.parseNum(i.value); if (!(v > 0)) { renderPanel(); return; } fijarEsc(i.dataset.tamexacto, v / 100); });
+  });
   $$('[data-giroexacto]', P).forEach((i) => i.addEventListener('change', () => { const v = G.parseNum(i.value); if (!Number.isFinite(v)) { renderPanel(); return; } fijarGiro(i.dataset.giroexacto, v); }));
   $$('[data-obra]', P).forEach((li) => li.addEventListener('click', () => { S.sel = li.dataset.obra; S.vsel = null; render(); }));
 };
@@ -1514,6 +1616,7 @@ const pistaTexto = () => {
   if (t === 'linea') return d ? 'Clic: siguiente punto · escribe una medida y ⏎ · Shift: 15° · clic en el primer punto cierra · doble clic o ⏎ termina' : 'Clic donde empieza el muro';
   if (t === 'rect') return d ? 'Clic en la esquina opuesta · o escribe «3x2» y ⏎' : 'Clic en una esquina (o arrastra)';
   if (t === 'circulo') return d ? 'Clic en el borde · o escribe el diámetro y ⏎' : 'Clic en el centro';
+  if (t === 'proyeccion') return !d ? 'Clic en un extremo de la imagen, sobre el muro o la pantalla' : d.puntos.length === 1 ? 'Clic en el otro extremo de la imagen · o escribe su ancho y ⏎' : 'Clic donde va el proyector (la lente) · o escribe la distancia y ⏎';
   if (t === 'cuadro') return d ? 'Clic en el otro extremo del cuadro · o escribe su ancho y ⏎' : 'Clic en un extremo del cuadro, sobre el muro o panel donde cuelga';
   if (t === 'obra' || t === 'region') return d ? 'Clic: siguiente punto · escribe una medida y ⏎ · Shift: 15° · clic en el primer punto, doble clic o ⏎ cierra' : (t === 'obra' ? 'Clic en el primer punto del contorno de la obra' : 'Clic en el primer punto de la región');
   if (t === 'puerta') return d ? 'Clic en el otro extremo del vano · o escribe el ancho y ⏎' : 'Clic en un extremo del vano, sobre el muro';
@@ -1595,7 +1698,7 @@ const enfocar = (k) => { const i = $(`#panel [data-k="${k}"]`); if (i) { i.focus
 const ultimo = () => (S.draft ? S.draft.puntos[S.draft.puntos.length - 1] : null);
 // Cursor con imán, ángulo o libre según el estado
 const calcularCursor = (raw, ev) => {
-  const base = S.draft && !S.draft.cadena && ['linea', 'obra', 'region', 'puerta', 'ventana', 'cuadro', 'cota', 'calibrar'].includes(S.draft.tool) && !(S.draft.tool === 'cota' && S.draft.puntos.length === 2) ? ultimo() : null;
+  const base = S.draft && !S.draft.cadena && ['linea', 'obra', 'region', 'puerta', 'ventana', 'cuadro', 'proyeccion', 'cota', 'calibrar'].includes(S.draft.tool) && !((S.draft.tool === 'cota' || S.draft.tool === 'proyeccion') && S.draft.puntos.length === 2) ? ultimo() : null;
   if (S.draft && S.draft.tool === 'cota' && S.draft.puntos.length === 2) { S.iman = 'libre'; return raw; }
   if (S.tool === 'calibrar') { S.iman = 'libre'; return raw; }
   if (ev && ev.shiftKey && base) { S.iman = 'angulo'; return G.snapAngulo(base, raw, 15, S.doc.imanes ? S.doc.rejilla : 0); }
@@ -1636,12 +1739,19 @@ const terminarDosPuntos = (p) => {
     snap(); e.pts = [...pts, p]; delete e.a; delete e.b; S.sel = e.id; cambio(); return;
   }
   const a = d.puntos[0];
+  if (t === 'proyeccion' && d.puntos.length === 2) {
+    const [pa, pb] = d.puntos; S.draft = null; S.buffer = '';
+    if (G.dist(G.medio(pa, pb), p) < 0.05) { mensaje('Coloca el proyector a cierta distancia de la imagen', true); S.draft = { tool: t, puntos: [pa, pb] }; return render(); }
+    const n = S.doc.entidades.filter((x) => x.tipo === 'proyeccion').length;
+    agregar({ tipo: 'proyeccion', a: pa, b: pb, p, nombre: 'P' + (n + 1), formato: '16:9', color: '#4f6b82', verHaz: true, verDatos: true }); enfocar('nombre'); return;
+  }
   if (t === 'cota' && d.puntos.length === 2) {
     const e = { tipo: 'cota', pts: [d.puntos[0], d.puntos[1]], desp: G.r6(d.desp || 0), texto: '', total: false };
     S.buffer = ''; const nueva = agregar(e); S.draft = { tool: 'cota', cadena: nueva.id, puntos: [] }; render(); return;
   }
   if (G.dist(a, p) < 1e-4) { mensaje('Los dos puntos coinciden', true); return render(); }
   if (t === 'cota') { d.puntos.push(p); d.desp = 0; S.buffer = ''; return render(); }
+  if (t === 'proyeccion') { d.puntos.push(p); S.buffer = ''; return render(); }
   S.draft = null; S.buffer = '';
   if (t === 'rect') {
     if (Math.abs(p.x - a.x) < 1e-4 || Math.abs(p.y - a.y) < 1e-4) { mensaje('El rectángulo no tiene área', true); return render(); }
@@ -1673,6 +1783,11 @@ const aplicarBuffer = () => {
   if (!(L > 0)) { mensaje('Medida no válida', true); return render(); }
   if (d.tool === 'circulo') return terminarDosPuntos({ x: G.r6(base.x + L / 2), y: base.y });
   if (d.tool === 'cota' && d.puntos.length === 2) { d.desp = L * (Math.sign(d.desp || 1)); return terminarDosPuntos(null); }
+  if (d.tool === 'proyeccion' && d.puntos.length === 2) {
+    const [pa, pb] = d.puntos; const m = G.medio(pa, pb); const n = G.unit(G.perp(G.sub(pb, pa)));
+    const sg = Math.sign(G.dot(G.sub(S.cursor || G.add(m, n), pa), n)) || 1;
+    return terminarDosPuntos({ x: G.r6(m.x + n.x * L * sg), y: G.r6(m.y + n.y * L * sg) });
+  }
   const dir = G.dist(base, cur) > 1e-9 ? G.unit(G.sub(cur, base)) : { x: 1, y: 0 };
   const p = { x: G.r6(base.x + dir.x * L), y: G.r6(base.y + dir.y * L) };
   if (esPoli(d.tool)) { d.puntos.push(p); return render(); }
@@ -1759,7 +1874,7 @@ el.lienzo.addEventListener('pointerdown', (ev) => {
   if (S.tool === 'calco') { const c = S.doc.calco; if (c) S.arr = { ...base, tipo: 'calco', cx: c.x, cy: c.y, hecho: false }; return; }
   if (DIBUJO.includes(S.tool)) {
     const p = calcularCursor(raw, ev); S.cursor = p;
-    const creado = !S.draft && ['rect', 'circulo', 'puerta', 'ventana', 'cuadro', 'cota', 'calibrar'].includes(S.tool);
+    const creado = !S.draft && ['rect', 'circulo', 'puerta', 'ventana', 'cuadro', 'proyeccion', 'cota', 'calibrar'].includes(S.tool);
     if (creado) { S.draft = { tool: S.tool, puntos: [p] }; }
     S.arr = { ...base, tipo: 'dibujo', creado }; renderSvg(); renderPista();
   }
@@ -1887,7 +2002,7 @@ document.addEventListener('keydown', (ev) => {
     const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
     snap(); G.mover(e, d[0] * paso, d[1] * paso); cambio(); return;
   }
-  const herr = { v: 'select', l: 'linea', r: 'rect', o: 'circulo', p: 'puerta', n: 'ventana', t: 'texto', d: 'cota', c: 'cuadro', b: 'obra', g: 'region' };
+  const herr = { v: 'select', l: 'linea', r: 'rect', o: 'circulo', p: 'puerta', n: 'ventana', t: 'texto', d: 'cota', c: 'cuadro', b: 'obra', g: 'region', y: 'proyeccion' };
   if (herr[kl]) { setTool(herr[kl]); return; }
   if (k === '0') verTodo(); else if (k === '+' || k === '=') { const { rect } = tam(); zoomEn(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.25); }
   else if (k === '-') { const { rect } = tam(); zoomEn(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.8); }
@@ -1951,7 +2066,8 @@ const validarDoc = (d) => {
     (e.tipo === 'cota' && ((Array.isArray(e.pts) && e.pts.length >= 2 && e.pts.every(esPunto)) || (esPunto(e.a) && esPunto(e.b)))) ||
     (e.tipo === 'texto' && Number.isFinite(e.x) && Number.isFinite(e.y) && e.tam > 0) ||
     ((e.tipo === 'obra' || e.tipo === 'region') && Array.isArray(e.pts) && e.pts.length >= 3 && e.pts.every(esPunto)) ||
-    (e.tipo === 'cuadro' && esPunto(e.a) && esPunto(e.b))));
+    (e.tipo === 'cuadro' && esPunto(e.a) && esPunto(e.b)) ||
+    (e.tipo === 'proyeccion' && esPunto(e.a) && esPunto(e.b) && esPunto(e.p))));
   const descartadas = d.entidades.length - ok.length;
   ok.forEach((e) => { e.id ||= G.nuevoId(); e.color ||= COLORES[0]; if (e.tipo === 'cota' && !Array.isArray(e.pts)) { e.pts = [e.a, e.b]; delete e.a; delete e.b; } });
   const c = d.calco && d.calco.src && d.calco.w > 0 && d.calco.h > 0 && d.calco.mpp > 0 ? d.calco : null;
