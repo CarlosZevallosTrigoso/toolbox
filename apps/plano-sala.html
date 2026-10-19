@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>plano-sala</title>
+<style>
+:root{
+  --bg:#ffffff; --ink:#111111; --ink2:#5a5a5a; --linea:#d9d9d9; --panel:#f6f6f3;
+  --moss:#8fa676; --moss2:#586a45; --steel:#4f6b82; --naranja:#b06a36; --rojo:#b03a2e;
+  --mono:"Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r:2px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:12px;line-height:1.4}
+button,input,select,textarea{font:inherit;color:inherit;border-radius:var(--r)}
+button{background:var(--bg);border:1px solid var(--linea);padding:4px 8px;cursor:pointer}
+button:hover{border-color:var(--ink)}
+button.activo{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.peligro:hover{border-color:var(--rojo);color:var(--rojo)}
+button.primario{background:var(--moss2);border-color:var(--moss2);color:#fff}
+button.primario:hover{background:#4a5a3a}
+button:disabled{opacity:.4;cursor:default}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--linea);padding:4px 6px;background:var(--bg);width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--steel)}
+textarea{resize:vertical;min-height:48px}
+label{display:block;color:var(--ink2);margin:8px 0 2px;font-size:11px;text-transform:uppercase;letter-spacing:.04em}
+label.check{display:flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--ink);margin:6px 0;cursor:pointer}
+label.check input{margin:0}
+kbd{border:1px solid var(--linea);padding:0 4px;border-radius:var(--r);background:var(--bg);font-size:10px;color:var(--ink2)}
+input[type=file]{display:none}
+
+#app{display:grid;grid-template-rows:42px 1fr 30px;grid-template-columns:146px 1fr 272px;height:100%}
+header{grid-column:1/-1;display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid var(--linea);background:var(--panel)}
+#titulo{font-weight:700;cursor:pointer;margin-right:6px;user-select:none}
+#volver{color:var(--ink2);text-decoration:none;white-space:nowrap}
+#volver:hover{color:var(--moss2)}
+#titulo:hover{color:var(--moss2)}
+#nombre{width:200px;border:1px solid transparent;background:transparent;padding:3px 6px}
+#nombre:hover,#nombre:focus{border-color:var(--linea);background:var(--bg)}
+#acciones{margin-left:auto;display:flex;gap:4px;align-items:center}
+.sep{width:1px;height:22px;background:var(--linea);margin:0 4px}
+
+nav{border-right:1px solid var(--linea);background:var(--panel);padding:8px 6px;display:flex;flex-direction:column;gap:3px;overflow:auto}
+nav button{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:4px;text-align:left;padding:6px 6px;border-color:transparent;background:transparent}
+nav button:hover{border-color:var(--linea);background:var(--bg)}
+nav button.activo{background:var(--ink);color:#fff;border-color:var(--ink)}
+nav button.activo kbd{background:transparent;color:#ccc;border-color:#555}
+nav button .ic{font-size:15px;text-align:center;line-height:1}
+nav .grupo{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);margin:10px 4px 2px}
+
+#lienzo{position:relative;overflow:hidden;background:#fff;touch-action:none;cursor:default}
+#lienzo.dibujo{cursor:crosshair}
+#lienzo.pan{cursor:grab}
+#lienzo.panning{cursor:grabbing}
+#svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+#flotante{position:absolute;pointer-events:none;background:var(--ink);color:#fff;padding:2px 7px;border-radius:var(--r);font-size:12px;white-space:nowrap;display:none;transform:translate(14px,14px)}
+#flotante .buf{color:#e8c48f}
+#guia{position:absolute;left:12px;right:12px;top:10px;background:#fffdf7;border:1px solid var(--naranja);border-left:4px solid var(--naranja);padding:8px 12px;display:none;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+#guia.visible{display:flex}
+#guia .paso{color:var(--naranja);font-weight:700;white-space:nowrap}
+#guia .txt{flex:1}
+#barraEscala{pointer-events:none;position:absolute;left:12px;bottom:12px;background:rgba(255,255,255,.9);padding:3px 8px;border:1px solid var(--linea);border-radius:var(--r);font-size:11px}
+#barraEscala .l{height:6px;border:2px solid var(--ink);border-top:none;margin-top:2px}
+
+#inicio{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.88);z-index:4}
+#inicio.visible{display:flex}
+#inicio .tarjeta{background:#fff;border:1px solid var(--linea);padding:22px 24px;width:min(560px,92%);box-shadow:0 6px 24px rgba(0,0,0,.07)}
+#inicio h1{font-size:16px;margin:0 0 4px}
+#inicio p.sub{margin:0 0 16px;color:var(--ink2)}
+#inicio .opcion{border:1px solid var(--linea);padding:12px 14px;margin-bottom:8px;border-radius:var(--r)}
+#inicio .opcion:hover{border-color:var(--ink2)}
+#inicio .opcion h2{font-size:13px;margin:0 0 4px}
+#inicio .opcion p{margin:0 0 8px;color:var(--ink2)}
+#inicio .fila{display:flex;align-items:center;gap:6px}
+#inicio .fila input{width:80px}
+#inicio .pie{display:flex;gap:6px;margin-top:6px}
+
+aside{overflow:auto;background:var(--panel);padding:10px;border-left:1px solid var(--linea)}
+aside h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink2);margin:14px 0 6px;padding-top:10px;border-top:1px solid var(--linea)}
+aside h3:first-child{margin-top:0;padding-top:0;border-top:none}
+.fila{display:flex;gap:6px;align-items:flex-end}
+.fila>*{flex:1}
+.dato{color:var(--ink2);margin:6px 0}
+.dato b{color:var(--ink)}
+.vacio{color:var(--ink2);font-style:italic}
+.btns{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap}
+.seg{display:flex;gap:2px}
+.seg button{flex:1;padding:4px 2px}
+.swatches{display:flex;gap:4px;margin-top:2px}
+.swatches span{width:22px;height:22px;border:1px solid var(--linea);border-radius:var(--r);cursor:pointer}
+.swatches span.activo{outline:2px solid var(--ink);outline-offset:1px}
+table.tramos{width:100%;border-collapse:collapse;margin-top:2px}
+table.tramos td{padding:2px 0}
+table.tramos td:first-child{color:var(--ink2);width:58px}
+table.tramos input{text-align:right}
+table.tramos td.u{width:20px;padding-left:4px;color:var(--ink2)}
+table.tramos td.alto{width:72px;padding-left:4px}
+table.tramos td.alto input{color:var(--steel)}
+table.tramos td.alto input::placeholder{color:#a9b6c1}
+input[type=range]{width:100%}
+ul.obras{list-style:none;margin:0;padding:0}
+ul.obras li{display:flex;gap:6px;align-items:baseline;padding:3px 4px;border:1px solid transparent;border-radius:var(--r);cursor:pointer}
+ul.obras li:hover{background:var(--bg);border-color:var(--linea)}
+ul.obras li b{min-width:22px;color:var(--naranja)}
+ul.obras li span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ul.obras li i{font-style:normal;color:var(--ink2);font-size:11px}
+.nota{color:var(--ink2);font-size:11px;margin:4px 0}
+
+footer{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 10px;border-top:1px solid var(--linea);background:var(--panel);color:var(--ink2);font-size:11px;overflow:hidden;white-space:nowrap}
+#pista{color:var(--ink);overflow:hidden;text-overflow:ellipsis;flex:1}
+#pistaBtns{display:flex;gap:4px}
+#pistaBtns button{padding:1px 8px;font-size:11px}
+#msg{color:var(--moss2);max-width:40%;overflow:hidden;text-overflow:ellipsis}
+#msg.error{color:var(--rojo)}
+
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;z-index:10}
+.modal.visible{display:flex}
+.modal .caja{background:#fff;border:1px solid var(--linea);padding:18px 20px;width:min(440px,92%)}
+.modal h2{font-size:14px;margin:0 0 6px}
+#ayuda .caja{width:min(640px,94%);max-height:86vh;overflow:auto}
+#ayuda table{border-collapse:collapse;width:100%}
+#ayuda td{padding:3px 12px 3px 0;vertical-align:top}
+@media (max-width:900px){#app{grid-template-columns:58px 1fr}aside{display:none}nav button{grid-template-columns:1fr}nav button .tx,nav button kbd,nav .grupo{display:none}#nombre{width:110px}}
+@media print{header,nav,aside,footer{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <a id="volver" href="../index.html" title="Volver al toolbox">← toolbox/</a>
+    <span id="titulo" title="Recargar">plano-sala</span>
+    <input id="nombre" type="text" placeholder="nombre de la sala" aria-label="Nombre de la sala">
+    <div id="acciones">
+      <button id="bDeshacer" title="Deshacer (Ctrl+Z)">↶</button>
+      <button id="bRehacer" title="Rehacer (Ctrl+Y)">↷</button>
+      <span class="sep"></span>
+      <button id="bAjustar" title="Ver todo el plano (0)">⤢ ver todo</button>
+      <span class="sep"></span>
+      <button id="bNuevo" title="Empezar un plano nuevo">Nuevo</button>
+      <button id="bAbrir" title="Abrir un proyecto .json">Abrir</button>
+      <button id="bGuardar" title="Guardar el proyecto como .json (Ctrl+S)">Guardar</button>
+      <button id="bExportar" class="primario" title="Descargar el plano como SVG a escala o PNG">Exportar</button>
+      <button id="bAyuda" title="Ayuda (?)">?</button>
+    </div>
+  </header>
+
+  <nav id="herramientas" role="toolbar" aria-label="Herramientas">
+    <button data-tool="select" title="Seleccionar y mover (V)"><span class="ic">↖</span><span class="tx">Elegir</span><kbd>V</kbd></button>
+    <div class="grupo">dibujar</div>
+    <button data-tool="linea" title="Muro o línea: clic punto a punto (L)"><span class="ic">╱</span><span class="tx">Muro</span><kbd>L</kbd></button>
+    <button data-tool="rect" title="Rectángulo: panel, vitrina, tarima (R)"><span class="ic">▭</span><span class="tx">Rectángulo</span><kbd>R</kbd></button>
+    <button data-tool="circulo" title="Círculo: columna, pedestal (O)"><span class="ic">◯</span><span class="tx">Círculo</span><kbd>O</kbd></button>
+    <button data-tool="puerta" title="Puerta: dos clics sobre el muro (P)"><span class="ic">◜</span><span class="tx">Puerta</span><kbd>P</kbd></button>
+    <button data-tool="ventana" title="Ventana: dos clics sobre el muro (N)"><span class="ic">▥</span><span class="tx">Ventana</span><kbd>N</kbd></button>
+    <div class="grupo">obras</div>
+    <button data-tool="cuadro" title="Cuadro: dos clics sobre el muro donde cuelga (C)"><span class="ic">▬</span><span class="tx">Cuadro</span><kbd>C</kbd></button>
+    <button data-tool="obra" title="Obra en planta: lazo poligonal (B)"><span class="ic">⬠</span><span class="tx">Obra</span><kbd>B</kbd></button>
+    <button data-tool="region" title="Región o núcleo curatorial: lazo poligonal (G)"><span class="ic">⬚</span><span class="tx">Región</span><kbd>G</kbd></button>
+    <div class="grupo">anotar</div>
+    <button data-tool="texto" title="Texto (T)"><span class="ic">T</span><span class="tx">Texto</span><kbd>T</kbd></button>
+    <button data-tool="cota" title="Cota de medida (D)"><span class="ic">↔</span><span class="tx">Cota</span><kbd>D</kbd></button>
+    <div class="grupo">calco</div>
+    <button id="bCalcoNav" title="Subir una imagen para dibujar encima"><span class="ic">▤</span><span class="tx">Calcar</span><span></span></button>
+  </nav>
+
+  <div id="lienzo">
+    <svg id="svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" viewBox="0 0 100 100">
+      <defs id="defsRejilla"></defs>
+      <g id="capaRejilla"></g>
+      <g id="capaCalco"></g>
+      <g id="capaDibujo"></g>
+      <g id="capaSel"></g>
+      <g id="capaDraft"></g>
+    </svg>
+    <div id="guia"><span class="paso"></span><span class="txt"></span><button id="bGuiaCerrar">entendido</button></div>
+    <div id="barraEscala"><span class="t"></span><div class="l"></div></div>
+    <div id="flotante"></div>
+    <div id="inicio">
+      <div class="tarjeta">
+        <h1>Empieza tu plano de sala</h1>
+        <p class="sub">Todo se mide en metros. Puedes cambiar cualquier medida después.</p>
+        <div class="opcion">
+          <h2>Sala rectangular</h2>
+          <p>Escribe el ancho y el largo; el contorno aparece con sus medidas.</p>
+          <div class="fila">
+            <input id="iAncho" type="text" inputmode="decimal" value="8" aria-label="Ancho en metros"> <span>m ×</span>
+            <input id="iLargo" type="text" inputmode="decimal" value="5" aria-label="Largo en metros"> <span>m</span>
+            <button id="bCrearSala" class="primario">Crear sala</button>
+          </div>
+        </div>
+        <div class="opcion">
+          <h2>Calcar desde una imagen</h2>
+          <p>Sube un plano, un croquis o una foto cenital. Marcas una medida que conozcas y dibujas encima con papel de cebolla.</p>
+          <button id="bCalcoInicio" class="primario">Subir imagen…</button>
+        </div>
+        <div class="pie">
+          <button id="bBlanco">Empezar en blanco</button>
+          <button id="bAbrirInicio">Abrir proyecto (.json)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <aside id="panel"></aside>
+
+  <footer>
+    <span id="pista"></span>
+    <span id="pistaBtns"></span>
+    <span id="msg"></span>
+    <span id="coords"></span>
+    <span id="zoomInfo"></span>
+  </footer>
+</div>
+
+<div id="exportar" class="modal" role="dialog" aria-label="Exportar">
+  <div class="caja">
+    <h2>Exportar plano</h2>
+    <label>formato</label>
+    <div class="seg" id="exFormato">
+      <button data-v="svg" class="activo">SVG a escala</button>
+      <button data-v="png">PNG imagen</button>
+    </div>
+    <div id="exOpSvg">
+      <label>escala de impresión</label>
+      <select id="exEscala"></select>
+      <div class="dato" id="exPapel"></div>
+    </div>
+    <div id="exOpPng" style="display:none">
+      <label>ancho de la imagen</label>
+      <select id="exAncho"><option value="1600">1600 px</option><option value="3000" selected>3000 px</option><option value="5000">5000 px</option></select>
+    </div>
+    <label class="check"><input type="checkbox" id="exTitulo" checked> nombre de la sala</label>
+    <label class="check"><input type="checkbox" id="exBarra" checked> barra de escala</label>
+    <label class="check" id="exCalcoFila"><input type="checkbox" id="exCalco"> incluir la imagen de calco</label>
+    <p class="nota">El SVG lleva medidas reales en milímetros: al imprimirlo al 100 % (sin «ajustar a la página») respeta la escala. Ábrelo en el navegador, Inkscape o Illustrator.</p>
+    <div class="btns"><button id="exDescargar" class="primario">Descargar</button><button id="exObras">Lista de obras (CSV)</button><button id="exCancelar">Cancelar</button></div>
+  </div>
+</div>
+
+<div id="ayuda" class="modal" role="dialog" aria-label="Ayuda">
+  <div class="caja">
+    <h2>plano-sala</h2>
+    <table>
+      <tr><td><kbd>V</kbd> Elegir</td><td>Clic para seleccionar; arrastrar para mover. Con un muro seleccionado, arrastra sus puntos naranjas; doble clic sobre un tramo añade un punto; <kbd>Supr</kbd> borra el punto marcado o el elemento.</td></tr>
+      <tr><td><kbd>L</kbd> Muro</td><td>Clic punto a punto. Mientras dibujas, <b>escribe una medida</b> (por ejemplo <kbd>3,4</kbd>) y <kbd>⏎</kbd>: el tramo sale exacto en la dirección del cursor. Clic en el primer punto cierra la figura. Doble clic o <kbd>⏎</kbd> termina. <kbd>⌫</kbd> quita el último punto.</td></tr>
+      <tr><td><kbd>R</kbd> Rectángulo</td><td>Dos esquinas (clic-clic o arrastrar). Medida exacta: escribe <kbd>3x2</kbd> y <kbd>⏎</kbd>.</td></tr>
+      <tr><td><kbd>O</kbd> Círculo</td><td>Centro y borde. Escribe el diámetro y <kbd>⏎</kbd>.</td></tr>
+      <tr><td><kbd>P</kbd> Puerta</td><td>Dos clics sobre el muro, en los extremos del vano. En el panel, «Cambiar giro» rota la hoja.</td></tr>
+      <tr><td><kbd>N</kbd> Ventana</td><td>Dos clics sobre el muro, en los extremos de la ventana. En el panel ajustas el ancho y el espesor del muro.</td></tr>
+      <tr><td><kbd>C</kbd> Cuadro</td><td>Dos clics sobre el muro o panel donde cuelga (o escribe el ancho y ⏎). Queda adosado, hacia dentro de la sala, con su número. «Cambiar de cara» lo pasa al otro lado.</td></tr>
+      <tr><td><kbd>B</kbd> Obra</td><td>Lazo poligonal para esculturas, instalaciones o vitrinas: clic punto a punto y cierra en el primer punto, con doble clic o <kbd>⏎</kbd>. Ficha en el panel.</td></tr>
+      <tr><td><kbd>G</kbd> Región</td><td>Lazo poligonal para un núcleo o zona curatorial. Muestra su nombre y cuántas obras caen dentro.</td></tr>
+      <tr><td>Lista</td><td>Sin nada elegido, el panel lista las obras; clic en una para ir a ella. «Lista de obras (CSV)» descarga la checklist de montaje.</td></tr>
+      <tr><td><kbd>T</kbd> Texto</td><td>Clic y escribe en el panel derecho.</td></tr>
+      <tr><td><kbd>D</kbd> Cota</td><td>Primer punto, segundo punto, y un tercer clic para separarla del muro. Después, cada clic encadena otra medida en la misma línea; <kbd>⏎</kbd> o <kbd>Esc</kbd> termina. En el panel puedes mostrar el total.</td></tr>
+      <tr><td>Rótulos</td><td>Las medidas, alturas y números se colocan solos donde no chocan con otros rótulos, muros, cuadros ni obras. Con «Elegir» puedes arrastrar cualquiera; sigue a su muro si este se mueve. Doble clic sobre un rótulo movido lo devuelve a su sitio automático.</td></tr>
+      <tr><td>Altura</td><td>Con un muro elegido, escribe su altura en el panel; aparece como «h 3,20 m» por el otro lado del muro. Si un tramo es distinto, escribe su alto en la tabla de tramos.</td></tr>
+      <tr><td>Espesor</td><td>Con un muro elegido, escribe su espesor en el panel. La línea que dibujaste es la cara interior y el espesor crece hacia fuera (puedes cambiarlo). Puertas y ventanas cortan el muro completo.</td></tr>
+      <tr><td>Calcar</td><td>Sube una imagen, marca dos puntos de una medida conocida y escribe los metros. La imagen queda a escala debajo del dibujo; regula su opacidad en el panel.</td></tr>
+      <tr><td><kbd>Shift</kbd></td><td>Al dibujar, fija ángulos de 15° (horizontal, vertical, 45°…).</td></tr>
+      <tr><td><kbd>Alt</kbd></td><td>Desactiva el imán mientras lo mantienes.</td></tr>
+      <tr><td>Vista</td><td>Rueda: acercar. Arrastrar el fondo (en Elegir), botón central, o <kbd>Espacio</kbd> + arrastrar: desplazar. <kbd>0</kbd> ver todo.</td></tr>
+      <tr><td>Otros</td><td><kbd>Ctrl+Z</kbd>/<kbd>Ctrl+Y</kbd> deshacer/rehacer · <kbd>Ctrl+D</kbd> duplicar · flechas: mover lo seleccionado · <kbd>Esc</kbd> cancela.</td></tr>
+    </table>
+    <p>El trabajo se guarda solo en este navegador mientras quepa. «Guardar» descarga un .json con todo, imagen de calco incluida.</p>
+    <div class="btns"><button id="bCerrarAyuda">Cerrar</button></div>
+  </div>
+</div>
+
+<input type="file" id="fCalco" accept="image/*">
+<input type="file" id="fJson" accept="application/json,.json">
+
+<script id="geometria">
+// ─── G: geometría y render, funciones puras sin DOM. Modelo en metros; SVG en centímetros (U).
+const G = (() => {
+  const U = 100;
+  const GROSOR = { fino: 1, medio: 2, grueso: 3.5 };
+  const TRAZO = { continua: null, discontinua: [6, 4], punteada: [0.1, 2.6] };
+  const COLORES = ['#111111', '#4f6b82', '#586a45', '#b06a36', '#b03a2e', '#8a8a8a'];
+  const FUENTE = "'Fira Code', ui-monospace, Menlo, Consolas, monospace";
+  const ESCALAS = [20, 25, 50, 75, 100, 200];
+  const PAPELES = [['A4', 210, 297], ['A3', 297, 420], ['A2', 420, 594], ['A1', 594, 841], ['A0', 841, 1189]];
+
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const r6 = (v) => Math.round(v * 1e6) / 1e6;
+  const dist = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
+  const sub = (a, b) => ({ x: a.x - b.x, y: a.y - b.y });
+  const add = (a, b) => ({ x: a.x + b.x, y: a.y + b.y });
+  const mul = (a, k) => ({ x: a.x * k, y: a.y * k });
+  const dot = (a, b) => a.x * b.x + a.y * b.y;
+  const unit = (v) => { const l = Math.hypot(v.x, v.y); return l > 0 ? { x: v.x / l, y: v.y / l } : { x: 1, y: 0 }; };
+  const perp = (v) => ({ x: -v.y, y: v.x });
+  const medio = (a, b) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const rotar = (v, grados) => { const r = grados * Math.PI / 180, c = Math.cos(r), s = Math.sin(r); return { x: v.x * c - v.y * s, y: v.x * s + v.y * c }; };
+
+  // Números en español: acepta coma o punto
+  const parseNum = (s) => {
+    if (typeof s === 'number') return s;
+    const t = String(s ?? '').trim().replace(/\s+/g, '').replace(',', '.');
+    if (!/^[-+]?(\d+\.?\d*|\.\d+)$/.test(t)) return NaN;
+    return parseFloat(t);
+  };
+  const fmtNum = (n, dec = 2) => {
+    if (!Number.isFinite(n)) return '—';
+    const f = 10 ** dec; let s = (Math.round((n + Math.sign(n) * 1e-9) * f) / f).toFixed(dec);
+    if (/^-0(\.0*)?$/.test(s)) s = s.slice(1);
+    return s.replace('.', ',');
+  };
+  const fmtM = (m) => fmtNum(m) + ' m';
+  const fmtM2 = (a) => fmtNum(a) + ' m²';
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ── ajustes de puntero
+  const snapGrid = (p, s) => (s > 0 ? { x: r6(Math.round(p.x / s) * s), y: r6(Math.round(p.y / s) * s) } : { x: p.x, y: p.y });
+  // Ángulo en pasos de `paso` grados; longitud redondeada a `pasoLong` si se da
+  const snapAngulo = (o, p, paso = 15, pasoLong = 0) => {
+    let d = dist(o, p); if (!(d > 0)) return { x: p.x, y: p.y };
+    if (pasoLong > 0) d = Math.max(pasoLong, Math.round(d / pasoLong) * pasoLong);
+    const s = paso * Math.PI / 180;
+    const b = Math.round(Math.atan2(p.y - o.y, p.x - o.x) / s) * s;
+    return { x: r6(o.x + Math.cos(b) * d), y: r6(o.y + Math.sin(b) * d) };
+  };
+  const proyectar = (p, a, b) => {
+    const ab = sub(b, a); const L2 = dot(ab, ab);
+    if (!(L2 > 0)) return { q: { x: a.x, y: a.y }, t: 0, d: dist(p, a) };
+    const t = clamp(dot(sub(p, a), ab) / L2, 0, 1);
+    const q = { x: a.x + ab.x * t, y: a.y + ab.y * t };
+    return { q, t, d: dist(p, q) };
+  };
+  const esPoligono = (e) => e.tipo === 'obra' || e.tipo === 'region';
+  const segmentos = (e) => {
+    if (esPoligono(e)) { const s = []; const n = e.pts.length; for (let i = 0; i < n; i++) s.push([e.pts[i], e.pts[(i + 1) % n], i]); return n > 2 ? s : []; }
+    if (e.tipo === 'linea') {
+      const s = [];
+      for (let i = 0; i < e.pts.length - 1; i++) s.push([e.pts[i], e.pts[i + 1], i]);
+      if (e.cerrada && e.pts.length > 2) s.push([e.pts[e.pts.length - 1], e.pts[0], e.pts.length - 1]);
+      return s;
+    }
+    if (e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro') return [[e.a, e.b, 0]];
+    return [];
+  };
+  const verticesIman = (e) => (e.tipo === 'linea' ? e.pts : e.tipo === 'circulo' ? [e.c] : e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro' ? [e.a, e.b] : esPoligono(e) ? e.pts : []);
+  // Imán: vértice > punto medio > sobre un tramo > rejilla > libre
+  const imanar = (p, o) => {
+    const ents = o.entidades || [], tol = o.tol || 0.1, ex = o.excluir || null;
+    if (o.objetos !== false) {
+      let best = null, bd = tol;
+      for (const e of ents) verticesIman(e).forEach((v, i) => {
+        if (ex && ex.id === e.id && ex.idx === i) return;
+        const d = dist(p, v); if (d <= bd) { bd = d; best = { p: { x: v.x, y: v.y }, tipo: 'vertice' }; }
+      });
+      if (best) return best;
+      const segs = [];
+      for (const e of ents) { if (ex && ex.id === e.id) continue; for (const s of segmentos(e)) segs.push(s); }
+      let bm = tol * 0.55;
+      for (const [a, b] of segs) { const m = medio(a, b); const d = dist(p, m); if (d <= bm) { bm = d; best = { p: { x: r6(m.x), y: r6(m.y) }, tipo: 'medio' }; } }
+      if (best) return best;
+      let bl = null, bdl = tol * 0.8;
+      for (const [a, b] of segs) { const pr = proyectar(p, a, b); if (pr.d <= bdl) { bdl = pr.d; bl = { p: { x: r6(pr.q.x), y: r6(pr.q.y) }, tipo: 'linea' }; } }
+      if (bl) return bl;
+    }
+    if (o.rejilla > 0) return { p: snapGrid(p, o.rejilla), tipo: 'rejilla' };
+    return { p: { x: p.x, y: p.y }, tipo: 'libre' };
+  };
+
+  // ── medidas
+  const areaFirmada = (pts) => { let s = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; s += a.x * b.y - b.x * a.y; } return s / 2; };
+  const area = (pts) => (pts && pts.length > 2 ? Math.abs(areaFirmada(pts)) : 0);
+  const longitudLinea = (e) => segmentos(e).reduce((s, [a, b]) => s + dist(a, b), 0);
+  const puntoEnPoligono = (p, pts) => {
+    let dentro = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const a = pts[i], b = pts[j];
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) dentro = !dentro;
+    }
+    return dentro;
+  };
+  const anguloLegible = (a, b) => { let g = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI; if (g > 89.999) g -= 180; else if (g < -90.001) g += 180; return g; };
+  // Lado "de lectura" para un rótulo junto a un tramo abierto: arriba, o a la izquierda si es vertical
+  const ladoArriba = (n) => (n.y < -1e-9 || (Math.abs(n.y) < 1e-9 && n.x < 0)) ? 1 : -1;
+  // Rótulos de longitud por tramo: fuera de la figura si es cerrada; arriba/izquierda si es abierta
+  // Una línea cerrada, o abierta que rodea un espacio (calco a medio trazar), define un contorno con dentro y fuera
+  const contornoDe = (e) => (e.tipo === 'linea' && e.pts.length > 2 && (e.cerrada || area(e.pts) > 0.05 * Math.pow(longitudLinea(e), 2) / 16) ? e.pts : null);
+  const esRectangulo = (pts) => {
+    if (pts.length !== 4) return false;
+    for (let i = 0; i < 4; i++) { const a = pts[i], b = pts[(i + 1) % 4], c = pts[(i + 2) % 4]; const u = sub(b, a), v = sub(c, b); if (Math.abs(dot(u, v)) > 1e-6 * (Math.hypot(u.x, u.y) * Math.hypot(v.x, v.y) + 1e-12)) return false; }
+    return true;
+  };
+  // extra(a, b): separación adicional para un tramo (p. ej. el marco de una ventana que está sobre él)
+  const etiquetasTramos = (e, h, extra = null) => {
+    const res = []; const cerr = e.tipo === 'linea' && e.cerrada && e.pts.length > 2;
+    // una línea abierta que rodea un espacio se rotula hacia fuera de la figura que insinúa
+    const contorno = contornoDe(e);
+    const rect = cerr && esRectangulo(e.pts);
+    for (const [a, b, i] of segmentos(e)) {
+      if (rect && i > 1) continue;
+      const L = dist(a, b); if (L < h * 2) continue; // un tramo más corto que su rótulo se acota a mano
+      const m = medio(a, b); const n = unit(perp(sub(b, a)));
+      let s;
+      if (contorno) { const prueba = add(m, mul(n, Math.min(h * 0.85, L * 0.2, h * 0.3))); s = puntoEnPoligono(prueba, contorno) ? -1 : 1; }
+      else s = ladoArriba(n);
+      // extra puede devolver un número (separación) o {off, t}: separación y posición a lo largo del tramo (0–1)
+      const ex = extra ? extra(a, b, s) : 0;
+      const off = h * 0.85 + (typeof ex === 'number' ? ex : ex.off);
+      const base = typeof ex === 'number' ? m : add(a, mul(sub(b, a), ex.t));
+      const pos = add(base, mul(n, s * off));
+      res.push({ x: pos.x, y: pos.y, ang: anguloLegible(a, b), texto: fmtM(L), L, i, lado: s, n, base });
+    }
+    return res;
+  };
+
+  // Altura de un tramo: la propia si se indicó, si no la general del muro (0 = sin indicar)
+  const alturaTramo = (e, i) => (e.alturas && e.alturas[i] > 0 ? e.alturas[i] : e.altura > 0 ? e.altura : 0);
+  const tieneAlturas = (e) => e.tipo === 'linea' && (e.altura > 0 || (e.alturas && Object.values(e.alturas).some((v) => v > 0)));
+  // Rótulos de altura: los tramos con altura propia, más la general una vez (en el tramo rotulado más largo sin altura propia)
+  const etiquetasAltura = (e, et) => {
+    if (!tieneAlturas(e)) return [];
+    const propia = (i) => e.alturas && e.alturas[i] > 0;
+    const res = et.filter((t) => propia(t.i)).map((t) => ({ t, v: e.alturas[t.i] }));
+    if (e.altura > 0) { const libres = et.filter((t) => !propia(t.i)).sort((a, b) => b.L - a.L); if (libres.length) res.push({ t: libres[0], v: e.altura }); }
+    return res;
+  };
+  // ── obras y regiones
+  const centroide = (pts) => {
+    let A = 0, cx = 0, cy = 0;
+    for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; const c = a.x * b.y - b.x * a.y; A += c; cx += (a.x + b.x) * c; cy += (a.y + b.y) * c; }
+    if (Math.abs(A) < 1e-12) { const n = pts.length || 1; return { x: pts.reduce((s, p) => s + p.x, 0) / n, y: pts.reduce((s, p) => s + p.y, 0) / n }; }
+    return { x: cx / (3 * A), y: cy / (3 * A) };
+  };
+  // Muro (línea) sobre el que está un tramo a–b
+  const lineaBajo = (ents, a, b) => {
+    for (let k = ents.length - 1; k >= 0; k--) { const e = ents[k]; if (e.tipo !== 'linea') continue; for (const [p, q] of segmentos(e)) if (proyectar(a, p, q).d < 0.02 && proyectar(b, p, q).d < 0.02) return { e, hn: unit(perp(sub(q, p))) }; }
+    return null;
+  };
+  // Cuadro adosado: franja de fondo `fondo` desde la cara del muro, hacia el lado `lado` (±1 sobre la normal izquierda de a→b)
+  const cuadroGeom = (e, ents = [], k = 0) => {
+    const w = dist(e.a, e.b); const d = unit(sub(e.b, e.a)); const n = mul(perp(d), e.lado === -1 ? -1 : 1);
+    const host = lineaBajo(ents, e.a, e.b); let s0 = 0;
+    if (host) {
+      const bm = bandaMuro(host.e); const sh = Math.sign(dot(n, host.hn)) || 1;
+      s0 = bm ? Math.max(0, sh > 0 ? bm[1] : -bm[0]) : (GROSOR[host.e.grosor] || 2) * k / 2;
+    }
+    const f = Math.max(e.fondo > 0 ? e.fondo : 0.05, k * 4);
+    const esquinas = [add(e.a, mul(n, s0)), add(e.b, mul(n, s0)), add(e.b, mul(n, s0 + f)), add(e.a, mul(n, s0 + f))];
+    return { w, d, n, s0, f, esquinas, centro: add(medio(e.a, e.b), mul(n, s0 + f / 2)), frente: add(medio(e.a, e.b), mul(n, s0 + f)) };
+  };
+  // Lado por defecto de un cuadro: hacia dentro de la sala si el muro es un contorno
+  const ladoCuadro = (ents, a, b) => {
+    const host = lineaBajo(ents, a, b); const c = host && contornoDe(host.e); if (!c) return 1;
+    // sala: hacia dentro; panel o tabique delgado (ancho medio 2·área/perímetro < 35 cm): hacia fuera
+    const dentro = -ladoFuera(host.e); const anchoMedio = 2 * area(c) / Math.max(longitudLinea({ ...host.e, cerrada: true }), 1e-9);
+    const lado = anchoMedio < 0.35 ? -dentro : dentro;
+    return (Math.sign(dot(perp(unit(sub(b, a))), host.hn)) || 1) * lado;
+  };
+  const esObra = (e) => e.tipo === 'obra' || e.tipo === 'cuadro';
+  const etqRegion = (e) => (e.etq && Number.isFinite(e.etq.x) ? e.etq : centroide(e.pts));
+  const enEtqRegion = (e, p, h = 0.2) => { const c = etqRegion(e); const w = Math.max(3, String(e.nombre || '').length) * h * 1.5 * 0.62; return Math.abs(p.x - c.x) <= w / 2 && Math.abs(p.y - c.y) <= h * 1.3; };
+  const puntoObra = (e, ents) => (e.tipo === 'obra' ? centroide(e.pts) : cuadroGeom(e, ents).centro);
+  const obrasEn = (doc, r) => doc.entidades.filter((o) => esObra(o) && puntoEnPoligono(puntoObra(o, doc.entidades), r.pts));
+  const regionDe = (doc, o) => { const p = puntoObra(o, doc.entidades); const rs = doc.entidades.filter((r) => r.tipo === 'region' && r.pts.length > 2 && puntoEnPoligono(p, r.pts)); return rs.length ? rs[rs.length - 1] : null; };
+  const numSiguiente = (ents) => ents.filter(esObra).reduce((m, o) => Math.max(m, parseInt(o.num, 10) || 0), 0) + 1;
+  const ordenNatural = (a, b) => String(a.num ?? '').localeCompare(String(b.num ?? ''), 'es', { numeric: true });
+  // Lista de obras: punto y coma y coma decimal (Excel en español)
+  const csvObras = (doc) => {
+    const q = (v) => '"' + String(v ?? '').replace(/"/g, '""') + '"';
+    const filas = [['nº', 'tipo', 'título', 'artista', 'año', 'técnica', 'medidas', 'región', 'ancho en planta (m)', 'área en planta (m²)', 'x (m)', 'y (m)', 'nota']];
+    for (const o of doc.entidades.filter(esObra).slice().sort(ordenNatural)) {
+      const r = regionDe(doc, o); const p = puntoObra(o, doc.entidades);
+      filas.push([o.num, o.tipo === 'cuadro' ? 'cuadro' : 'obra en planta', o.titulo, o.artista, o.anio, o.tecnica, o.dims, r ? r.nombre : '',
+        o.tipo === 'cuadro' ? fmtNum(dist(o.a, o.b)) : '', o.tipo === 'obra' ? fmtNum(area(o.pts)) : '', fmtNum(p.x), fmtNum(p.y), o.nota]);
+    }
+    return filas.map((f) => f.map(q).join(';')).join('\r\n');
+  };
+  // ── geometría de piezas
+  const puertaGeom = (e) => {
+    const hinge = e.bisagra === 'b' ? e.b : e.a, otro = e.bisagra === 'b' ? e.a : e.b;
+    const w = dist(hinge, otro); if (!(w > 0)) return null;
+    const d = unit(sub(otro, hinge)); const n = mul(perp(d), e.lado === -1 ? -1 : 1);
+    const hoja = add(hinge, mul(n, w));
+    const v1 = sub(hoja, hinge), v2 = sub(otro, hinge);
+    return { hinge, otro, hoja, w, sweep: v1.x * v2.y - v1.y * v2.x > 0 ? 1 : 0 };
+  };
+  // Cuatro giros posibles de una puerta: [lado, bisagra]
+  const GIROS = [[1, 'a'], [-1, 'a'], [-1, 'b'], [1, 'b']];
+  const siguienteGiro = (e) => { const i = GIROS.findIndex(([l, b]) => l === (e.lado === -1 ? -1 : 1) && b === (e.bisagra === 'b' ? 'b' : 'a')); const [l, b] = GIROS[(i + 1) % GIROS.length]; return { lado: l, bisagra: b }; };
+  // ── muros con espesor. La línea dibujada es la cara de referencia (la que se mide); la banda crece hacia `cara`
+  // Signo de la normal izquierda (perp) que apunta fuera del contorno; +1 si no hay contorno
+  const ladoFuera = (e) => {
+    const c = contornoDe(e); if (!c) return 1;
+    let mejor = null, bl = 0; for (const [a, b] of segmentos(e)) { const L = dist(a, b); if (L > bl) { bl = L; mejor = [a, b]; } }
+    if (!mejor) return 1;
+    const [a, b] = mejor; const prueba = add(medio(a, b), mul(unit(perp(sub(b, a))), Math.min(bl * 0.01, 0.01)));
+    return puntoEnPoligono(prueba, c) ? -1 : 1;
+  };
+  // [omin, omax]: extensión de la banda respecto de la normal izquierda de cada tramo
+  const bandaMuro = (e) => {
+    const t = e.tipo === 'linea' && e.espesor > 0 ? e.espesor : 0; if (!t) return null;
+    if (e.cara === 'centro') return [-t / 2, t / 2];
+    const s = ladoFuera(e) * (e.cara === 'dentro' ? -1 : 1);
+    return s > 0 ? [0, t] : [-t, 0];
+  };
+  // Polilínea desplazada o metros hacia la normal izquierda, con ingletes (limitados a 6 veces el desplazamiento)
+  const desplazarPolilinea = (pts, cerrada, o) => {
+    const n = pts.length; if (!o) return pts.map((p) => ({ x: p.x, y: p.y }));
+    const nrm = (i) => unit(perp(sub(pts[(i + 1) % n], pts[i])));
+    return pts.map((p, i) => {
+      if (!cerrada && i === 0) return add(p, mul(nrm(0), o));
+      if (!cerrada && i === n - 1) return add(p, mul(nrm(n - 2), o));
+      const n1 = nrm((i - 1 + n) % n), n2 = nrm(i); const m = add(n1, n2); const ml = Math.hypot(m.x, m.y);
+      if (ml < 1e-9) return add(p, mul(n1, o));
+      const mu = mul(m, 1 / ml); const largo = Math.min(1 / Math.max(dot(mu, n1), 1e-9), 6) * o;
+      return add(p, mul(mu, largo));
+    });
+  };
+  const contornoBanda = (e) => {
+    const b = bandaMuro(e); if (!b) return null;
+    const cerr = e.cerrada && e.pts.length > 2;
+    return { banda: b, cerrada: cerr, A: desplazarPolilinea(e.pts, cerr, b[1]), B: desplazarPolilinea(e.pts, cerr, b[0]) };
+  };
+  // Muro con espesor bajo un vano a–b (puerta o ventana): normal del tramo y extensión de la banda
+  const anfitrion = (ents, a, b) => {
+    for (const e of ents) {
+      const banda = bandaMuro(e); if (!banda) continue;
+      for (const [p, q] of segmentos(e)) if (proyectar(a, p, q).d < 0.02 && proyectar(b, p, q).d < 0.02) return { n: unit(perp(sub(q, p))), omin: banda[0], omax: banda[1] };
+    }
+    return null;
+  };
+  // Ventana: vano a–b con marco del espesor del muro, centrado en él
+  const ventanaGeom = (e) => {
+    const w = dist(e.a, e.b); if (!(w > 0)) return null;
+    const d = unit(sub(e.b, e.a)); const n = perp(d); const m = mul(n, (e.esp > 0 ? e.esp : 0.15) / 2);
+    return { w, d, n, mitad: (e.esp > 0 ? e.esp : 0.15) / 2, esquinas: [add(e.a, m), add(e.b, m), sub(e.b, m), sub(e.a, m)] };
+  };
+  // Cota encadenada: puntos medidos sobre la dirección del primer tramo. Las longitudes son proyectadas: un clic torcido no las altera
+  const cotaPts = (e) => (Array.isArray(e.pts) ? e.pts : e.a && e.b ? [e.a, e.b] : []);
+  const cotaGeom = (e) => {
+    const pts = cotaPts(e); const p0 = pts[0] || { x: 0, y: 0 };
+    let d = { x: 1, y: 0 }; for (let i = 1; i < pts.length; i++) if (dist(pts[i], p0) > 1e-9) { d = unit(sub(pts[i], p0)); break; }
+    const n = perp(d); const off = e.desp || 0;
+    const ts = pts.map((p) => dot(sub(p, p0), d));
+    const sobre = (t, o) => add(p0, add(mul(d, t), mul(n, o)));
+    const qs = ts.map((t) => sobre(t, off));
+    const tmin = Math.min(...ts), tmax = Math.max(...ts);
+    const tramos = []; for (let i = 0; i < pts.length - 1; i++) tramos.push({ L: Math.abs(ts[i + 1] - ts[i]), m: medio(qs[i], qs[i + 1]) });
+    const lado = off !== 0 ? Math.sign(off) : ladoArriba(n);
+    const qmin = sobre(tmin, off), qmax = sobre(tmax, off);
+    return { pts, d, n, ts, qs, tramos, lado, sobre, tmin, tmax, total: tmax - tmin, L: tmax - tmin, qmin, qmax, a2: qmin, b2: qmax, m: medio(qmin, qmax), ang: anguloLegible(p0, add(p0, d)) };
+  };
+  // Cambia la medida del tramo i desplazando los puntos siguientes a lo largo de la cota
+  const estirarCota = (e, i, nuevaL) => {
+    const g = cotaGeom(e); if (i < 0 || i >= g.pts.length - 1 || !(nuevaL > 0)) return null;
+    const dt = g.ts[i + 1] - g.ts[i]; const s = Math.sign(dt) || 1; const delta = (nuevaL - Math.abs(dt)) * s;
+    return g.pts.map((p, k) => (k > i ? { x: r6(p.x + g.d.x * delta), y: r6(p.y + g.d.y * delta) } : { x: p.x, y: p.y }));
+  };
+  const textoCaja = (e) => {
+    const lineas = String(e.texto || ' ').split('\n');
+    const w = Math.max(1, ...lineas.map((l) => l.length)) * e.tam * 0.62;
+    return { w, h: lineas.length * e.tam * 1.25, lineas };
+  };
+
+  // ── selección: distancia de un punto a una pieza (m)
+  let o_h = 0.2, o_ents = [];
+  const distanciaA = (e, p) => {
+    switch (e.tipo) {
+      case 'linea': {
+        const bm = bandaMuro(e); const ext = bm ? Math.max(-bm[0], bm[1]) : 0;
+        if (ext) { let d = Infinity; for (const [a, b] of segmentos(e)) d = Math.min(d, proyectar(p, a, b).d); if (d <= ext) return 0; }
+        if (e.cerrada && e.relleno && e.relleno !== 'ninguno' && e.pts.length > 2 && puntoEnPoligono(p, e.pts)) return 0;
+        let d = Infinity; for (const [a, b] of segmentos(e)) d = Math.min(d, proyectar(p, a, b).d);
+        if (e.pts.length === 1) d = dist(p, e.pts[0]);
+        return d;
+      }
+      case 'circulo': { const d = dist(p, e.c); return e.relleno && e.relleno !== 'ninguno' && d <= e.r ? 0 : Math.abs(d - e.r); }
+      case 'puerta': { const g = puertaGeom(e); if (!g) return dist(p, e.a); const da = Math.abs(dist(p, g.hinge) - g.w); const enArco = dot(sub(p, g.hinge), sub(g.hoja, g.hinge)) >= 0 && dot(sub(p, g.hinge), sub(g.otro, g.hinge)) >= 0; return Math.min(proyectar(p, e.a, e.b).d, proyectar(p, g.hinge, g.hoja).d, enArco ? da : Infinity); }
+      case 'ventana': { const g = ventanaGeom(e); const pr = proyectar(p, e.a, e.b); return g ? Math.max(0, pr.d - g.mitad) : pr.d; }
+      case 'obra': { if (e.pts.length > 2 && puntoEnPoligono(p, e.pts)) return 0; let d = Infinity; for (const [a, b] of segmentos(e)) d = Math.min(d, proyectar(p, a, b).d); return d; }
+      case 'region': {
+        let d = Infinity; for (const [a, b] of segmentos(e)) d = Math.min(d, proyectar(p, a, b).d);
+        if (enEtqRegion(e, p, o_h || 0.2)) return 0;
+        return d;
+      }
+      case 'cuadro': { const g = cuadroGeom(e, o_ents); if (puntoEnPoligono(p, g.esquinas)) return 0; return Math.min(proyectar(p, e.a, e.b).d, dist(p, g.frente)); }
+      case 'texto': { const c = textoCaja(e); const l = rotar(sub(p, e), -(e.rot || 0)); const dx = Math.max(0, Math.abs(l.x) - c.w / 2), dy = Math.max(0, Math.abs(l.y) - c.h / 2); return Math.hypot(dx, dy); }
+      case 'cota': { const g = cotaGeom(e); return Math.min(proyectar(p, g.qmin, g.qmax).d, ...g.tramos.map((t) => dist(p, t.m))); }
+    }
+    return Infinity;
+  };
+  const tocar = (ents, p, tol, h = 0.2) => {
+    o_h = h; o_ents = ents; let best = null, bd = tol;
+    for (let i = ents.length - 1; i >= 0; i--) { const d = distanciaA(ents[i], p); if (d < bd - 1e-9) { bd = d; best = ents[i].id; } }
+    return best;
+  };
+
+  // ── edición
+  const mover = (e, dx, dy) => {
+    const m = (p) => ({ x: r6(p.x + dx), y: r6(p.y + dy) });
+    if (e.tipo === 'linea') e.pts = e.pts.map(m);
+    else if (e.tipo === 'circulo') e.c = m(e.c);
+    else if (e.tipo === 'cota') { e.pts = cotaPts(e).map(m); delete e.a; delete e.b; }
+    else if (esPoligono(e)) { e.pts = e.pts.map(m); if (e.etq) e.etq = m(e.etq); }
+    else if (e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro') { e.a = m(e.a); e.b = m(e.b); }
+    else if (e.tipo === 'texto') { const q = m(e); e.x = q.x; e.y = q.y; }
+    return e;
+  };
+  const asas = (e) => {
+    if (e.tipo === 'linea' || esPoligono(e)) return e.pts.map((p) => ({ x: p.x, y: p.y }));
+    if (e.tipo === 'cuadro') return [{ x: e.a.x, y: e.a.y }, { x: e.b.x, y: e.b.y }];
+    if (e.tipo === 'circulo') return [{ x: e.c.x, y: e.c.y }, { x: e.c.x + e.r, y: e.c.y }];
+    if (e.tipo === 'cota') return cotaPts(e).map((p) => ({ x: p.x, y: p.y }));
+    if (e.tipo === 'puerta' || e.tipo === 'ventana') return [{ x: e.a.x, y: e.a.y }, { x: e.b.x, y: e.b.y }];
+    return [];
+  };
+  const fijarAsa = (e, i, p) => {
+    const q = { x: r6(p.x), y: r6(p.y) };
+    if (e.tipo === 'linea' || esPoligono(e)) e.pts[i] = q;
+    else if (e.tipo === 'cuadro') e[i === 0 ? 'a' : 'b'] = q;
+    else if (e.tipo === 'circulo') { if (i === 0) e.c = q; else e.r = Math.max(0.01, r6(dist(e.c, q))); }
+    else if (e.tipo === 'cota') { e.pts = cotaPts(e).slice(); e.pts[i] = q; delete e.a; delete e.b; }
+    else if (e.tipo === 'puerta' || e.tipo === 'ventana') e[i === 0 ? 'a' : 'b'] = q;
+    return e;
+  };
+  // Inserta un vértice en el tramo más cercano a p (si está a menos de tol). Devuelve el índice nuevo o -1
+  const insertarVertice = (e, p, tol) => {
+    if (e.tipo !== 'linea' && !esPoligono(e)) return -1;
+    let best = null, bd = tol;
+    for (const [a, b, i] of segmentos(e)) { const pr = proyectar(p, a, b); if (pr.d <= bd && pr.t > 0.001 && pr.t < 0.999) { bd = pr.d; best = { i, q: pr.q }; } }
+    if (!best) return -1;
+    e.pts.splice(best.i + 1, 0, { x: r6(best.q.x), y: r6(best.q.y) }); delete e.etiq;
+    return best.i + 1;
+  };
+  const borrarVertice = (e, i) => {
+    if (esPoligono(e)) { if (e.pts.length <= 3) return false; e.pts.splice(i, 1); return true; }
+    if (e.tipo !== 'linea' || e.pts.length <= 2) return false;
+    delete e.etiq;
+    e.pts.splice(i, 1); if (e.cerrada && e.pts.length < 3) e.cerrada = false; return true;
+  };
+  // Estira el tramo i hasta nuevaL: todo lo que queda más allá de su extremo, en su dirección, se desplaza.
+  // Mantiene rectángulos y salas ortogonales rectas al cambiar una medida.
+  const estirarTramo = (pts, i, cerrada, nuevaL) => {
+    const n = pts.length; const j = (i + 1) % n;
+    if (i < 0 || i >= n || (!cerrada && j === 0)) return null;
+    const a = pts[i], b = pts[j]; const L = dist(a, b);
+    if (!(L > 0) || !(nuevaL > 0)) return null;
+    const d = unit(sub(b, a)); const delta = nuevaL - L; const tolp = Math.max(1e-6, L * 1e-6);
+    return pts.map((p, k) => {
+      if (k === i) return { x: p.x, y: p.y };
+      return dot(sub(p, a), d) >= L - tolp ? { x: r6(p.x + d.x * delta), y: r6(p.y + d.y * delta) } : { x: p.x, y: p.y };
+    });
+  };
+  const rectPts = (a, b) => [{ x: a.x, y: a.y }, { x: b.x, y: a.y }, { x: b.x, y: b.y }, { x: a.x, y: b.y }];
+
+  // ── calco (papel de cebolla): imagen con escala mpp (m por px), posición x,y (esquina, m) y rotación en grados sobre su centro
+  const calcoCentro = (c) => ({ x: c.x + c.w * c.mpp / 2, y: c.y + c.h * c.mpp / 2 });
+  const localAMundo = (c, l) => add(calcoCentro(c), rotar({ x: (l.x - c.w / 2) * c.mpp, y: (l.y - c.h / 2) * c.mpp }, c.rot || 0));
+  const mundoALocal = (c, p) => { const v = rotar(sub(p, calcoCentro(c)), -(c.rot || 0)); return { x: v.x / c.mpp + c.w / 2, y: v.y / c.mpp + c.h / 2 }; };
+  // Dos puntos en el mundo sobre la imagen + su longitud real: nueva escala, con el primer punto fijo en su sitio
+  const calibrarCalco = (c, p1, p2, metros) => {
+    const l1 = mundoALocal(c, p1), l2 = mundoALocal(c, p2); const dpx = dist(l1, l2);
+    if (!(dpx > 0) || !(metros > 0)) return null;
+    const mpp = metros / dpx;
+    const centro = sub(p1, rotar({ x: (l1.x - c.w / 2) * mpp, y: (l1.y - c.h / 2) * mpp }, c.rot || 0));
+    return { ...c, mpp, x: centro.x - c.w * mpp / 2, y: centro.y - c.h * mpp / 2, calibrado: { metros } };
+  };
+  // Rotar sin que el centro se mueva
+  const esquinasCalco = (c) => [[0, 0], [c.w, 0], [c.w, c.h], [0, c.h]].map(([x, y]) => localAMundo(c, { x, y }));
+
+  // ── caja envolvente de todo el dibujo (m)
+  const caja = (ents, h = 0.2) => {
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    const inc = (p, r = 0) => { x0 = Math.min(x0, p.x - r); y0 = Math.min(y0, p.y - r); x1 = Math.max(x1, p.x + r); y1 = Math.max(y1, p.y + r); };
+    for (const e of ents) {
+      if (e.tipo === 'linea') { const r = (e.medidas || tieneAlturas(e) ? h * 1.6 : 0) + (e.espesor > 0 ? e.espesor : 0); e.pts.forEach((p) => inc(p, r)); }
+      else if (e.tipo === 'circulo') { inc(e.c, e.r); if (e.medidas) inc({ x: e.c.x + e.r + h * 6, y: e.c.y }); }
+      else if (e.tipo === 'puerta') { inc(e.a); inc(e.b); const g = puertaGeom(e); if (g) inc(g.hoja); }
+      else if (e.tipo === 'ventana') { const g = ventanaGeom(e); (g ? g.esquinas : [e.a, e.b]).forEach((p) => inc(p, e.medidas ? h * 1.6 : 0)); }
+      else if (e.tipo === 'cota') { const g = cotaGeom(e); g.pts.forEach((p) => inc(p)); g.qs.forEach((p) => inc(p, h * 1.5)); if (e.total) { const o = (e.desp || 0) + g.lado * h * 2.2; inc(g.sobre(g.tmin, o), h * 1.5); inc(g.sobre(g.tmax, o), h * 1.5); } }
+      else if (e.tipo === 'texto') { const c = textoCaja(e); inc(e, Math.max(c.w, c.h) / 2); }
+      else if (esPoligono(e)) { e.pts.forEach((p) => inc(p)); if (e.tipo === 'region') { const c = etqRegion(e); inc(c, String(e.nombre || '').length * h * 0.5); } }
+      else if (e.tipo === 'cuadro') { const g = cuadroGeom(e, ents); g.esquinas.forEach((p) => inc(p)); inc(g.frente, h * 1.6); }
+    }
+    return x1 >= x0 ? { x: x0, y: y0, w: x1 - x0, h: y1 - y0 } : null;
+  };
+  const unirCajas = (a, b) => { if (!a) return b; if (!b) return a; const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y); return { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y }; };
+  const cajaPuntos = (pts) => { if (!pts.length) return null; const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y); const x = Math.min(...xs), y = Math.min(...ys); return { x, y, w: Math.max(...xs) - x, h: Math.max(...ys) - y }; };
+
+  const longitudBonita = (maxM) => { const b = [0.1, 0.2, 0.25, 0.5, 1, 2, 5, 10, 20, 50, 100]; let m = null; for (const n of b) if (n <= maxM) m = n; return m; };
+  // Hoja más pequeña que lo contiene con 10 mm de margen por lado; prueba primero la orientación del dibujo
+  const papelPara = (wmm, hmm, margen = 10) => {
+    const w = wmm + 2 * margen, h = hmm + 2 * margen; const apaisado = w > h;
+    for (const [n, a, b] of PAPELES) {
+      const ops = apaisado ? [['horizontal', b, a], ['vertical', a, b]] : [['vertical', a, b], ['horizontal', b, a]];
+      for (const [o, pw, ph] of ops) if (w <= pw && h <= ph) return { nombre: n, orient: o };
+    }
+    return null;
+  };
+
+  // ── render: SVG en cm. k = metros por unidad de grosor (editor: 1 px de pantalla; exportación: 0,18 mm de papel)
+  const C = (v) => +(v * U).toFixed(2);
+  // Texto centrado verticalmente en (x,y) sin depender de dominant-baseline. halo: grosor del contorno blanco (m), como copia detrás
+  const svgTexto = (x, y, texto, tam, color, ang, halo = 0, ancla = 'middle', peso = '') => {
+    const lineas = String(texto).split('\n'); const n = lineas.length;
+    const tr = ang ? ` transform="rotate(${+ang.toFixed(3)} ${C(x)} ${C(y)})"` : '';
+    const spans = lineas.map((l, i) => `<tspan x="${C(x)}" dy="${i === 0 ? fmtDy(0.35 - (n - 1) * 0.625) : '1.25em'}">${esc(l) || ' '}</tspan>`).join('');
+    const abre = (atr) => `<text x="${C(x)}" y="${C(y)}" font-size="${C(tam)}" font-family="${FUENTE}" text-anchor="${ancla}"${peso ? ` font-weight="${peso}"` : ''}${tr} ${atr}>`;
+    let s = '';
+    if (halo > 0) s += abre(`fill="#ffffff" stroke="#ffffff" stroke-width="${C(halo)}" stroke-linejoin="round"`) + spans + '</text>';
+    return s + abre(`fill="${color}"`) + spans + '</text>';
+  };
+  const fmtDy = (v) => (v === 0 ? '0' : +v.toFixed(4) + 'em');
+  // ── rótulos: colocación evitando choques
+  const cajaRotada = (c, w, hh, ang) => {
+    const r = (ang || 0) * Math.PI / 180, cs = Math.abs(Math.cos(r)), sn = Math.abs(Math.sin(r));
+    const ex = cs * w / 2 + sn * hh / 2, ey = sn * w / 2 + cs * hh / 2;
+    return { x0: c.x - ex, y0: c.y - ey, x1: c.x + ex, y1: c.y + ey };
+  };
+  const unirCaja = (a, b) => (a ? { x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) } : b);
+  const cajaDePuntos = (pts, m = 0) => pts.reduce((c, p) => unirCaja(c, { x0: p.x - m, y0: p.y - m, x1: p.x + m, y1: p.y + m }), null);
+  const cajasChocan = (a, b, eps = 0) => Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > eps && Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) > eps;
+  // Liang–Barsky: ¿el segmento p–q atraviesa la caja?
+  const segCruzaCaja = (p, q, c) => {
+    let t0 = 0, t1 = 1; const dx = q.x - p.x, dy = q.y - p.y;
+    for (const [pp, qq] of [[-dx, p.x - c.x0], [dx, c.x1 - p.x], [-dy, p.y - c.y0], [dy, c.y1 - p.y]]) {
+      if (Math.abs(pp) < 1e-12) { if (qq < 0) return false; continue; }
+      const r = qq / pp; if (pp < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+    }
+    return t1 - t0 > 1e-9;
+  };
+  const marcoDe = (a, b) => { const d = unit(sub(b, a)); return { o: a, d, n: perp(d) }; };
+  const marcoFijo = (o) => ({ o, d: { x: 1, y: 0 }, n: { x: 0, y: 1 } });
+  const enMarco = (f, p) => { const r = sub(p, f.o); return { u: dot(r, f.d), v: dot(r, f.n) }; };
+  const deMarco = (f, c) => add(f.o, add(mul(f.d, c.u), mul(f.n, c.v)));
+  // Geometría de un rótulo (una o varias líneas apiladas) en una posición: centros por línea y caja envolvente
+  const disponer = (p, pos) => {
+    const ap = p.apila || { x: 0, y: 1 }; let off = 0; let caja = null; const centros = [], cajas = [];
+    p.lineas.forEach((l, i) => {
+      if (i > 0) off += (p.lineas[i - 1].tam + l.tam) / 2 * 1.15;
+      const c = add(pos, mul(ap, off)); centros.push(c);
+      const cl = cajaRotada(c, Math.max(1, String(l.texto).length) * l.tam * 0.6, l.tam * 1.2, p.ang); cajas.push(cl); caja = unirCaja(caja, cl);
+    });
+    return { centros, caja, cajas };
+  };
+
+  const svgDibujo = (doc, o = {}) => {
+    const k = o.k || 0.01; const h = doc.rotulo || 0.2;
+    const sw = (g) => C((GROSOR[g] || GROSOR.medio) * k);
+    const trazo = (estilo, g) => {
+      const t = TRAZO[estilo]; if (!t) return ' stroke-linecap="square"';
+      const f = GROSOR[g] || 2;
+      return ` stroke-dasharray="${t.map((v) => C(v * k * f)).join(' ')}" stroke-linecap="${estilo === 'punteada' ? 'round' : 'butt'}"`;
+    };
+    const halo = h * 0.3;
+    const usados = new Set(); let cuerpo = '';
+    const pedidos = [], obsCajas = [], obsSegs = [];
+    const anchoTxt = (t, tam) => Math.max(1, String(t).length) * tam * 0.6;
+    // giro manual: el texto se lee con ese ángulo y las líneas se apilan hacia «abajo» del texto
+    const giroManual = (e, key) => { const g = e.etiq && e.etiq[key] && e.etiq[key].ang; return Number.isFinite(g) ? g : null; };
+    const abajo = (ang) => { const r = ang * Math.PI / 180; return { x: -Math.sin(r), y: Math.cos(r) }; };
+    const pedir = (e, key, lineas, ang, f, cands, op = {}) => {
+      const ov = e.etiq && e.etiq[key] && Number.isFinite(e.etiq[key].u) ? e.etiq[key] : null;
+      const gm = giroManual(e, key);
+      pedidos.push({ id: e.id, key, lineas, ang: gm ?? (ang || 0), f, cands: ov ? [ov] : cands, fijo: !!(ov || op.fijo), movible: op.movible !== false, manual: !!(ov || gm !== null), apila: gm !== null && lineas.length > 1 ? abajo(gm) : op.apila || null });
+    };
+    // posiciones candidatas a lo largo de un tramo de largo L: deslizar y alejar; las del otro lado al final
+    const variantes = (L, w, u0, vs) => {
+      const du = Math.max(w * 0.55, L * 0.1); const us = [u0];
+      for (let i = 1; i <= 3; i++) us.push(u0 - du * i, u0 + du * i);
+      const lo = Math.min(w / 2, L / 2), hi = Math.max(L - w / 2, L / 2);
+      let ok = us.filter((u) => u >= lo - 1e-9 && u <= hi + 1e-9); if (!ok.length) ok = [u0];
+      return vs.flatMap((v) => ok.map((u) => ({ u, v })));
+    };
+    const alejar = (v0) => { const s = Math.sign(v0) || 1; return [v0, v0 + s * h * 1.1, v0 + s * h * 2.2]; };
+    const vanos = doc.entidades.filter((x) => x.tipo === 'puerta' || x.tipo === 'ventana');
+    const ventanas = doc.entidades.filter((x) => x.tipo === 'ventana').map((v) => ({ v, g: ventanaGeom(v) })).filter((x) => x.g);
+    const margenVentanas = (a, b) => {
+      let m = 0;
+      for (const { v, g } of ventanas) { const pa = proyectar(v.a, a, b), pb = proyectar(v.b, a, b); if (pa.d < 0.02 && pb.d < 0.02) m = Math.max(m, g.mitad); }
+      return m;
+    };
+    const relleno = (e) => {
+      if (e.relleno === 'tenue') return `fill="${e.color}" fill-opacity="0.13"`;
+      if (e.relleno === 'rayado') { usados.add(e.color); return `fill="url(#ry${e.color.slice(1)})"`; }
+      return 'fill="none"';
+    };
+    const capa = (e) => (e.tipo === 'region' ? -1 : e.tipo === 'puerta' || e.tipo === 'ventana' || esObra(e) ? 1 : e.tipo === 'cota' || e.tipo === 'texto' ? 2 : 0);
+    const orden = [-1, 0, 1, 2].flatMap((n) => doc.entidades.filter((e) => capa(e) === n));
+    for (const e of orden) {
+      const col = e.color || COLORES[0];
+      if (e.tipo === 'linea') {
+        if (e.pts.length < 2) continue;
+        const cerr = e.cerrada && e.pts.length > 2;
+        const d = 'M' + e.pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L') + (cerr ? ' Z' : '');
+        const cb = contornoBanda(e);
+        const segs = segmentos(e); segs.forEach(([a, b]) => obsSegs.push([a, b]));
+        if (cb) {
+          for (const P of [cb.A, cb.B]) for (let i = 0; i < P.length - (cb.cerrada ? 0 : 1); i++) obsSegs.push([P[i], P[(i + 1) % P.length]]);
+          const anillo = (P) => 'M' + P.map((p) => C(p.x) + ' ' + C(p.y)).join(' L');
+          const dB = cb.cerrada ? anillo(cb.A) + ' Z ' + anillo(cb.B) + ' Z' : anillo(cb.A) + ' L' + cb.B.slice().reverse().map((p) => C(p.x) + ' ' + C(p.y)).join(' L') + ' Z';
+          if (cerr && e.relleno && e.relleno !== 'ninguno') cuerpo += `<path d="${d}" ${relleno(e)} stroke="none"/>`;
+          const mr = e.muroRelleno || 'gris';
+          const fill = mr === 'negro' ? `fill="${col}"` : mr === 'rayado' ? (usados.add(col), `fill="url(#ry${col.slice(1)})"`) : mr === 'blanco' ? 'fill="#ffffff"' : `fill="${col}" fill-opacity="0.55"`;
+          cuerpo += `<path d="${dB}" ${fill} fill-rule="evenodd" stroke="${col}" stroke-width="${sw('fino')}" stroke-linejoin="miter" stroke-miterlimit="6"/>`;
+        } else cuerpo += `<path d="${d}" ${cerr ? relleno(e) : 'fill="none"'} stroke="${col}" stroke-width="${sw(e.grosor)}" stroke-linejoin="miter" stroke-miterlimit="6"${trazo(e.estilo, e.grosor)}/>`;
+        if (e.flecha && !cerr) {
+          const b = e.pts[e.pts.length - 1], a = e.pts[e.pts.length - 2]; const dd = unit(sub(b, a)); const s = h * 0.9;
+          const base = sub(b, mul(dd, s)); const w = mul(perp(dd), s * 0.42);
+          cuerpo += `<polygon points="${[b, add(base, w), sub(base, w)].map((p) => C(p.x) + ',' + C(p.y)).join(' ')}" fill="${col}"/>`;
+        }
+        const bnd = cb ? cb.banda : null;
+        const banda = (s) => (bnd ? Math.max(0, s > 0 ? bnd[1] : -bnd[0]) : 0);
+        const apartar = (a, b, s) => {
+          let off = Math.max(margenVentanas(a, b), banda(s));
+          // vanos en este tramo: el rótulo va al centro del mayor trozo libre; si no cabe en ninguno, se aparta de la hoja de la puerta
+          const L = dist(a, b); const iv = []; let hoja = 0;
+          const n = unit(perp(sub(b, a)));
+          for (const v of vanos) {
+            const pa = proyectar(v.a, a, b), pb = proyectar(v.b, a, b); if (pa.d > 0.02 || pb.d > 0.02) continue;
+            iv.push([Math.min(pa.t, pb.t), Math.max(pa.t, pb.t)]);
+            if (v.tipo === 'puerta') { const g = puertaGeom(v); if (g && dot(sub(g.hoja, g.hinge), n) * s > 0) hoja = Math.max(hoja, g.w); }
+          }
+          if (!iv.length) return off;
+          iv.sort((x, y) => x[0] - y[0]); const huecos = []; let c = 0;
+          for (const [u, w] of iv) { if (u > c) huecos.push([c, u]); c = Math.max(c, w); }
+          if (c < 1) huecos.push([c, 1]);
+          const necesita = (h * 4.2) / L;
+          const mejor = huecos.filter((g) => g[1] - g[0] >= necesita).sort((x, y) => (y[1] - y[0]) - (x[1] - x[0]))[0];
+          return mejor ? { off, t: (mejor[0] + mejor[1]) / 2 } : { off: off + hoja, t: 0.5 };
+        };
+        const et = e.medidas || tieneAlturas(e) ? etiquetasTramos(e, h, apartar) : [];
+        const alts = etiquetasAltura(e, et);
+        // figura estrecha (panel, vitrina): no cabe la altura por dentro; va junto al largo
+        const estrecha = cerr && 2 * area(e.pts) / Math.max(longitudLinea(e), 1e-9) < h * 2.2;
+        const junto = new Map(); if (estrecha) alts.forEach(({ t, v }) => junto.set(t.i, v));
+        const tramo = (i) => segs.find((x) => x[2] === i);
+        const otroLado = (v, tam) => { const s = -(Math.sign(v) || 1); return s * (h * 0.85 + banda(s)); };
+        if (e.medidas) for (const t of et) {
+          const [a, b] = tramo(t.i); const f = marcoDe(a, b); const L = dist(a, b);
+          const txt = t.texto + (junto.has(t.i) ? ' · h ' + fmtM(junto.get(t.i)) : '');
+          const c0 = enMarco(f, t);
+          pedir(e, 'L' + t.i, [{ texto: txt, tam: h, color: '#333333' }], t.ang, f, variantes(L, anchoTxt(txt, h), c0.u, [...alejar(c0.v), otroLado(c0.v)]));
+        }
+        // altura: al otro lado del muro respecto de la medida de largo
+        for (const { t, v } of alts) {
+          if (estrecha && e.medidas) continue;
+          const [a, b] = tramo(t.i); const f = marcoDe(a, b); const L = dist(a, b);
+          const so = estrecha ? t.lado : -t.lado; const off = h * 0.85 + banda(so);
+          const c0 = enMarco(f, add(t.base, mul(t.n, so * off))); const txt = 'h ' + fmtM(v);
+          pedir(e, 'H' + t.i, [{ texto: txt, tam: h * 0.9, color: '#4f6b82' }], t.ang, f, variantes(L, anchoTxt(txt, h * 0.9), c0.u, [...alejar(c0.v), otroLado(c0.v)]));
+        }
+      } else if (e.tipo === 'circulo') {
+        cuerpo += `<circle cx="${C(e.c.x)}" cy="${C(e.c.y)}" r="${C(e.r)}" ${relleno(e)} stroke="${col}" stroke-width="${sw(e.grosor)}"${trazo(e.estilo, e.grosor)}/>`;
+        obsCajas.push({ x0: e.c.x - e.r, y0: e.c.y - e.r, x1: e.c.x + e.r, y1: e.c.y + e.r });
+        if (e.medidas) {
+          const txt = 'Ø ' + fmtM(e.r * 2); const w = anchoTxt(txt, h); const dx = e.r + h * 0.4 + w / 2, dy = e.r + h * 0.9;
+          pedir(e, 'D', [{ texto: txt, tam: h, color: '#333333' }], 0, marcoFijo(e.c), [{ u: dx, v: 0 }, { u: -dx, v: 0 }, { u: 0, v: -dy }, { u: 0, v: dy }, { u: dx, v: -dy }, { u: dx, v: dy }]);
+        }
+      } else if (e.tipo === 'puerta') {
+        const g = puertaGeom(e); if (!g) continue;
+        const an = anfitrion(doc.entidades, e.a, e.b);
+        if (an) {
+          const x = k * 1.5, c4 = [add(e.a, mul(an.n, an.omin - x)), add(e.b, mul(an.n, an.omin - x)), add(e.b, mul(an.n, an.omax + x)), add(e.a, mul(an.n, an.omax + x))];
+          cuerpo += `<polygon points="${c4.map((p) => C(p.x) + ',' + C(p.y)).join(' ')}" fill="#ffffff"/>`;
+          for (const p of [e.a, e.b]) { const p1 = add(p, mul(an.n, an.omin)), p2 = add(p, mul(an.n, an.omax)); cuerpo += `<line x1="${C(p1.x)}" y1="${C(p1.y)}" x2="${C(p2.x)}" y2="${C(p2.y)}" stroke="${col}" stroke-width="${sw('fino')}"/>`; }
+        } else cuerpo += `<line x1="${C(e.a.x)}" y1="${C(e.a.y)}" x2="${C(e.b.x)}" y2="${C(e.b.y)}" stroke="#ffffff" stroke-width="${C(k * 7)}"/>`;
+        cuerpo += `<line x1="${C(g.hinge.x)}" y1="${C(g.hinge.y)}" x2="${C(g.hoja.x)}" y2="${C(g.hoja.y)}" stroke="${col}" stroke-width="${sw('medio')}" stroke-linecap="square"/>`;
+        cuerpo += `<path d="M${C(g.hoja.x)} ${C(g.hoja.y)} A${C(g.w)} ${C(g.w)} 0 0 ${g.sweep} ${C(g.otro.x)} ${C(g.otro.y)}" fill="none" stroke="${col}" stroke-width="${sw('fino')}"/>`;
+        obsCajas.push(cajaDePuntos([g.hinge, g.hoja, g.otro, add(g.hinge, sub(g.hoja, g.hinge)), add(g.otro, sub(g.hoja, g.hinge))]));
+        if (e.medidas) {
+          const f = marcoDe(e.a, e.b); const s = dot(sub(g.hoja, g.hinge), f.n) > 0 ? -1 : 1; const txt = fmtM(g.w);
+          pedir(e, 'W', [{ texto: txt, tam: h * 0.85, color: '#333333' }], anguloLegible(e.a, e.b), f, variantes(g.w, anchoTxt(txt, h * 0.85), g.w / 2, alejar(s * h * 0.85)));
+        }
+      } else if (e.tipo === 'ventana') {
+        const g = ventanaGeom(e); if (!g) continue;
+        const an = anfitrion(doc.entidades, e.a, e.b);
+        const nn = an ? an.n : g.n, o0 = an ? an.omin : -g.mitad, o1 = an ? an.omax : g.mitad, om = (o0 + o1) / 2;
+        const esq = [add(e.a, mul(nn, o0)), add(e.b, mul(nn, o0)), add(e.b, mul(nn, o1)), add(e.a, mul(nn, o1))];
+        const va = add(e.a, mul(nn, om)), vb = add(e.b, mul(nn, om));
+        if (!an) cuerpo += `<line x1="${C(e.a.x)}" y1="${C(e.a.y)}" x2="${C(e.b.x)}" y2="${C(e.b.y)}" stroke="#ffffff" stroke-width="${C(k * 7)}"/>`;
+        cuerpo += `<polygon points="${esq.map((p) => C(p.x) + ',' + C(p.y)).join(' ')}" fill="#ffffff" stroke="${col}" stroke-width="${sw('fino')}"/>`;
+        cuerpo += `<line x1="${C(va.x)}" y1="${C(va.y)}" x2="${C(vb.x)}" y2="${C(vb.y)}" stroke="${col}" stroke-width="${sw('fino')}"/>`;
+        obsCajas.push(cajaDePuntos(esq));
+        if (e.medidas) {
+          const s = ladoArriba(nn); const pos = add(medio(va, vb), mul(nn, s * ((o1 - o0) / 2 + h * 0.85)));
+          const f = marcoDe(e.a, e.b); const c0 = enMarco(f, pos); const txt = fmtM(g.w);
+          pedir(e, 'W', [{ texto: txt, tam: h * 0.85, color: '#333333' }], anguloLegible(e.a, e.b), f, variantes(g.w, anchoTxt(txt, h * 0.85), c0.u, [...alejar(c0.v), -c0.v]));
+        }
+      } else if (e.tipo === 'region') {
+        if (e.pts.length < 3) continue;
+        const dd = 'M' + e.pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L') + ' Z';
+        cuerpo += `<path d="${dd}" fill="${col}" fill-opacity="0.07" stroke="${col}" stroke-width="${sw('medio')}" stroke-linejoin="round"${trazo('discontinua', 'medio')}/>`;
+        const c = etqRegion(e);
+        const info = [e.conteo !== false ? (() => { const n = obrasEn(doc, e).length; return n + (n === 1 ? ' obra' : ' obras'); })() : null, e.verArea ? fmtM2(area(e.pts)) : null].filter(Boolean).join(' · ');
+        const lineas = [{ texto: e.nombre || 'Región', tam: h * 1.5, color: col }]; if (info) lineas.push({ texto: info, tam: h * 0.8, color: col });
+        // nombre: donde lo dejaste; si no, busca sitio libre en espiral dentro de la región
+        let cands = [{ u: 0, v: 0 }];
+        if (!e.etq) {
+          const bb = cajaDePuntos(e.pts); const R = Math.min(bb.x1 - bb.x0, bb.y1 - bb.y0) / 2;
+          for (const f of [0.18, 0.36, 0.54, 0.72]) for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; const q = { u: Math.cos(a) * R * f * 1.6, v: Math.sin(a) * R * f }; if (puntoEnPoligono(add(c, { x: q.u, y: q.v }), e.pts)) cands.push(q); }
+        }
+        const gR = giroManual(e, 'R');
+        pedidos.push({ id: e.id, key: 'R', lineas, ang: gR ?? 0, f: marcoFijo(add(c, { x: 0, y: info ? -h * 0.45 : 0 })), cands, fijo: !!e.etq, movible: false, apila: gR !== null ? abajo(gR) : null });
+      } else if (e.tipo === 'obra') {
+        if (e.pts.length < 3) continue;
+        const dd = 'M' + e.pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L') + ' Z';
+        cuerpo += `<path d="${dd}" fill="${col}" fill-opacity="0.18" stroke="${col}" stroke-width="${sw('medio')}" stroke-linejoin="miter"/>`;
+        obsCajas.push(cajaDePuntos(e.pts));
+        const c = centroide(e.pts); const tit = e.verTitulo && e.titulo ? e.titulo : '';
+        const lineas = [{ texto: String(e.num ?? ''), tam: h * 1.15, color: col, peso: '700' }]; if (tit) lineas.push({ texto: tit, tam: h * 0.75, color: '#333333' });
+        const gN = giroManual(e, 'N');
+        pedidos.push({ id: e.id, key: 'N', lineas, ang: gN ?? 0, f: marcoFijo(gN !== null ? c : add(c, { x: 0, y: tit ? -h * 0.4 : 0 })), cands: [{ u: 0, v: 0 }], fijo: true, movible: false, apila: gN !== null ? abajo(gN) : null });
+      } else if (e.tipo === 'cuadro') {
+        const g = cuadroGeom(e, doc.entidades, k); if (!(g.w > 0)) continue;
+        cuerpo += `<polygon points="${g.esquinas.map((p) => C(p.x) + ',' + C(p.y)).join(' ')}" fill="${col}" fill-opacity="0.9" stroke="${col}" stroke-width="${sw('fino')}"/>`;
+        // para los rótulos, la geometría real (sin el grosor mínimo de pantalla): misma colocación a cualquier zoom y al exportar
+        const gr = cuadroGeom(e, doc.entidades, 0); obsCajas.push(cajaDePuntos(gr.esquinas));
+        const tit = e.verTitulo && e.titulo ? ' · ' + e.titulo : '';
+        const ang = Math.abs(anguloLegible(e.a, e.b)) > 45 ? anguloLegible(e.a, e.b) : 0;
+        const lineas = [{ texto: String(e.num ?? '') + tit, tam: h * 0.95, color: col, peso: '700' }]; if (e.medidas) lineas.push({ texto: fmtM(g.w), tam: h * 0.75, color: '#333333' });
+        const f = marcoDe(e.a, e.b); const c0 = enMarco(f, add(gr.frente, mul(gr.n, h * 0.85)));
+        const w = anchoTxt(lineas[0].texto, h * 0.95); const vs = alejar(c0.v);
+        const paso = Math.max(w, h * 1.6);
+        const cands = vs.flatMap((v) => [0, -0.6, 0.6, -1, 1, -2, 2, -3, 3].map((m) => ({ u: c0.u + m * paso, v })));
+        pedir(e, 'N', lineas, ang, f, cands, { apila: g.n });
+      } else if (e.tipo === 'texto') {
+        cuerpo += svgTexto(e.x, e.y, e.texto || ' ', e.tam, col, e.rot || 0, halo);
+        const c = textoCaja(e); obsCajas.push(cajaRotada(e, c.w, c.h, e.rot || 0));
+      } else if (e.tipo === 'cota') {
+        const g = cotaGeom(e); if (!(g.total > 0)) continue;
+        const ln = (p, q, c, w) => `<line x1="${C(p.x)}" y1="${C(p.y)}" x2="${C(q.x)}" y2="${C(q.y)}" stroke="${c}" stroke-width="${w}"/>`;
+        const t = mul(unit(add(g.d, g.n)), h * 0.32);
+        const tic = (p) => ln(sub(p, t), add(p, t), col, sw('medio'));
+        const offT = (e.desp || 0) + g.lado * h * 2.2; const conTotal = e.total && g.pts.length > 2;
+        // líneas de referencia: del punto medido a la línea de cota (y a la del total en los extremos)
+        g.pts.forEach((p, i) => {
+          const extremo = conTotal && (Math.abs(g.ts[i] - g.tmin) < 1e-9 || Math.abs(g.ts[i] - g.tmax) < 1e-9);
+          const hasta = g.sobre(g.ts[i], (extremo ? offT : (e.desp || 0)) + g.lado * h * 0.3);
+          if (dist(p, hasta) > h * 0.31) cuerpo += ln(p, hasta, '#8a8a8a', sw('fino'));
+        });
+        cuerpo += ln(g.qmin, g.qmax, col, sw('fino')); obsSegs.push([g.qmin, g.qmax]);
+        g.qs.forEach((q) => { cuerpo += tic(q); });
+        const f = { o: g.pts[0], d: g.d, n: g.n };
+        g.tramos.forEach((tr, i) => {
+          if (!(tr.L > 1e-6)) return;
+          pedir(e, 'T' + i, [{ texto: (i === 0 && e.texto ? e.texto + ' ' : '') + fmtM(tr.L), tam: h, color: col }], g.ang, f, [{ u: (g.ts[i] + g.ts[i + 1]) / 2, v: (e.desp || 0) + g.lado * h * 0.7 }], { fijo: true });
+        });
+        if (conTotal) {
+          const a = g.sobre(g.tmin, offT), b = g.sobre(g.tmax, offT);
+          cuerpo += ln(a, b, col, sw('fino')) + tic(a) + tic(b); obsSegs.push([a, b]);
+          pedir(e, 'TOT', [{ texto: fmtM(g.total), tam: h, color: col }], g.ang, f, [{ u: (g.tmin + g.tmax) / 2, v: offT + g.lado * h * 0.7 }], { fijo: true });
+        }
+      }
+    }
+    // colocación: primero los fijos (y los movidos a mano), luego los automáticos en la primera posición libre
+    const colocados = []; let rot = '';
+    // cada línea de un rótulo cuenta con su propia caja: «6 obras» no ocupa el ancho del nombre de la región
+    const choques = (cajas) => {
+      let n = 0;
+      for (const caja of cajas) {
+        for (const c of colocados) for (const cc of c.cajas) if (cajasChocan(caja, cc, h * 0.02)) n++;
+        for (const c of obsCajas) if (c && cajasChocan(caja, c, h * 0.02)) n++;
+        for (const [a, b] of obsSegs) if (segCruzaCaja(a, b, caja)) n++;
+      }
+      return n;
+    };
+    // fijos primero; luego los automáticos más restringidos; los nombres de región, que pueden moverse más, al final
+    const ordenados = [...pedidos.filter((p) => p.fijo), ...pedidos.filter((p) => !p.fijo && p.key !== 'R'), ...pedidos.filter((p) => !p.fijo && p.key === 'R')];
+    for (const p of ordenados) {
+      let mejor = null;
+      for (const c of p.cands) {
+        const pos = deMarco(p.f, c); const dsp = disponer(p, pos);
+        const n = p.fijo ? 0 : choques(dsp.cajas);
+        if (!mejor || n < mejor.n) mejor = { c, pos, dsp, n };
+        if (n === 0) break;
+      }
+      if (!mejor) continue;
+      colocados.push({ id: p.id, key: p.key, caja: mejor.dsp.caja, cajas: mejor.dsp.cajas, f: p.f, u: mejor.c.u, v: mejor.c.v, x: mejor.pos.x, y: mejor.pos.y, ang: p.ang, texto: p.lineas[0].texto, movible: p.movible, manual: p.manual });
+      p.lineas.forEach((l, i) => { const c = mejor.dsp.centros[i]; rot += svgTexto(c.x, c.y, l.texto, l.tam, l.color, p.ang, halo, 'middle', l.peso || ''); });
+    }
+    let defs = '';
+    for (const c of usados) {
+      const s = C(Math.max(0.04, h * 0.45));
+      defs += `<pattern id="ry${c.slice(1)}" patternUnits="userSpaceOnUse" width="${s}" height="${s}" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="${s}" stroke="${c}" stroke-width="${C(k * 1.2)}"/></pattern>`;
+    }
+    return { defs, cuerpo: cuerpo + rot, rotulos: colocados };
+  };
+  const svgCalco = (c, opacidad) => {
+    if (!c) return '';
+    const cc = calcoCentro(c);
+    const tr = c.rot ? ` transform="rotate(${+(+c.rot).toFixed(3)} ${C(cc.x)} ${C(cc.y)})"` : '';
+    return `<image href="${c.src}" xlink:href="${c.src}" x="${C(c.x)}" y="${C(c.y)}" width="${C(c.w * c.mpp)}" height="${C(c.h * c.mpp)}" preserveAspectRatio="none" opacity="${opacidad ?? c.opacidad}"${tr}/>`;
+  };
+  // SVG autónomo. o: {escala: 50 | null, pxAncho, titulo, barra, calco}
+  const construirSVG = (doc, o = {}) => {
+    const h = doc.rotulo || 0.2;
+    let bb = caja(doc.entidades, h);
+    const conCalco = !!(o.calco && doc.calco);
+    if (conCalco) bb = unirCajas(bb, cajaPuntos(esquinasCalco(doc.calco)));
+    if (!bb) return null;
+    // los rótulos pueden haberse apartado fuera de la caja de las piezas
+    for (const r of svgDibujo(doc, { k: 0.18 / 1000 * (o.escala || 50) }).rotulos) bb = unirCajas(bb, { x: r.caja.x0, y: r.caja.y0, w: r.caja.x1 - r.caja.x0, h: r.caja.y1 - r.caja.y0 });
+    const margen = Math.max(h * 3, 0.3);
+    const arriba = o.titulo && doc.nombre ? h * 3.2 : 0;
+    const abajo = o.barra ? h * 4 : 0;
+    const vx = bb.x - margen, vy = bb.y - margen - arriba;
+    const W = bb.w + margen * 2, H = bb.h + margen * 2 + arriba + abajo;
+    let k, ancho, alto;
+    if (o.escala) {
+      k = 0.18 / 1000 * o.escala;
+      ancho = +(W * 1000 / o.escala).toFixed(2) + 'mm'; alto = +(H * 1000 / o.escala).toFixed(2) + 'mm';
+    } else {
+      const px = o.pxAncho || 3000; const ppm = px / W;
+      k = (px / 1600) / ppm; ancho = Math.round(px); alto = Math.round(H * ppm);
+    }
+    const dib = svgDibujo(doc, { k });
+    let s = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${ancho}" height="${alto}" viewBox="${C(vx)} ${C(vy)} ${C(W)} ${C(H)}">`;
+    s += `<rect x="${C(vx)}" y="${C(vy)}" width="${C(W)}" height="${C(H)}" fill="#ffffff"/>`;
+    if (dib.defs) s += `<defs>${dib.defs}</defs>`;
+    if (conCalco) s += svgCalco(doc.calco);
+    s += dib.cuerpo;
+    if (arriba) s += svgTexto(bb.x, bb.y - arriba * 0.55, doc.nombre, h * 1.5, '#111111', 0, 0, 'start');
+    if (abajo) {
+      const L = longitudBonita(Math.max(0.1, bb.w / 3)) || 1;
+      const y = bb.y + bb.h + margen * 0.5 + h * 1.6, x = bb.x, alt = h * 0.45, n = L >= 1 && Number.isInteger(L) && L <= 5 ? L : 4;
+      for (let i = 0; i < n; i++) s += `<rect x="${C(x + L / n * i)}" y="${C(y)}" width="${C(L / n)}" height="${C(alt)}" fill="${i % 2 ? '#ffffff' : '#111111'}" stroke="#111111" stroke-width="${C(k)}"/>`;
+      s += svgTexto(x, y + alt + h * 0.8, '0', h * 0.85, '#111111', 0, 0, 'start');
+      s += svgTexto(x + L, y + alt + h * 0.8, L >= 1 ? fmtNum(L, L % 1 ? 1 : 0) + ' m' : fmtNum(L * 100, 0) + ' cm', h * 0.85, '#111111', 0, 0, 'middle');
+      if (o.escala) s += svgTexto(x + L + h * 2.5, y + alt / 2, 'escala 1:' + o.escala, h * 0.85, '#111111', 0, 0, 'start');
+    }
+    return { svg: s + '</svg>', W, H, ancho, alto };
+  };
+
+  let _n = 0;
+  const nuevoId = () => 'e' + Date.now().toString(36) + (_n++).toString(36) + Math.floor(Math.random() * 1e6).toString(36);
+
+  return { U, GROSOR, TRAZO, COLORES, ESCALAS, clamp, r6, dist, sub, add, mul, dot, unit, perp, medio, rotar, parseNum, fmtNum, fmtM, fmtM2, esc,
+    snapGrid, snapAngulo, proyectar, segmentos, imanar, areaFirmada, area, longitudLinea, puntoEnPoligono, anguloLegible, etiquetasTramos,
+    esRectangulo, puertaGeom, ventanaGeom, siguienteGiro, esPoligono, centroide, etqRegion, enEtqRegion, lineaBajo, cuadroGeom, ladoCuadro, esObra, puntoObra, obrasEn, regionDe, numSiguiente, ordenNatural, csvObras, alturaTramo, tieneAlturas, etiquetasAltura, cotaGeom, cotaPts, estirarCota, contornoDe, ladoFuera, bandaMuro, desplazarPolilinea, contornoBanda, anfitrion, textoCaja, distanciaA, tocar, mover, asas, fijarAsa, insertarVertice, borrarVertice, estirarTramo, rectPts,
+    calcoCentro, localAMundo, mundoALocal, calibrarCalco, esquinasCalco, caja, unirCajas, cajaPuntos, longitudBonita, papelPara,
+    C, svgDibujo, svgCalco, marcoDe, enMarco, deMarco, cajasChocan, segCruzaCaja, construirSVG, nuevoId };
+})();
+if (typeof module !== 'undefined') module.exports = G;
+</script>
+
+<script id="app-js">
+// ─── app: estado, render del editor, herramientas, paneles, archivos.
+(() => {
+'use strict';
+if (typeof document === 'undefined') return;
+const LS = 'plano-sala:doc';
+const MAX_UNDO = 60, MAX_LADO_CALCO = 3000;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = G.esc, C = G.C;
+const DIBUJO = ['linea', 'rect', 'circulo', 'puerta', 'ventana', 'texto', 'cota', 'calibrar', 'cuadro', 'obra', 'region'];
+const POLI = ['linea', 'obra', 'region'];
+const esPoli = (t) => POLI.includes(t);
+const COLORES_REGION = ['#4f6b82', '#586a45', '#b06a36', '#b03a2e', '#8a8a8a'];
+const DEF = {
+  linea: { grosor: 'medio', estilo: 'continua', medidas: true, relleno: 'ninguno', flecha: false },
+  rect: { grosor: 'medio', estilo: 'continua', medidas: true, relleno: 'ninguno' },
+  circulo: { grosor: 'medio', estilo: 'continua', medidas: false, relleno: 'ninguno' },
+};
+
+const el = {
+  lienzo: $('#lienzo'), svg: $('#svg'), defsRej: $('#defsRejilla'), capaRej: $('#capaRejilla'), capaCalco: $('#capaCalco'),
+  capaDib: $('#capaDibujo'), capaSel: $('#capaSel'), capaDraft: $('#capaDraft'), flot: $('#flotante'), guia: $('#guia'),
+  barra: $('#barraEscala'), inicio: $('#inicio'), panel: $('#panel'), pista: $('#pista'), pistaBtns: $('#pistaBtns'),
+  msg: $('#msg'), coords: $('#coords'), zoomInfo: $('#zoomInfo'), nombre: $('#nombre'), fCalco: $('#fCalco'), fJson: $('#fJson'),
+  exportar: $('#exportar'), ayuda: $('#ayuda'),
+};
+
+const docNuevo = () => ({ version: 1, app: 'plano-sala', nombre: '', rotulo: 0.2, rejilla: 0.05, imanes: true, entidades: [], calco: null });
+const S = {
+  doc: docNuevo(), tool: 'select', sel: null, vsel: null, tramo: null,
+  view: { vx: -1, vy: -1, zoom: 60 }, draft: null, cursor: null, iman: null, raw: null, buffer: '',
+  undo: [], redo: [], arr: null, alt: false, espacio: false, lsFallo: false, inicioOculto: false, guiaPaso: null, raf: 0,
+};
+// rótulo movible bajo el puntero (los de encima primero)
+const rotuloEn = (p) => { const pad = 3 / S.view.zoom; for (let i = (S.rotulos || []).length - 1; i >= 0; i--) { const r = S.rotulos[i]; if (r.movible && p.x >= r.caja.x0 - pad && p.x <= r.caja.x1 + pad && p.y >= r.caja.y0 - pad && p.y <= r.caja.y1 + pad) return r; } return null; };
+const ent = (id = S.sel) => S.doc.entidades.find((e) => e.id === id) || null;
+
+// ── mensajes y guía
+let msgT = null;
+const mensaje = (t, error = false) => { el.msg.textContent = t; el.msg.classList.toggle('error', error); clearTimeout(msgT); msgT = setTimeout(() => { el.msg.textContent = ''; }, error ? 8000 : 4500); };
+const guia = (paso, texto) => {
+  S.guiaPaso = paso;
+  if (!paso) { el.guia.classList.remove('visible'); return; }
+  $('.paso', el.guia).textContent = paso; $('.txt', el.guia).textContent = texto; el.guia.classList.add('visible');
+};
+
+// ── deshacer (la imagen del calco no entra en la instantánea: solo sus parámetros)
+const instantanea = () => JSON.stringify({ entidades: S.doc.entidades, calco: S.doc.calco ? { ...S.doc.calco, src: null } : null });
+const snap = () => { S.undo.push(instantanea()); if (S.undo.length > MAX_UNDO) S.undo.shift(); S.redo.length = 0; };
+const restaurar = (s) => {
+  const d = JSON.parse(s); S.doc.entidades = d.entidades;
+  if (d.calco && S.doc.calco) Object.assign(S.doc.calco, { ...d.calco, src: S.doc.calco.src });
+  S.sel = null; S.vsel = null;
+};
+const deshacer = () => { if (!S.undo.length) return; S.redo.push(instantanea()); restaurar(S.undo.pop()); cambio(); };
+const rehacer = () => { if (!S.redo.length) return; S.undo.push(instantanea()); restaurar(S.redo.pop()); cambio(); };
+
+// ── persistencia
+const autosave = () => {
+  try { localStorage.setItem(LS, JSON.stringify(S.doc)); S.lsFallo = false; }
+  catch (e) { if (!S.lsFallo) { S.lsFallo = true; mensaje('El plano ya no cabe en el navegador (la imagen de calco pesa): usa «Guardar»', true); } }
+};
+const cambio = () => { render(); autosave(); };
+
+// ── vista
+const tam = () => { const r = el.lienzo.getBoundingClientRect(); return { w: Math.max(1, r.width), h: Math.max(1, r.height), rect: r }; };
+const aMundo = (cx, cy) => { const { rect } = tam(); return { x: S.view.vx + (cx - rect.left) / S.view.zoom, y: S.view.vy + (cy - rect.top) / S.view.zoom }; };
+const aPantalla = (p) => ({ x: (p.x - S.view.vx) * S.view.zoom, y: (p.y - S.view.vy) * S.view.zoom });
+const zoomEn = (cx, cy, f) => {
+  const p = aMundo(cx, cy); const z = G.clamp(S.view.zoom * f, 2, 3000); const { rect } = tam();
+  S.view = { zoom: z, vx: p.x - (cx - rect.left) / z, vy: p.y - (cy - rect.top) / z }; pedirRender();
+};
+const cajaTodo = () => {
+  let bb = G.caja(S.doc.entidades, S.doc.rotulo);
+  if (S.doc.calco) bb = G.unirCajas(bb, G.cajaPuntos(G.esquinasCalco(S.doc.calco)));
+  return bb;
+};
+const verTodo = () => {
+  const bb = cajaTodo() || { x: 0, y: 0, w: 10, h: 6 };
+  const { w, h } = tam(); const m = 0.08;
+  const z = G.clamp(Math.min(w / Math.max(bb.w, 0.5), h / Math.max(bb.h, 0.5)) * (1 - m * 2), 2, 3000);
+  S.view = { zoom: z, vx: bb.x + bb.w / 2 - w / z / 2, vy: bb.y + bb.h / 2 - h / z / 2 }; pedirRender();
+};
+const tolM = (px = 10) => px / S.view.zoom;
+
+// ── render del lienzo
+const pedirRender = () => { if (S.raf) return; S.raf = (window.requestAnimationFrame || ((f) => setTimeout(f, 16)))(() => { S.raf = 0; renderSvg(); }); };
+const PASOS_REJ = [0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20, 50];
+const renderRejilla = (w, h) => {
+  const z = S.view.zoom;
+  const menor = PASOS_REJ.find((s) => s * z >= 12) || 50;
+  const mayor = [1, 5, 10, 50, 100].find((s) => s >= menor * 4) || 100;
+  const px = C(1 / z);
+  const pat = (id, s, color) => `<pattern id="${id}" patternUnits="userSpaceOnUse" width="${C(s)}" height="${C(s)}"><path d="M${C(s)} 0 L0 0 0 ${C(s)}" fill="none" stroke="${color}" stroke-width="${px}"/></pattern>`;
+  el.defsRej.innerHTML = pat('rjMenor', menor, '#efefec') + pat('rjMayor', mayor, '#dcdcd6');
+  const r = `x="${C(S.view.vx)}" y="${C(S.view.vy)}" width="${C(w / z)}" height="${C(h / z)}"`;
+  const o = `<line x1="${C(S.view.vx)}" y1="0" x2="${C(S.view.vx + w / z)}" y2="0" stroke="#c9c9c2" stroke-width="${px}"/><line x1="0" y1="${C(S.view.vy)}" x2="0" y2="${C(S.view.vy + h / z)}" stroke="#c9c9c2" stroke-width="${px}"/>`;
+  el.capaRej.innerHTML = `<rect ${r} fill="url(#rjMenor)"/><rect ${r} fill="url(#rjMayor)"/>${o}`;
+};
+const asaSvg = (p, activa, z) => { const a = 9 / z; return `<rect x="${C(p.x - a / 2)}" y="${C(p.y - a / 2)}" width="${C(a)}" height="${C(a)}" fill="${activa ? '#b06a36' : '#ffffff'}" stroke="#b06a36" stroke-width="${C(1.5 / z)}"/>`; };
+const renderSel = (z) => {
+  const e = ent(); if (!e) return '';
+  const ra = S.rsel && S.rsel.id === e.id ? (S.rotulos || []).find((r) => r.id === S.rsel.id && r.key === S.rsel.key) : null;
+  const marcoRotulo = ra ? `<rect x="${C(ra.caja.x0 - 3 / z)}" y="${C(ra.caja.y0 - 3 / z)}" width="${C(ra.caja.x1 - ra.caja.x0 + 6 / z)}" height="${C(ra.caja.y1 - ra.caja.y0 + 6 / z)}" fill="none" stroke="#b06a36" stroke-width="${C(1.5 / z)}" stroke-dasharray="${C(4 / z)} ${C(2 / z)}"/>` : '';
+  return marcoRotulo + renderSelPieza(e, z);
+};
+const renderSelPieza = (e, z) => {
+  const st = `fill="none" stroke="#b06a36" stroke-width="${C(1.5 / z)}" stroke-dasharray="${C(5 / z)} ${C(3 / z)}"`;
+  let s = '';
+  if ((e.tipo === 'linea' || G.esPoligono(e)) && e.pts.length > 1) {
+    s += `<path d="M${e.pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L')}${(e.cerrada || G.esPoligono(e)) && e.pts.length > 2 ? ' Z' : ''}" ${st}/>`;
+    if (S.tramo != null) { const sg = G.segmentos(e).find((x) => x[2] === S.tramo); if (sg) s += `<line x1="${C(sg[0].x)}" y1="${C(sg[0].y)}" x2="${C(sg[1].x)}" y2="${C(sg[1].y)}" stroke="#b06a36" stroke-width="${C(5 / z)}" stroke-opacity=".45"/>`; }
+  } else if (e.tipo === 'circulo') s += `<circle cx="${C(e.c.x)}" cy="${C(e.c.y)}" r="${C(e.r)}" ${st}/>`;
+  else if (e.tipo === 'texto') { const c = G.textoCaja(e); const p = 3 / z; s += `<rect x="${C(e.x - c.w / 2 - p)}" y="${C(e.y - c.h / 2 - p)}" width="${C(c.w + 2 * p)}" height="${C(c.h + 2 * p)}" ${st}${e.rot ? ` transform="rotate(${e.rot} ${C(e.x)} ${C(e.y)})"` : ''}/>`; }
+  else if (e.tipo === 'cota') { const g = G.cotaGeom(e); s += `<line x1="${C(g.qmin.x)}" y1="${C(g.qmin.y)}" x2="${C(g.qmax.x)}" y2="${C(g.qmax.y)}" ${st}/>`; }
+  else if (e.tipo === 'puerta' || e.tipo === 'ventana' || e.tipo === 'cuadro') s += `<line x1="${C(e.a.x)}" y1="${C(e.a.y)}" x2="${C(e.b.x)}" y2="${C(e.b.y)}" ${st}/>`;
+  G.asas(e).forEach((p, i) => { s += asaSvg(p, i === S.vsel, z); });
+  return s;
+};
+const renderDraft = (z) => {
+  let s = '';
+  const d = S.draft, cur = S.cursor;
+  const st = (col = '#b06a36') => `fill="none" stroke="${col}" stroke-width="${C(1.5 / z)}" stroke-dasharray="${C(5 / z)} ${C(3 / z)}"`;
+  let etiqueta = null;
+  if (d && cur) {
+    const p0 = d.puntos[0];
+    if (esPoli(d.tool)) {
+      const pts = [...d.puntos, cur];
+      const colD = d.tool === 'obra' ? '#b06a36' : d.tool === 'region' ? '#4f6b82' : '#111111';
+      if (d.tool !== 'linea') s += `<path d="M${pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L')} Z" fill="${colD}" fill-opacity="0.08" stroke="none"/>`;
+      s += `<path d="M${pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L')}${d.tool !== 'linea' ? ' Z' : ''}" ${st(colD)}/>`;
+      d.puntos.forEach((p, i) => { s += `<circle cx="${C(p.x)}" cy="${C(p.y)}" r="${C((i === 0 && d.puntos.length >= 3 ? 6 : 3) / z)}" fill="${i === 0 ? '#ffffff' : '#111111'}" stroke="#111111" stroke-width="${C(1.5 / z)}"/>`; });
+      etiqueta = G.fmtM(G.dist(d.puntos[d.puntos.length - 1], cur));
+    } else if (d.tool === 'rect') {
+      const pts = G.rectPts(p0, cur); s += `<path d="M${pts.map((p) => C(p.x) + ' ' + C(p.y)).join(' L')} Z" ${st('#111111')}/>`;
+      etiqueta = G.fmtNum(Math.abs(cur.x - p0.x)) + ' × ' + G.fmtNum(Math.abs(cur.y - p0.y)) + ' m';
+    } else if (d.tool === 'circulo') {
+      const r = G.dist(p0, cur); s += `<circle cx="${C(p0.x)}" cy="${C(p0.y)}" r="${C(r)}" ${st('#111111')}/><circle cx="${C(p0.x)}" cy="${C(p0.y)}" r="${C(2.5 / z)}" fill="#111"/>`;
+      etiqueta = 'Ø ' + G.fmtM(r * 2);
+    } else if (d.tool === 'cota' && d.cadena) {
+      const e = ent(d.cadena);
+      if (e) {
+        const tmp = { ...e, pts: [...G.cotaPts(e), cur], color: '#b06a36', total: false };
+        s += G.svgDibujo({ entidades: [tmp], rotulo: S.doc.rotulo }, { k: 1 / z }).cuerpo;
+        const g = G.cotaGeom(tmp); etiqueta = G.fmtM(g.tramos[g.tramos.length - 1].L);
+      }
+    } else if (d.tool === 'cuadro' && G.dist(p0, cur) > 0) {
+      const tmp = { tipo: 'cuadro', a: p0, b: cur, lado: G.ladoCuadro(S.doc.entidades, p0, cur) };
+      const g = G.cuadroGeom(tmp, S.doc.entidades, 1 / z);
+      s += `<polygon points="${g.esquinas.map((q) => C(q.x) + ',' + C(q.y)).join(' ')}" fill="#b06a36" fill-opacity="0.7"/>`;
+      s += `<line x1="${C(p0.x)}" y1="${C(p0.y)}" x2="${C(cur.x)}" y2="${C(cur.y)}" ${st('#b06a36')}/>`;
+      etiqueta = G.fmtM(G.dist(p0, cur));
+    } else if (d.tool === 'puerta' || d.tool === 'ventana' || d.tool === 'calibrar' || (d.tool === 'cota' && d.puntos.length === 1)) {
+      const col = d.tool === 'calibrar' ? '#b03a2e' : '#111111';
+      s += `<line x1="${C(p0.x)}" y1="${C(p0.y)}" x2="${C(cur.x)}" y2="${C(cur.y)}" ${st(col)}/>`;
+      for (const p of [p0, cur]) s += `<circle cx="${C(p.x)}" cy="${C(p.y)}" r="${C(3.5 / z)}" fill="${col}"/>`;
+      if (d.tool === 'ventana' && G.dist(p0, cur) > 0) { const g = G.ventanaGeom({ a: p0, b: cur, esp: 0.15 }); s += `<polygon points="${g.esquinas.map((q) => C(q.x) + ',' + C(q.y)).join(' ')}" ${st('#8a8a8a')}/>`; }
+      if (d.tool === 'puerta' && G.dist(p0, cur) > 0) { const g = G.puertaGeom({ a: p0, b: cur, lado: 1, bisagra: 'a' }); s += `<path d="M${C(g.hoja.x)} ${C(g.hoja.y)} A${C(g.w)} ${C(g.w)} 0 0 ${g.sweep} ${C(g.otro.x)} ${C(g.otro.y)}" ${st('#8a8a8a')}/>`; }
+      etiqueta = d.tool === 'calibrar' && !S.doc.calco?.calibrado ? 'mide sobre la imagen' : G.fmtM(G.dist(p0, cur));
+    } else if (d.tool === 'cota' && d.puntos.length === 2) {
+      const tmp = { tipo: 'cota', pts: [d.puntos[0], d.puntos[1]], desp: d.desp || 0, color: '#b06a36' };
+      s += G.svgDibujo({ entidades: [tmp], rotulo: S.doc.rotulo }, { k: 1 / z }).cuerpo;
+    }
+  }
+  // indicador de imán
+  if (cur && (DIBUJO.includes(S.tool) || (S.arr && S.arr.tipo === 'asa')) && S.iman) {
+    const a = 6 / z, p = cur, col = '#b06a36', w = C(1.5 / z);
+    if (S.iman === 'vertice') s += `<rect x="${C(p.x - a)}" y="${C(p.y - a)}" width="${C(2 * a)}" height="${C(2 * a)}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+    else if (S.iman === 'medio') s += `<path d="M${C(p.x)} ${C(p.y - a)} L${C(p.x + a)} ${C(p.y + a)} L${C(p.x - a)} ${C(p.y + a)} Z" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+    else if (S.iman === 'linea') s += `<path d="M${C(p.x - a)} ${C(p.y - a)} L${C(p.x + a)} ${C(p.y + a)} M${C(p.x + a)} ${C(p.y - a)} L${C(p.x - a)} ${C(p.y + a)}" stroke="${col}" stroke-width="${w}"/>`;
+    else if (S.iman === 'angulo') s += `<circle cx="${C(p.x)}" cy="${C(p.y)}" r="${C(a)}" fill="none" stroke="${col}" stroke-width="${w}"/>`;
+    else s += `<circle cx="${C(p.x)}" cy="${C(p.y)}" r="${C(2 / z)}" fill="${col}"/>`;
+  }
+  // etiqueta flotante
+  if (cur && (etiqueta || S.buffer)) {
+    const sp = aPantalla(cur);
+    el.flot.innerHTML = S.buffer ? `<span class="buf">${esc(S.buffer)}▌</span> m ⏎` : esc(etiqueta);
+    el.flot.style.left = sp.x + 'px'; el.flot.style.top = sp.y + 'px'; el.flot.style.display = 'block';
+  } else el.flot.style.display = 'none';
+  return s;
+};
+const renderSvg = () => {
+  const { w, h } = tam(); const z = S.view.zoom;
+  el.svg.setAttribute('viewBox', `${C(S.view.vx)} ${C(S.view.vy)} ${C(w / z)} ${C(h / z)}`);
+  renderRejilla(w, h);
+  const c = S.doc.calco;
+  el.capaCalco.innerHTML = c && c.visible ? G.svgCalco(c) : '';
+  const dib = G.svgDibujo(S.doc, { k: 1 / z });
+  S.rotulos = dib.rotulos;
+  el.capaDib.innerHTML = (dib.defs ? `<defs>${dib.defs}</defs>` : '') + dib.cuerpo;
+  el.capaSel.innerHTML = renderSel(z);
+  el.capaDraft.innerHTML = renderDraft(z);
+  el.zoomInfo.textContent = '1 m = ' + G.fmtNum(z, 0) + ' px';
+  const L = G.longitudBonita(160 / z);
+  if (L) { $('.t', el.barra).textContent = L >= 1 ? G.fmtNum(L, L % 1 ? 1 : 0) + ' m' : G.fmtNum(L * 100, 0) + ' cm'; $('.l', el.barra).style.width = L * z + 'px'; el.barra.style.display = ''; }
+  else el.barra.style.display = 'none';
+  const vacio = !S.doc.entidades.length && !S.doc.calco;
+  el.inicio.classList.toggle('visible', vacio && !S.inicioOculto);
+};
+
+// ── paneles
+const COLORES = G.COLORES;
+const segBtns = (k, opciones, actual) => `<div class="seg" data-seg="${k}">${opciones.map(([v, t]) => `<button data-v="${v}" class="${v === actual ? 'activo' : ''}">${t}</button>`).join('')}</div>`;
+const swatches = (actual) => `<div class="swatches">${COLORES.map((c) => `<span data-color="${c}" class="${c === actual ? 'activo' : ''}" style="background:${c}" title="${c}"></span>`).join('')}</div>`;
+const check = (k, texto, v) => `<label class="check"><input type="checkbox" data-k="${k}" ${v ? 'checked' : ''}> ${texto}</label>`;
+const estiloHtml = (e) => `<label>peso de línea</label>${segBtns('grosor', [['fino', 'fino'], ['medio', 'medio'], ['grueso', 'grueso']], e.grosor)}
+  <label>tipo de línea</label>${segBtns('estilo', [['continua', '———'], ['discontinua', '– – –'], ['punteada', '· · · ·']], e.estilo)}
+  <label>color</label>${swatches(e.color)}`;
+const rellenoHtml = (e) => `<label>relleno</label>${segBtns('relleno', [['ninguno', 'ninguno'], ['tenue', 'tenue'], ['rayado', 'rayado']], e.relleno || 'ninguno')}`;
+// botones de giro de un rótulo concreto (clave) de la pieza elegida
+const giroBotones = (key, titulo, auto = 'como su muro') => `<label>${titulo}</label><div class="seg" data-giro="${key}"><button data-g="-90">⟲ 90°</button><button data-g="0">horizontal</button><button data-g="v">vertical</button><button data-g="auto">${auto}</button></div>`;
+const panelRotulo = (e, key, ra) => {
+  const ov = e.etiq && e.etiq[key];
+  let h = `<h3>rótulo · ${esc(ra.texto)}</h3>`;
+  h += giroBotones(key, 'giro');
+  h += `<div class="fila"><div><label>giro exacto (°)</label><input type="text" inputmode="decimal" data-giroexacto="${key}" value="${G.fmtNum(ra.ang || 0, 0)}"></div></div>`;
+  h += `<div class="nota">Arrástralo para moverlo. Doble clic lo devuelve a su sitio y giro automáticos.</div>`;
+  if (ov) h += `<div class="btns"><button data-acc="etqUna" data-key="${key}">posición y giro automáticos</button></div>`;
+  return h;
+};
+const NOMBRES = { linea: 'muro / línea', circulo: 'círculo', puerta: 'puerta', ventana: 'ventana', texto: 'texto', cota: 'cota', cuadro: 'cuadro en muro', obra: 'obra en planta', region: 'región' };
+
+const renderPanel = () => {
+  const e = ent(); let h = '';
+  if (e) {
+    const ra = S.rsel && S.rsel.id === e.id ? (S.rotulos || []).find((r) => r.id === e.id && r.key === S.rsel.key) : null;
+    if (ra) h += panelRotulo(e, ra.key, ra);
+    h += `<h3>${NOMBRES[e.tipo]}</h3>`;
+    if (e.tipo === 'linea') {
+      const segs = G.segmentos(e);
+      h += check('cerrada', 'figura cerrada', e.cerrada) + check('medidas', 'mostrar medidas de cada tramo', e.medidas);
+      if (!e.cerrada) h += check('flecha', 'flecha al final (acceso, recorrido)', e.flecha);
+      h += `<label>altura del muro (m)</label><input type="text" inputmode="decimal" data-num="altura" value="${e.altura > 0 ? G.fmtNum(e.altura) : ''}" placeholder="sin indicar">`;
+      const ph = e.altura > 0 ? G.fmtNum(e.altura) : '—';
+      h += `<label>tramos: largo · alto (m)</label><table class="tramos">${segs.map(([a, b, i]) => `<tr><td>tramo ${i + 1}</td><td><input type="text" inputmode="decimal" data-tramo="${i}" value="${G.fmtNum(G.dist(a, b))}" aria-label="largo del tramo ${i + 1}"></td><td class="alto"><input type="text" inputmode="decimal" data-alto="${i}" value="${e.alturas && e.alturas[i] > 0 ? G.fmtNum(e.alturas[i]) : ''}" placeholder="${ph}" aria-label="alto del tramo ${i + 1}"></td></tr>`).join('')}</table>`;
+      h += `<div class="nota">El alto de un tramo solo hace falta si difiere de la altura del muro.</div>`;
+      h += `<div class="nota">Cambiar una medida estira la figura desde el final de ese tramo.</div>`;
+      h += `<div class="dato">largo total: <b>${G.fmtM(G.longitudLinea(e))}</b>${e.cerrada && e.pts.length > 2 ? ` · área: <b>${G.fmtM2(G.area(e.pts))}</b>` : ''}</div>`;
+      h += `<label>espesor del muro (m)</label><input type="text" inputmode="decimal" data-num="espesor" value="${G.fmtNum(e.espesor > 0 ? e.espesor : 0)}">`;
+      if (e.espesor > 0) {
+        const cont = !!G.contornoDe(e);
+        h += `<label>la línea dibujada es</label>${segBtns('cara', cont ? [['fuera', 'cara interior'], ['centro', 'eje'], ['dentro', 'cara exterior']] : [['fuera', 'una cara'], ['centro', 'eje'], ['dentro', 'la otra cara']], e.cara || 'fuera')}`;
+        h += `<div class="nota">${cont ? 'Con «cara interior» el espesor crece hacia fuera: las medidas siguen siendo las de dentro de la sala.' : 'Elige hacia qué lado crece el espesor.'}</div>`;
+        h += `<label>relleno del muro</label>${segBtns('muroRelleno', [['gris', 'gris'], ['negro', 'negro'], ['rayado', 'rayado'], ['blanco', 'vacío']], e.muroRelleno || 'gris')}`;
+      } else h += `<div class="nota">0 = línea simple. Para una hendidura, dibuja el quiebre del muro (por ejemplo, escribe 0,05 y ⏎) y dale espesor.</div>`;
+      h += estiloHtml(e) + (e.cerrada ? rellenoHtml(e) : '');
+    } else if (e.tipo === 'circulo') {
+      h += `<label>diámetro (m)</label><input type="text" inputmode="decimal" data-num="diametro" value="${G.fmtNum(e.r * 2)}">`;
+      h += check('medidas', 'mostrar el diámetro', e.medidas) + estiloHtml(e) + rellenoHtml(e);
+    } else if (e.tipo === 'puerta') {
+      h += `<label>ancho del vano (m)</label><input type="text" inputmode="decimal" data-num="ancho" value="${G.fmtNum(G.dist(e.a, e.b))}">`;
+      h += `<div class="btns"><button data-acc="giro">↻ cambiar giro</button></div>`;
+      h += check('medidas', 'mostrar el ancho', e.medidas) + `<label>color</label>${swatches(e.color)}`;
+    } else if (e.tipo === 'ventana') {
+      h += `<div class="fila"><div><label>ancho (m)</label><input type="text" inputmode="decimal" data-num="ancho" value="${G.fmtNum(G.dist(e.a, e.b))}"></div><div><label>espesor (m)</label><input type="text" inputmode="decimal" data-num="esp" value="${G.fmtNum(e.esp > 0 ? e.esp : 0.15)}"></div></div>`;
+      h += `<div class="nota">El espesor es el del muro donde va la ventana.</div>`;
+      h += check('medidas', 'mostrar el ancho', e.medidas) + `<label>color</label>${swatches(e.color)}`;
+    } else if (e.tipo === 'texto') {
+      h += `<label>texto</label><textarea data-k="texto" rows="3">${esc(e.texto)}</textarea>`;
+      h += `<div class="fila"><div><label>tamaño (m)</label><input type="text" inputmode="decimal" data-num="tam" value="${G.fmtNum(e.tam)}"></div><div><label>giro (°)</label><input type="text" inputmode="decimal" data-num="rot" value="${G.fmtNum(e.rot || 0, 0)}"></div></div>`;
+      h += `<div class="btns"><button data-acc="rot90">⟲ 90°</button><button data-acc="rot0">horizontal</button></div><label>color</label>${swatches(e.color)}`;
+    } else if (G.esObra(e)) {
+      const txt = (k, label, ph = '') => `<label>${label}</label><input type="text" data-k="${k}" value="${esc(e[k] || '')}" placeholder="${ph}">`;
+      h += `<div class="fila"><div style="flex:0 0 64px"><label>nº</label><input type="text" data-k="num" value="${esc(e.num ?? '')}"></div><div>${txt('titulo', 'título', 'sin título')}</div></div>`;
+      h += txt('artista', 'artista') + `<div class="fila"><div style="flex:0 0 64px">${txt('anio', 'año')}</div><div>${txt('tecnica', 'técnica')}</div></div>`;
+      h += txt('dims', 'medidas de la obra', 'p. ej. 120 × 80 cm');
+      h += `<label>nota</label><textarea data-k="nota" rows="2">${esc(e.nota || '')}</textarea>`;
+      h += check('verTitulo', 'mostrar el título en el plano', e.verTitulo);
+      if (e.tipo === 'cuadro') {
+        h += `<label>ancho en el muro (m)</label><input type="text" inputmode="decimal" data-num="ancho" value="${G.fmtNum(G.dist(e.a, e.b))}">`;
+        h += check('medidas', 'mostrar el ancho', e.medidas) + `<div class="btns"><button data-acc="cara">⇄ cambiar de cara del muro</button></div>`;
+      } else h += `<div class="dato">ocupa en planta: <b>${G.fmtM2(G.area(e.pts))}</b></div>` + giroBotones('N', 'giro del número', 'sin giro');
+      const r = G.regionDe(S.doc, e); h += `<div class="dato">región: <b>${r ? esc(r.nombre) : '—'}</b></div>`;
+      h += `<label>color</label>${swatches(e.color)}`;
+    } else if (e.tipo === 'region') {
+      h += `<label>nombre</label><input type="text" data-k="nombre" value="${esc(e.nombre || '')}">`;
+      h += giroBotones('R', 'giro del nombre', 'sin giro');
+      h += check('conteo', 'mostrar el número de obras', e.conteo !== false) + check('verArea', 'mostrar el área', e.verArea);
+      if (e.etq) h += `<div class="btns"><button data-acc="etqCentro">centrar el nombre</button></div>`; else h += `<div class="nota">Arrastra el nombre en el plano para moverlo a un lugar libre.</div>`;
+      const os = G.obrasEn(S.doc, e).sort(G.ordenNatural);
+      h += `<div class="dato">área: <b>${G.fmtM2(G.area(e.pts))}</b> · ${os.length} obra${os.length === 1 ? '' : 's'}</div>`;
+      if (os.length) h += `<div class="nota">${os.map((o) => `${esc(o.num)}${o.titulo ? ' · ' + esc(o.titulo) : ''}`).join('<br>')}</div>`;
+      h += `<label>color</label>${swatches(e.color)}`;
+    } else if (e.tipo === 'cota') {
+      const g = G.cotaGeom(e);
+      h += `<label>${g.tramos.length > 1 ? 'tramos encadenados (m)' : 'medida (m)'}</label><table class="tramos">${g.tramos.map((t, i) => `<tr><td>tramo ${i + 1}</td><td><input type="text" inputmode="decimal" data-ctramo="${i}" value="${G.fmtNum(t.L)}"></td><td class="u">m</td></tr>`).join('')}</table>`;
+      if (g.tramos.length > 1) h += `<div class="dato">total: <b>${G.fmtM(g.total)}</b></div>` + check('total', 'mostrar también la cota total', e.total);
+      h += `<div class="nota">Para seguir la cadena, elige la herramienta Cota y haz clic en el último punto.</div>`;
+      h += `<label>separación del muro (m)</label><input type="text" inputmode="decimal" data-num="desp" value="${G.fmtNum(e.desp || 0)}">`;
+      h += `<label>prefijo (opcional)</label><input type="text" data-k="texto" value="${esc(e.texto || '')}" placeholder="p. ej. vano">`;
+      h += `<label>color</label>${swatches(e.color)}`;
+    }
+    if (e.etiq && Object.keys(e.etiq).length) h += `<div class="btns"><button data-acc="etqAuto">rótulos en posición automática</button></div>`;
+    h += `<div class="btns"><button data-acc="duplicar">duplicar</button><button data-acc="frente">al frente</button><button data-acc="borrar" class="peligro">borrar</button></div>`;
+  } else {
+    const d = S.doc;
+    h += `<h3>sala</h3>`;
+    h += `<label>tamaño de los rótulos (m)</label><input type="text" inputmode="decimal" data-doc="rotulo" value="${G.fmtNum(d.rotulo)}">`;
+    h += `<div class="nota">Altura de las medidas y cotas. Con 0,20 m se leen bien en salas de 5 a 15 m.</div>`;
+    h += `<label>ajuste a la rejilla</label><select data-doc="rejilla">${[[0, 'sin ajuste'], [0.01, '1 cm'], [0.05, '5 cm'], [0.1, '10 cm'], [0.25, '25 cm'], [0.5, '50 cm']].map(([v, t]) => `<option value="${v}" ${v === d.rejilla ? 'selected' : ''}>${t}</option>`).join('')}</select>`;
+    h += `<label class="check"><input type="checkbox" data-doc="imanes" ${d.imanes ? 'checked' : ''}> imán a puntos y muros</label>`;
+    h += `<div class="nota">Las medidas se colocan solas evitando choques. Para mover una, arrástrala con «Elegir»; doble clic la devuelve.</div>`;
+    if (d.entidades.some((x) => x.etiq && Object.keys(x.etiq).length)) h += `<div class="btns"><button data-acc="etqTodas">recolocar todos los rótulos</button></div>`;
+    const cerradas = d.entidades.filter((x) => x.tipo === 'linea' && x.cerrada && x.pts.length > 2);
+    if (cerradas.length) { const mayor = cerradas.reduce((a, b) => (G.area(b.pts) > G.area(a.pts) ? b : a)); h += `<div class="dato">figura mayor: <b>${G.fmtM2(G.area(mayor.pts))}</b> · perímetro <b>${G.fmtM(G.longitudLinea(mayor))}</b></div>`; }
+    h += `<div class="dato">${d.entidades.length} elemento${d.entidades.length === 1 ? '' : 's'}</div>`;
+    const obras = d.entidades.filter(G.esObra).sort(G.ordenNatural);
+    h += `<h3>obras · ${obras.length}</h3>`;
+    if (!obras.length) h += `<div class="nota">Usa «Cuadro» para obras colgadas y «Obra» para esculturas, instalaciones o vitrinas.</div>`;
+    else {
+      h += `<ul class="obras">${obras.map((o) => { const r = G.regionDe(d, o); return `<li data-obra="${o.id}"><b>${esc(o.num)}</b> <span>${esc(o.titulo || 'sin título')}${o.artista ? ' · ' + esc(o.artista) : ''}</span>${r ? `<i>${esc(r.nombre)}</i>` : ''}</li>`; }).join('')}</ul>`;
+      h += `<div class="btns"><button data-acc="csvObras">Lista de obras (CSV)</button></div>`;
+    }
+  }
+  // calco
+  const c = S.doc.calco;
+  h += `<h3>calco · papel de cebolla</h3>`;
+  if (!c) h += `<div class="nota">Sube un plano, croquis o foto y dibuja encima a escala.</div><div class="btns"><button data-acc="calcoSubir" class="primario">Subir imagen…</button></div>`;
+  else {
+    h += `<label>opacidad <span id="opVal">${Math.round(c.opacidad * 100)} %</span></label><input type="range" min="5" max="100" step="1" data-calco="opacidad" value="${Math.round(c.opacidad * 100)}">`;
+    h += `<label class="check"><input type="checkbox" data-calco="visible" ${c.visible ? 'checked' : ''}> visible</label>`;
+    h += c.calibrado ? `<div class="dato">escala: <b>1 m = ${G.fmtNum(1 / c.mpp, 1)} px</b> de la imagen</div>` : `<div class="dato" style="color:var(--rojo)">sin calibrar: sus medidas aún no son reales</div>`;
+    h += `<div class="btns"><button data-acc="calibrar" class="${c.calibrado ? '' : 'primario'}">⊢ calibrar medida</button><button data-acc="calcoMover" class="${S.tool === 'calco' ? 'activo' : ''}">✥ mover</button></div>`;
+    h += `<label>giro de la imagen (°)</label><input type="text" inputmode="decimal" data-calco="rot" value="${G.fmtNum(c.rot || 0, 1)}">`;
+    h += `<div class="btns"><button data-acc="calcoQuitar" class="peligro">quitar calco</button></div>`;
+  }
+  el.panel.innerHTML = h;
+  enlazarPanel(e);
+};
+const enlazarPanel = (e) => {
+  const P = el.panel; let snapCampo = false;
+  const unaVez = () => { if (!snapCampo) { snap(); snapCampo = true; } };
+  $$('input,textarea,select', P).forEach((i) => i.addEventListener('focus', () => { snapCampo = false; }));
+  // estilo
+  $$('[data-seg]', P).forEach((g) => $$('button', g).forEach((b) => b.addEventListener('click', () => { if (!e) return; snap(); e[g.dataset.seg] = b.dataset.v; cambio(); })));
+  $$('.swatches span', P).forEach((s) => s.addEventListener('click', () => { if (!e) return; snap(); e.color = s.dataset.color; cambio(); }));
+  $$('input[type=checkbox][data-k]', P).forEach((i) => i.addEventListener('change', () => {
+    snap(); const k = i.dataset.k; e[k] = i.checked;
+    if (k === 'cerrada' && e.cerrada && e.pts.length < 3) { e.cerrada = false; mensaje('Una figura cerrada necesita al menos tres puntos', true); }
+    cambio();
+  }));
+  $$('textarea[data-k],input[type=text][data-k]', P).forEach((i) => i.addEventListener('input', () => { unaVez(); e[i.dataset.k] = i.value; pedirRender(); autosave(); }));
+  // tramos
+  $$('[data-ctramo]', P).forEach((i) => {
+    const t = +i.dataset.ctramo;
+    const aplicar = () => {
+      const v = G.parseNum(i.value); if (!(v > 0)) { mensaje('Medida no válida', true); renderPanel(); return; }
+      const g = G.cotaGeom(e); if (Math.abs(g.tramos[t].L - v) < 1e-9) return;
+      const nuevos = G.estirarCota(e, t, v); if (!nuevos) return;
+      snap(); e.pts = nuevos; delete e.a; delete e.b; cambio();
+    };
+    i.addEventListener('change', aplicar);
+    i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); i.blur(); } });
+  });
+  $$('[data-alto]', P).forEach((i) => {
+    const t = +i.dataset.alto;
+    i.addEventListener('focus', () => { S.tramo = t; pedirRender(); });
+    i.addEventListener('blur', () => { S.tramo = null; pedirRender(); });
+    i.addEventListener('change', () => {
+      const txt = String(i.value).trim(); const v = G.parseNum(txt);
+      if (txt && !(v > 0)) { mensaje('Altura no válida', true); renderPanel(); return; }
+      snap(); e.alturas = { ...(e.alturas || {}) };
+      if (txt && !(e.altura > 0 && Math.abs(v - e.altura) < 1e-9)) e.alturas[t] = v; else delete e.alturas[t];
+      if (!Object.keys(e.alturas).length) delete e.alturas;
+      cambio();
+    });
+    i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); i.blur(); } });
+  });
+  $$('[data-tramo]', P).forEach((i) => {
+    const t = +i.dataset.tramo;
+    i.addEventListener('focus', () => { S.tramo = t; pedirRender(); });
+    i.addEventListener('blur', () => { S.tramo = null; aplicarTramo(i, e, t); });
+    i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); aplicarTramo(i, e, t); i.select(); } });
+  });
+  // números de pieza
+  $$('[data-num]', P).forEach((i) => {
+    const aplicar = () => {
+      const v = G.parseNum(i.value); const k = i.dataset.num;
+      if (k === 'altura' && String(i.value).trim() === '') { snap(); delete e.altura; cambio(); return; }
+      if (!Number.isFinite(v) || (k === 'altura' && v < 0) || ((k === 'diametro' || k === 'ancho' || k === 'tam' || k === 'largo' || k === 'esp') && !(v > 0)) || (k === 'espesor' && v < 0)) { mensaje('Medida no válida', true); renderPanel(); return; }
+      snap();
+      if (k === 'diametro') e.r = v / 2;
+      else if (k === 'ancho' || k === 'largo') { const d = G.unit(G.sub(e.b, e.a)); e.b = { x: G.r6(e.a.x + d.x * v), y: G.r6(e.a.y + d.y * v) }; }
+      else if (k === 'tam') e.tam = v;
+      else if (k === 'rot') e.rot = v;
+      else if (k === 'desp') e.desp = v;
+      else if (k === 'esp') e.esp = v;
+      else if (k === 'altura') { if (v > 0) e.altura = v; else delete e.altura; }
+      else if (k === 'espesor') { e.espesor = v; if (v > 0) { e.cara ||= 'fuera'; e.muroRelleno ||= 'gris'; } }
+      cambio();
+    };
+    i.addEventListener('change', aplicar);
+    i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); i.blur(); } });
+  });
+  // sala
+  $$('[data-doc]', P).forEach((i) => i.addEventListener('change', () => {
+    const k = i.dataset.doc;
+    if (k === 'imanes') S.doc.imanes = i.checked;
+    else if (k === 'rejilla') S.doc.rejilla = parseFloat(i.value) || 0;
+    else if (k === 'rotulo') { const v = G.parseNum(i.value); if (!(v > 0)) { mensaje('Tamaño no válido', true); renderPanel(); return; } snap(); S.doc.rotulo = v; }
+    cambio();
+  }));
+  // calco
+  const c = S.doc.calco;
+  $$('[data-calco]', P).forEach((i) => {
+    const k = i.dataset.calco;
+    if (k === 'opacidad') i.addEventListener('input', () => { c.opacidad = (+i.value) / 100; $('#opVal').textContent = i.value + ' %'; const img = el.capaCalco.querySelector('image'); if (img) img.setAttribute('opacity', c.opacidad); });
+    if (k === 'opacidad') i.addEventListener('change', autosave);
+    if (k === 'visible') i.addEventListener('change', () => { c.visible = i.checked; cambio(); });
+    if (k === 'rot') i.addEventListener('change', () => { const v = G.parseNum(i.value); if (!Number.isFinite(v)) { renderPanel(); return; } snap(); c.rot = v; cambio(); });
+  });
+  $$('[data-acc]', P).forEach((b) => b.addEventListener('click', () => accion(b.dataset.acc, e, b)));
+  // giro de rótulos
+  const fijarGiro = (key, ang) => {
+    snap(); e.etiq = { ...(e.etiq || {}) }; const prev = e.etiq[key] || {};
+    if (ang === null) { const { ang: _, ...resto } = prev; if (Number.isFinite(resto.u)) e.etiq[key] = resto; else delete e.etiq[key]; }
+    else e.etiq[key] = { ...prev, ang: ((ang % 360) + 540) % 360 - 180 };
+    if (!Object.keys(e.etiq).length) delete e.etiq; cambio();
+  };
+  const giroActual = (key) => { const r = (S.rotulos || []).find((x) => x.id === e.id && x.key === key); return r ? r.ang || 0 : 0; };
+  $$('[data-giro]', P).forEach((g) => $$('button', g).forEach((b) => b.addEventListener('click', () => {
+    const key = g.dataset.giro; const v = b.dataset.g;
+    if (v === 'auto') fijarGiro(key, null); else if (v === 'v') fijarGiro(key, -90); else if (v === '0') fijarGiro(key, 0); else fijarGiro(key, giroActual(key) - 90);
+  })));
+  $$('[data-giroexacto]', P).forEach((i) => i.addEventListener('change', () => { const v = G.parseNum(i.value); if (!Number.isFinite(v)) { renderPanel(); return; } fijarGiro(i.dataset.giroexacto, v); }));
+  $$('[data-obra]', P).forEach((li) => li.addEventListener('click', () => { S.sel = li.dataset.obra; S.vsel = null; render(); }));
+};
+const aplicarTramo = (i, e, t) => {
+  if (!e || !ent(e.id)) return;
+  const v = G.parseNum(i.value); const sg = G.segmentos(e).find((x) => x[2] === t); if (!sg) return;
+  const actual = G.dist(sg[0], sg[1]);
+  if (!(v > 0)) { i.value = G.fmtNum(actual); mensaje('Medida no válida', true); return; }
+  if (Math.abs(v - actual) < 1e-9) return;
+  const nuevos = G.estirarTramo(e.pts, t, e.cerrada, v); if (!nuevos) return;
+  snap(); e.pts = nuevos; autosave(); renderSvg();
+  $$('[data-tramo]', el.panel).forEach((inp) => { const s = G.segmentos(e).find((x) => x[2] === +inp.dataset.tramo); if (s && inp !== document.activeElement) inp.value = G.fmtNum(G.dist(s[0], s[1])); });
+  i.value = G.fmtNum(v);
+  const d = $('.dato', el.panel); if (d) d.innerHTML = `largo total: <b>${G.fmtM(G.longitudLinea(e))}</b>${e.cerrada && e.pts.length > 2 ? ` · área: <b>${G.fmtM2(G.area(e.pts))}</b>` : ''}`;
+};
+const accion = (acc, e, btn = null) => {
+  if (acc === 'borrar') borrarSel();
+  else if (acc === 'duplicar') duplicar();
+  else if (acc === 'frente') { snap(); S.doc.entidades = S.doc.entidades.filter((x) => x !== e).concat(e); cambio(); }
+  else if (acc === 'giro') { snap(); Object.assign(e, G.siguienteGiro(e)); cambio(); }
+  else if (acc === 'rot90') { snap(); e.rot = (((e.rot || 0) - 90) % 360 + 360) % 360; if (e.rot > 180) e.rot -= 360; cambio(); }
+  else if (acc === 'rot0') { snap(); e.rot = 0; cambio(); }
+  else if (acc === 'etqUna') { const key = btn ? btn.dataset.key : null; if (key && e.etiq) { snap(); delete e.etiq[key]; if (!Object.keys(e.etiq).length) delete e.etiq; cambio(); } }
+  else if (acc === 'etqAuto') { snap(); delete e.etiq; cambio(); }
+  else if (acc === 'etqTodas') { snap(); S.doc.entidades.forEach((x) => { delete x.etiq; }); cambio(); mensaje('Rótulos recolocados automáticamente'); }
+  else if (acc === 'etqCentro') { snap(); delete e.etq; cambio(); }
+  else if (acc === 'cara') { snap(); e.lado = e.lado === -1 ? 1 : -1; cambio(); }
+  else if (acc === 'csvObras') exportarCsvObras();
+  else if (acc === 'calcoSubir') abrirCalco();
+  else if (acc === 'calibrar') { setTool('calibrar'); guia('Calibrar', 'Haz clic en dos puntos de la imagen cuya distancia real conozcas (por ejemplo, los extremos de una pared acotada) y escribe cuántos metros mide.'); }
+  else if (acc === 'calcoMover') setTool(S.tool === 'calco' ? 'select' : 'calco');
+  else if (acc === 'calcoQuitar') { if (confirm('¿Quitar la imagen de calco? Lo que dibujaste se queda.')) { S.doc.calco = null; if (S.tool === 'calco' || S.tool === 'calibrar') S.tool = 'select'; guia(null); S.undo.length = 0; S.redo.length = 0; cambio(); } }
+};
+
+// ── barra inferior: pistas por herramienta
+const pistaTexto = () => {
+  const d = S.draft, t = S.tool;
+  if (t === 'select') {
+    const e = ent();
+    if (!e) return 'Clic en un elemento para elegirlo · arrastra un número para moverlo (doble clic lo devuelve) · arrastra el fondo para desplazarte';
+    if (e.tipo === 'region') return 'Arrastra el nombre para moverlo solo · arrastra el borde para mover la región · puntos naranjas: contorno · Supr borra';
+    if (e.tipo === 'obra' || e.tipo === 'region') return 'Arrastra para mover · los puntos naranjas ajustan el contorno · doble clic en un borde añade un punto · Supr borra';
+    if (e.tipo === 'linea') return 'Arrastra los puntos naranjas · doble clic sobre un tramo añade un punto · Supr borra el punto marcado · flechas mueven';
+    return 'Arrastra para mover · los puntos naranjas ajustan la forma · Supr borra';
+  }
+  if (t === 'linea') return d ? 'Clic: siguiente punto · escribe una medida y ⏎ · Shift: 15° · clic en el primer punto cierra · doble clic o ⏎ termina' : 'Clic donde empieza el muro';
+  if (t === 'rect') return d ? 'Clic en la esquina opuesta · o escribe «3x2» y ⏎' : 'Clic en una esquina (o arrastra)';
+  if (t === 'circulo') return d ? 'Clic en el borde · o escribe el diámetro y ⏎' : 'Clic en el centro';
+  if (t === 'cuadro') return d ? 'Clic en el otro extremo del cuadro · o escribe su ancho y ⏎' : 'Clic en un extremo del cuadro, sobre el muro o panel donde cuelga';
+  if (t === 'obra' || t === 'region') return d ? 'Clic: siguiente punto · escribe una medida y ⏎ · Shift: 15° · clic en el primer punto, doble clic o ⏎ cierra' : (t === 'obra' ? 'Clic en el primer punto del contorno de la obra' : 'Clic en el primer punto de la región');
+  if (t === 'puerta') return d ? 'Clic en el otro extremo del vano · o escribe el ancho y ⏎' : 'Clic en un extremo del vano, sobre el muro';
+  if (t === 'ventana') return d ? 'Clic en el otro extremo de la ventana · o escribe el ancho y ⏎' : 'Clic en un extremo de la ventana, sobre el muro';
+  if (t === 'texto') return 'Clic donde va el texto; escribe en el panel derecho';
+  if (t === 'cota' && d && d.cadena) return 'Clic en el siguiente punto para encadenar otra medida · escribe una medida y ⏎ · ⏎ o Esc termina';
+  if (t === 'cota') return !d ? 'Clic en el primer punto a medir' : d.puntos.length === 1 ? 'Clic en el segundo punto · o escribe la medida y ⏎' : 'Aleja el cursor para separar la cota del muro y haz clic';
+  if (t === 'calibrar') return d ? 'Clic en el segundo punto de la medida conocida' : 'Clic en el primer punto de una medida que conozcas, sobre la imagen';
+  if (t === 'calco') return 'Arrastra para mover la imagen de calco · Esc para terminar';
+  return '';
+};
+const renderPista = () => {
+  el.pista.textContent = pistaTexto();
+  let b = '';
+  if (S.draft && esPoli(S.draft.tool)) {
+    if (S.draft.tool === 'linea' && S.draft.puntos.length >= 2) b += '<button data-p="terminar">terminar</button>';
+    if (S.draft.puntos.length >= 3) b += `<button data-p="cerrar">${S.draft.tool === 'linea' ? 'cerrar figura' : 'cerrar ' + (S.draft.tool === 'obra' ? 'obra' : 'región')}</button>`;
+    b += '<button data-p="quitar">quitar punto</button>';
+  }
+  if (S.draft && S.draft.cadena) b += '<button data-p="cancelar">terminar cadena</button>';
+  else if (S.draft) b += '<button data-p="cancelar">cancelar</button>';
+  el.pistaBtns.innerHTML = b;
+  $$('button', el.pistaBtns).forEach((x) => x.addEventListener('click', () => {
+    const p = x.dataset.p;
+    if (p === 'terminar') terminarLinea(false); else if (p === 'cerrar') terminarLinea(true);
+    else if (p === 'quitar') quitarPunto(); else cancelarDraft();
+  }));
+};
+const render = () => {
+  renderSvg(); renderPanel(); renderPista();
+  $$('#herramientas button[data-tool]').forEach((b) => b.classList.toggle('activo', b.dataset.tool === S.tool));
+  el.lienzo.classList.toggle('dibujo', DIBUJO.includes(S.tool));
+  el.lienzo.classList.toggle('pan', S.tool === 'calco');
+  $('#bDeshacer').disabled = !S.undo.length; $('#bRehacer').disabled = !S.redo.length;
+  if (document.activeElement !== el.nombre) el.nombre.value = S.doc.nombre || '';
+  document.title = (S.doc.nombre ? S.doc.nombre + ' · ' : '') + 'plano-sala';
+};
+
+// ── piezas
+const agregar = (base) => {
+  snap();
+  const e = { id: G.nuevoId(), color: COLORES[0], ...base };
+  S.doc.entidades.push(e); S.sel = e.id; S.vsel = null; S.inicioOculto = true; cambio(); return e;
+};
+const borrarSel = () => {
+  const e = ent(); if (!e) return;
+  snap();
+  if (S.vsel != null && ((e.tipo === 'linea' && e.pts.length > 2) || (G.esPoligono(e) && e.pts.length > 3))) { G.borrarVertice(e, S.vsel); S.vsel = null; cambio(); return; }
+  S.doc.entidades = S.doc.entidades.filter((x) => x !== e); S.sel = null; S.vsel = null; cambio();
+};
+const duplicar = () => { const e = ent(); if (!e) return; snap(); const c = G.mover(JSON.parse(JSON.stringify(e)), S.doc.rotulo * 2, S.doc.rotulo * 2); c.id = G.nuevoId(); if (G.esObra(c)) c.num = String(G.numSiguiente(S.doc.entidades)); S.doc.entidades.push(c); S.sel = c.id; S.vsel = null; cambio(); };
+
+// ── herramientas
+const setTool = (t) => {
+  if (S.draft && esPoli(S.draft.tool) && t !== S.draft.tool && S.draft.puntos.length >= (S.draft.tool === 'linea' ? 2 : 3)) terminarLinea(false);
+  S.tool = t; S.draft = null; S.buffer = ''; if (t !== 'select') { S.vsel = null; }
+  if (t === 'calibrar' && !S.doc.calco) { S.tool = 'select'; mensaje('Primero sube una imagen de calco', true); }
+  if (t !== 'calibrar' && S.guiaPaso === 'Calibrar') guia(null);
+  render();
+};
+const cancelarDraft = () => { S.draft = null; S.buffer = ''; render(); };
+const quitarPunto = () => { const d = S.draft; if (!d || !esPoli(d.tool)) return; d.puntos.pop(); if (!d.puntos.length) S.draft = null; render(); };
+const terminarLinea = (cerrar) => {
+  const d = S.draft; if (!d || !esPoli(d.tool)) return;
+  const tol = tolM(3); const pts = [];
+  for (const p of d.puntos) if (!pts.length || G.dist(pts[pts.length - 1], p) > tol) pts.push(p);
+  if (cerrar && pts.length > 2 && G.dist(pts[0], pts[pts.length - 1]) <= tol) pts.pop();
+  S.draft = null; S.buffer = '';
+  if (d.tool !== 'linea') {
+    if (pts.length < 3) { mensaje('Una obra o región necesita al menos tres puntos', true); render(); return; }
+    if (d.tool === 'obra') { agregar({ tipo: 'obra', pts, num: String(G.numSiguiente(S.doc.entidades)), titulo: '', artista: '', color: '#b06a36', verTitulo: false }); enfocar('titulo'); }
+    else { const n = S.doc.entidades.filter((x) => x.tipo === 'region').length; agregar({ tipo: 'region', pts, nombre: 'Región ' + String.fromCharCode(65 + (n % 26)), color: COLORES_REGION[n % COLORES_REGION.length], conteo: true, verArea: false }); enfocar('nombre'); }
+    return;
+  }
+  if (pts.length < 2) { render(); return; }
+  agregar({ tipo: 'linea', pts, cerrada: !!cerrar && pts.length >= 3, ...DEF.linea });
+};
+const enfocar = (k) => { const i = $(`#panel [data-k="${k}"]`); if (i) { i.focus(); i.select(); } };
+const ultimo = () => (S.draft ? S.draft.puntos[S.draft.puntos.length - 1] : null);
+// Cursor con imán, ángulo o libre según el estado
+const calcularCursor = (raw, ev) => {
+  const base = S.draft && !S.draft.cadena && ['linea', 'obra', 'region', 'puerta', 'ventana', 'cuadro', 'cota', 'calibrar'].includes(S.draft.tool) && !(S.draft.tool === 'cota' && S.draft.puntos.length === 2) ? ultimo() : null;
+  if (S.draft && S.draft.tool === 'cota' && S.draft.puntos.length === 2) { S.iman = 'libre'; return raw; }
+  if (S.tool === 'calibrar') { S.iman = 'libre'; return raw; }
+  if (ev && ev.shiftKey && base) { S.iman = 'angulo'; return G.snapAngulo(base, raw, 15, S.doc.imanes ? S.doc.rejilla : 0); }
+  if ((ev && ev.altKey) || !S.doc.imanes) { S.iman = 'libre'; return raw; }
+  const ents = S.doc.entidades.slice();
+  if (S.draft && esPoli(S.draft.tool)) ents.push({ id: '_draft', tipo: 'linea', pts: S.draft.puntos, cerrada: false });
+  const r = G.imanar(raw, { entidades: ents, tol: tolM(10), rejilla: S.doc.rejilla, excluir: S.arr && S.arr.tipo === 'asa' ? { id: S.sel, idx: S.arr.idx } : null });
+  S.iman = r.tipo; return r.p;
+};
+// Clic de herramienta (en coordenadas ya ajustadas)
+const clicDibujo = (p, arr) => {
+  const t = S.tool, d = S.draft;
+  if (esPoli(t)) {
+    if (!d) { S.draft = { tool: t, puntos: [p] }; }
+    else {
+      const u = ultimo(); if (G.dist(u, p) < 1e-6) return render();
+      if (d.puntos.length >= 3 && G.dist(d.puntos[0], p) <= tolM(8)) return terminarLinea(true);
+      d.puntos.push(p);
+    }
+    S.buffer = ''; return render();
+  }
+  if (t === 'texto') {
+    const e = agregar({ tipo: 'texto', x: p.x, y: p.y, texto: 'Texto', tam: G.r6(S.doc.rotulo * 1.4), rot: 0 });
+    const ta = $('textarea[data-k=texto]', el.panel); if (ta) { ta.focus(); ta.select(); }
+    return e;
+  }
+  // herramientas de dos (o tres) puntos
+  if (!d) { if (arr && arr.creado) return render(); S.draft = { tool: t, puntos: [p] }; return render(); }
+  if (arr && arr.creado && !arr.movido) return render();
+  terminarDosPuntos(p);
+};
+const terminarDosPuntos = (p) => {
+  const d = S.draft; const t = d.tool;
+  if (t === 'cota' && d.cadena) {
+    const e = ent(d.cadena); S.buffer = '';
+    if (!e) { S.draft = null; return render(); }
+    const pts = G.cotaPts(e); if (G.dist(pts[pts.length - 1], p) < 1e-4) return render();
+    snap(); e.pts = [...pts, p]; delete e.a; delete e.b; S.sel = e.id; cambio(); return;
+  }
+  const a = d.puntos[0];
+  if (t === 'cota' && d.puntos.length === 2) {
+    const e = { tipo: 'cota', pts: [d.puntos[0], d.puntos[1]], desp: G.r6(d.desp || 0), texto: '', total: false };
+    S.buffer = ''; const nueva = agregar(e); S.draft = { tool: 'cota', cadena: nueva.id, puntos: [] }; render(); return;
+  }
+  if (G.dist(a, p) < 1e-4) { mensaje('Los dos puntos coinciden', true); return render(); }
+  if (t === 'cota') { d.puntos.push(p); d.desp = 0; S.buffer = ''; return render(); }
+  S.draft = null; S.buffer = '';
+  if (t === 'rect') {
+    if (Math.abs(p.x - a.x) < 1e-4 || Math.abs(p.y - a.y) < 1e-4) { mensaje('El rectángulo no tiene área', true); return render(); }
+    agregar({ tipo: 'linea', pts: G.rectPts(a, p), cerrada: true, ...DEF.rect });
+  } else if (t === 'circulo') agregar({ tipo: 'circulo', c: a, r: G.r6(G.dist(a, p)), ...DEF.circulo });
+  else if (t === 'puerta') agregar({ tipo: 'puerta', a, b: p, lado: 1, bisagra: 'a', medidas: false });
+  else if (t === 'ventana') agregar({ tipo: 'ventana', a, b: p, esp: 0.15, medidas: false });
+  else if (t === 'cuadro') { agregar({ tipo: 'cuadro', a, b: p, lado: G.ladoCuadro(S.doc.entidades, a, p), num: String(G.numSiguiente(S.doc.entidades)), titulo: '', artista: '', color: '#b06a36', medidas: true, verTitulo: false }); enfocar('titulo'); }
+  else if (t === 'calibrar') calibrar(a, p);
+};
+// Medida tecleada mientras se dibuja
+const aplicarBuffer = () => {
+  const d = S.draft; const txt = S.buffer.trim(); S.buffer = '';
+  if (!d || !txt) return render();
+  if (d.cadena) {
+    const e = ent(d.cadena); const L = G.parseNum(txt); if (!e || !(L > 0)) { mensaje('Medida no válida', true); return render(); }
+    const g = G.cotaGeom(e); const base = g.pts[g.pts.length - 1]; const cur = S.cursor || base;
+    const sg = Math.sign(G.dot(G.sub(cur, base), g.d)) || Math.sign(g.ts[g.ts.length - 1] - g.ts[0]) || 1;
+    return terminarDosPuntos({ x: G.r6(base.x + g.d.x * L * sg), y: G.r6(base.y + g.d.y * L * sg) });
+  }
+  const base = ultimo(); const cur = S.cursor || { x: base.x + 1, y: base.y };
+  if (d.tool === 'rect') {
+    const m = txt.replace(/,/g, '.').split(/[x×*]/i).map((s) => parseFloat(s));
+    if (m.length !== 2 || !(m[0] > 0) || !(m[1] > 0)) { mensaje('Escribe ancho x alto, por ejemplo 3x2', true); return render(); }
+    const sx = Math.sign(cur.x - base.x) || 1, sy = Math.sign(cur.y - base.y) || 1;
+    return terminarDosPuntos({ x: G.r6(base.x + sx * m[0]), y: G.r6(base.y + sy * m[1]) });
+  }
+  const L = G.parseNum(txt);
+  if (!(L > 0)) { mensaje('Medida no válida', true); return render(); }
+  if (d.tool === 'circulo') return terminarDosPuntos({ x: G.r6(base.x + L / 2), y: base.y });
+  if (d.tool === 'cota' && d.puntos.length === 2) { d.desp = L * (Math.sign(d.desp || 1)); return terminarDosPuntos(null); }
+  const dir = G.dist(base, cur) > 1e-9 ? G.unit(G.sub(cur, base)) : { x: 1, y: 0 };
+  const p = { x: G.r6(base.x + dir.x * L), y: G.r6(base.y + dir.y * L) };
+  if (esPoli(d.tool)) { d.puntos.push(p); return render(); }
+  terminarDosPuntos(p);
+};
+
+// ── calco
+const abrirCalco = () => { el.fCalco.value = ''; el.fCalco.click(); };
+const leerImagen = (file) => new Promise((res, rej) => {
+  if (!file || !/^image\//.test(file.type)) return rej(new Error('El archivo no es una imagen'));
+  const fr = new FileReader();
+  fr.onerror = () => rej(new Error('No se pudo leer el archivo'));
+  fr.onload = () => {
+    const img = new Image();
+    img.onerror = () => rej(new Error('Formato de imagen no soportado por el navegador'));
+    img.onload = () => {
+      const w0 = img.naturalWidth, h0 = img.naturalHeight; if (!(w0 > 0 && h0 > 0)) return rej(new Error('Imagen vacía'));
+      const k = Math.min(1, MAX_LADO_CALCO / Math.max(w0, h0));
+      if (k === 1 && file.size < 2.5e6) return res({ src: fr.result, w: w0, h: h0 });
+      const w = Math.round(w0 * k), h = Math.round(h0 * k);
+      const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+      const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+      res({ src: file.type === 'image/png' ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.9), w, h });
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+});
+const cargarCalco = async (file) => {
+  try {
+    const im = await leerImagen(file);
+    const bb = G.caja(S.doc.entidades, S.doc.rotulo);
+    const anchoM = bb ? Math.max(bb.w, 4) : 10;
+    S.doc.calco = { src: im.src, w: im.w, h: im.h, mpp: anchoM / im.w, x: bb ? bb.x : 0, y: bb ? bb.y : 0, rot: 0, opacidad: 0.5, visible: true, calibrado: null };
+    S.inicioOculto = true; S.undo.length = 0; S.redo.length = 0;
+    autosave(); verTodo(); setTool('calibrar');
+    guia('Paso 1 de 2', 'Marca dos puntos sobre una medida que conozcas del plano (una pared, una puerta acotada) y escribe cuántos metros mide. Así la imagen queda a escala real.');
+  } catch (err) { mensaje(err.message, true); }
+};
+const calibrar = (a, b, metrosDados) => {
+  const c = S.doc.calco; if (!c) return;
+  let m = metrosDados;
+  if (!(m > 0)) {
+    const r = prompt('¿Cuántos metros mide en la realidad la distancia que marcaste? (por ejemplo 3,18)');
+    if (r == null) { render(); return; }
+    m = G.parseNum(r);
+  }
+  const nuevo = G.calibrarCalco(c, a, b, m);
+  if (!nuevo) { mensaje('Medida no válida', true); render(); return; }
+  snap(); Object.assign(c, nuevo);
+  const lado = Math.max(c.w, c.h) * c.mpp;
+  if (!S.doc.entidades.length) S.doc.rotulo = G.clamp(Math.round(lado / 45 * 100) / 100, 0.06, 0.6);
+  S.tool = 'linea'; S.draft = null;
+  guia('Paso 2 de 2', `Listo: la imagen está a escala (1 m = ${G.fmtNum(1 / c.mpp, 1)} px). Traza encima con «Muro» haciendo clic en las esquinas. Regula la opacidad del calco en el panel derecho.`);
+  autosave(); verTodo(); render();
+};
+
+// ── puntero
+const enUi = (t) => t && t.closest && (t.closest('#guia') || t.closest('#inicio'));
+el.lienzo.addEventListener('pointerdown', (ev) => {
+  if (enUi(ev.target)) return;
+  if (document.activeElement && document.activeElement !== document.body && ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) document.activeElement.blur();
+  try { el.lienzo.setPointerCapture(ev.pointerId); } catch (e) {}
+  const raw = aMundo(ev.clientX, ev.clientY);
+  const base = { x0: ev.clientX, y0: ev.clientY, raw0: raw, view0: { ...S.view }, movido: false };
+  if (ev.button === 1 || ev.button === 2 || S.espacio) { S.arr = { ...base, tipo: 'pan' }; el.lienzo.classList.add('panning'); return; }
+  if (ev.button !== 0) return;
+  if (S.tool === 'select') {
+    const e = ent();
+    if (e) { const i = G.asas(e).findIndex((p) => G.dist(p, raw) <= tolM(8)); if (i >= 0) { S.vsel = i; S.arr = { ...base, tipo: 'asa', idx: i, hecho: false }; renderSvg(); renderPista(); return; } }
+    const id = G.tocar(S.doc.entidades, raw, tolM(7), S.doc.rotulo);
+    const rt = rotuloEn(raw);
+    if (rt && ent(rt.id)) {
+      const cambia = rt.id !== S.sel || !S.rsel || S.rsel.key !== rt.key;
+      S.sel = rt.id; S.vsel = null; S.rsel = { id: rt.id, key: rt.key }; if (cambia) renderPanel();
+      const c = G.enMarco(rt.f, raw); S.arr = { ...base, tipo: 'rotulo', id: rt.id, key: rt.key, f: rt.f, du: rt.u - c.u, dv: rt.v - c.v, hecho: false }; renderSvg(); renderPista(); return;
+    }
+    if (S.rsel) { S.rsel = null; if (!id) renderPanel(); }
+    const er = id && ent(id);
+    if (er && er.tipo === 'region' && G.enEtqRegion(er, raw, S.doc.rotulo)) { if (id !== S.sel) { S.sel = id; S.vsel = null; renderPanel(); } const c = G.etqRegion(er); S.arr = { ...base, tipo: 'etq', id, dx: c.x - raw.x, dy: c.y - raw.y, hecho: false }; renderSvg(); renderPista(); return; }
+    if (id) { if (id !== S.sel) { S.sel = id; S.vsel = null; renderPanel(); } S.arr = { ...base, tipo: 'mover', id, ult: S.doc.rejilla > 0 && S.doc.imanes ? G.snapGrid(raw, S.doc.rejilla) : raw, hecho: false }; renderSvg(); renderPista(); return; }
+    S.arr = { ...base, tipo: 'fondo' }; return;
+  }
+  if (S.tool === 'calco') { const c = S.doc.calco; if (c) S.arr = { ...base, tipo: 'calco', cx: c.x, cy: c.y, hecho: false }; return; }
+  if (DIBUJO.includes(S.tool)) {
+    const p = calcularCursor(raw, ev); S.cursor = p;
+    const creado = !S.draft && ['rect', 'circulo', 'puerta', 'ventana', 'cuadro', 'cota', 'calibrar'].includes(S.tool);
+    if (creado) { S.draft = { tool: S.tool, puntos: [p] }; }
+    S.arr = { ...base, tipo: 'dibujo', creado }; renderSvg(); renderPista();
+  }
+});
+el.lienzo.addEventListener('pointermove', (ev) => {
+  const raw = aMundo(ev.clientX, ev.clientY); S.raw = raw;
+  const a = S.arr;
+  if (a && !a.movido && Math.hypot(ev.clientX - a.x0, ev.clientY - a.y0) > 3) a.movido = true;
+  if (a && a.movido) {
+    if (a.tipo === 'pan' || a.tipo === 'fondo') {
+      a.tipo = 'pan'; el.lienzo.classList.add('panning');
+      S.view = { ...a.view0, vx: a.view0.vx - (ev.clientX - a.x0) / a.view0.zoom, vy: a.view0.vy - (ev.clientY - a.y0) / a.view0.zoom };
+      return pedirRender();
+    }
+    if (a.tipo === 'mover') {
+      const e = ent(a.id); if (!e) return;
+      if (!a.hecho) { snap(); a.hecho = true; }
+      const t = S.doc.rejilla > 0 && S.doc.imanes && !ev.altKey ? G.snapGrid(raw, S.doc.rejilla) : raw;
+      G.mover(e, t.x - a.ult.x, t.y - a.ult.y); a.ult = t; return pedirRender();
+    }
+    if (a.tipo === 'rotulo') {
+      const e = ent(a.id); if (!e) return;
+      if (!a.hecho) { snap(); a.hecho = true; }
+      const c = G.enMarco(a.f, raw); e.etiq = { ...(e.etiq || {}), [a.key]: { u: G.r6(c.u + a.du), v: G.r6(c.v + a.dv) } }; return pedirRender();
+    }
+    if (a.tipo === 'etq') {
+      const e = ent(a.id); if (!e) return;
+      if (!a.hecho) { snap(); a.hecho = true; }
+      e.etq = { x: G.r6(raw.x + a.dx), y: G.r6(raw.y + a.dy) }; return pedirRender();
+    }
+    if (a.tipo === 'asa') {
+      const e = ent(); if (!e) return;
+      if (!a.hecho) { snap(); a.hecho = true; }
+      const p = calcularCursor(raw, ev); S.cursor = p; G.fijarAsa(e, a.idx, p); return pedirRender();
+    }
+    if (a.tipo === 'calco') {
+      const c = S.doc.calco; if (!c) return;
+      if (!a.hecho) { snap(); a.hecho = true; }
+      c.x = a.cx + (ev.clientX - a.x0) / S.view.zoom; c.y = a.cy + (ev.clientY - a.y0) / S.view.zoom; return pedirRender();
+    }
+  }
+  const p = DIBUJO.includes(S.tool) ? calcularCursor(raw, ev) : raw;
+  S.cursor = p;
+  if (S.tool === 'select' && !a) el.lienzo.style.cursor = rotuloEn(raw) ? 'move' : '';
+  if (S.draft && S.draft.tool === 'cota' && S.draft.puntos.length === 2) { const g = G.cotaGeom({ a: S.draft.puntos[0], b: S.draft.puntos[1], desp: 0 }); S.draft.desp = G.dot(G.sub(raw, S.draft.puntos[0]), g.n); if (S.doc.rejilla > 0 && S.doc.imanes) S.draft.desp = Math.round(S.draft.desp / S.doc.rejilla) * S.doc.rejilla; }
+  el.coords.textContent = `x ${G.fmtNum(p.x)} · y ${G.fmtNum(p.y)} m`;
+  if (DIBUJO.includes(S.tool) || S.draft) pedirRender();
+});
+const finPuntero = (ev) => {
+  const a = S.arr; if (!a) return; S.arr = null; el.lienzo.classList.remove('panning');
+  try { el.lienzo.releasePointerCapture(ev.pointerId); } catch (e) {}
+  if (a.tipo === 'pan') return;
+  if (a.tipo === 'fondo') { if (S.sel) { S.sel = null; S.vsel = null; S.rsel = null; render(); } return; }
+  if (a.tipo === 'mover' || a.tipo === 'asa' || a.tipo === 'calco' || a.tipo === 'etq' || a.tipo === 'rotulo') { if (a.hecho) { autosave(); render(); } return; }
+  if (a.tipo === 'dibujo') {
+    const raw = aMundo(ev.clientX, ev.clientY);
+    const p = calcularCursor(raw, ev); S.cursor = p;
+    clicDibujo(p, a);
+  }
+};
+el.lienzo.addEventListener('pointerup', finPuntero);
+el.lienzo.addEventListener('pointercancel', () => { S.arr = null; el.lienzo.classList.remove('panning'); });
+el.lienzo.addEventListener('pointerleave', () => { if (!S.arr) { el.flot.style.display = 'none'; } });
+el.lienzo.addEventListener('dblclick', (ev) => {
+  if (enUi(ev.target)) return;
+  if (esPoli(S.tool) && S.draft) { ev.preventDefault(); terminarLinea(false); return; }
+  if (S.tool === 'cota' && S.draft && S.draft.cadena) {
+    ev.preventDefault(); const e = ent(S.draft.cadena);
+    if (e) { const g = G.cotaGeom(e); const ult = g.tramos[g.tramos.length - 1]; if (g.tramos.length > 1 && ult.L < tolM(4)) { e.pts = g.pts.slice(0, -1); S.undo.pop(); } }
+    cancelarDraft(); return;
+  }
+  if (S.tool === 'select') {
+    const e = ent(); const raw = aMundo(ev.clientX, ev.clientY);
+    const rt = rotuloEn(raw);
+    if (rt && rt.manual) { const er = ent(rt.id); if (er && er.etiq) { snap(); delete er.etiq[rt.key]; if (!Object.keys(er.etiq).length) delete er.etiq; cambio(); mensaje('Rótulo en posición automática'); return; } }
+    if (e && (e.tipo === 'linea' || G.esPoligono(e))) { snap(); const i = G.insertarVertice(e, raw, tolM(8)); if (i >= 0) { S.vsel = i; cambio(); mensaje('Punto añadido: arrástralo'); } else S.undo.pop(); return; }
+    if (e && e.tipo === 'texto') { const ta = $('textarea[data-k=texto]', el.panel); if (ta) { ta.focus(); ta.select(); } }
+  }
+});
+el.lienzo.addEventListener('wheel', (ev) => { ev.preventDefault(); zoomEn(ev.clientX, ev.clientY, ev.deltaY < 0 ? 1.15 : 1 / 1.15); }, { passive: false });
+el.lienzo.addEventListener('contextmenu', (ev) => ev.preventDefault());
+el.lienzo.addEventListener('dragover', (ev) => ev.preventDefault());
+el.lienzo.addEventListener('drop', (ev) => {
+  ev.preventDefault(); const f = (ev.dataTransfer && ev.dataTransfer.files || [])[0]; if (!f) return;
+  if (/\.json$/i.test(f.name) || f.type === 'application/json') importarJson(f);
+  else if (/^image\//.test(f.type)) { if (S.doc.calco && !confirm('¿Reemplazar la imagen de calco actual?')) return; cargarCalco(f); }
+  else mensaje('Arrastra una imagen o un proyecto .json', true);
+});
+
+// ── teclado
+document.addEventListener('keydown', (ev) => {
+  const ae = document.activeElement; const enCampo = ae && ['INPUT', 'TEXTAREA', 'SELECT'].includes(ae.tagName);
+  if (ev.key === 'Escape') {
+    if (el.ayuda.classList.contains('visible')) { el.ayuda.classList.remove('visible'); return; }
+    if (el.exportar.classList.contains('visible')) { el.exportar.classList.remove('visible'); return; }
+    if (enCampo) { ae.blur(); return; }
+    if (S.buffer) { S.buffer = ''; return render(); }
+    if (S.draft) { if (esPoli(S.draft.tool) && S.draft.puntos.length >= 2) terminarLinea(false); else cancelarDraft(); return; }
+    if (S.vsel != null) { S.vsel = null; return render(); }
+    if (S.sel) { S.sel = null; S.rsel = null; return render(); }
+    if (S.tool !== 'select') setTool('select');
+    return;
+  }
+  if (enCampo) return;
+  const k = ev.key; const kl = k.toLowerCase(); const mod = ev.ctrlKey || ev.metaKey;
+  if (mod && kl === 'z') { ev.preventDefault(); ev.shiftKey ? rehacer() : deshacer(); return; }
+  if (mod && kl === 'y') { ev.preventDefault(); rehacer(); return; }
+  if (mod && kl === 's') { ev.preventDefault(); guardarJson(); return; }
+  if (mod && kl === 'd') { ev.preventDefault(); duplicar(); return; }
+  if (mod || ev.altKey) return;
+  if (k === ' ') { ev.preventDefault(); if (!S.espacio) { S.espacio = true; el.lienzo.classList.add('pan'); } return; }
+  // medida tecleada durante el dibujo
+  if (S.draft && S.draft.tool !== 'calibrar' && (/^[0-9.,]$/.test(k) || (S.draft.tool === 'rect' && /^[x×*]$/i.test(k) && S.buffer))) {
+    ev.preventDefault(); S.buffer += k; renderSvg(); return;
+  }
+  if (k === 'Backspace' || k === 'Delete') {
+    ev.preventDefault();
+    if (S.buffer) { S.buffer = S.buffer.slice(0, -1); renderSvg(); return; }
+    if (S.draft && esPoli(S.draft.tool)) { quitarPunto(); return; }
+    borrarSel(); return;
+  }
+  if (k === 'Enter') { if (S.buffer) { ev.preventDefault(); aplicarBuffer(); return; } if (S.draft && esPoli(S.draft.tool)) { ev.preventDefault(); terminarLinea(false); } else if (S.draft && S.draft.cadena) { ev.preventDefault(); cancelarDraft(); } return; }
+  if (k.startsWith('Arrow') && S.sel) {
+    ev.preventDefault(); const e = ent(); const paso = (S.doc.rejilla || 0.05) * (ev.shiftKey ? 10 : 1);
+    const d = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[k];
+    snap(); G.mover(e, d[0] * paso, d[1] * paso); cambio(); return;
+  }
+  const herr = { v: 'select', l: 'linea', r: 'rect', o: 'circulo', p: 'puerta', n: 'ventana', t: 'texto', d: 'cota', c: 'cuadro', b: 'obra', g: 'region' };
+  if (herr[kl]) { setTool(herr[kl]); return; }
+  if (k === '0') verTodo(); else if (k === '+' || k === '=') { const { rect } = tam(); zoomEn(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.25); }
+  else if (k === '-') { const { rect } = tam(); zoomEn(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.8); }
+  else if (k === '?') el.ayuda.classList.add('visible');
+});
+document.addEventListener('keyup', (ev) => { if (ev.key === ' ') { S.espacio = false; el.lienzo.classList.remove('pan'); if (S.tool === 'calco') el.lienzo.classList.add('pan'); } });
+
+// ── inicio
+const crearSala = () => {
+  const w = G.parseNum($('#iAncho').value), h = G.parseNum($('#iLargo').value);
+  if (!(w > 0 && h > 0 && w < 1000 && h < 1000)) { mensaje('Escribe ancho y largo en metros, por ejemplo 8 y 5', true); return; }
+  S.doc.rotulo = G.clamp(Math.round(Math.max(w, h) / 45 * 100) / 100, 0.08, 0.6);
+  S.inicioOculto = true;
+  agregar({ tipo: 'linea', pts: G.rectPts({ x: 0, y: 0 }, { x: w, y: h }), cerrada: true, ...DEF.linea, grosor: 'grueso' });
+  S.sel = null; verTodo(); render();
+  mensaje('Sala creada. Usa «Muro» para tabiques y paneles, «Puerta» sobre los muros.');
+};
+$('#bCrearSala').addEventListener('click', crearSala);
+$$('#iAncho,#iLargo').forEach((i) => i.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') crearSala(); }));
+$('#bCalcoInicio').addEventListener('click', abrirCalco);
+$('#bBlanco').addEventListener('click', () => { S.inicioOculto = true; setTool('linea'); });
+$('#bAbrirInicio').addEventListener('click', () => { el.fJson.value = ''; el.fJson.click(); });
+$('#bGuiaCerrar').addEventListener('click', () => guia(null));
+
+// ── barra superior
+$('#titulo').addEventListener('click', () => location.reload());
+$$('#herramientas button[data-tool]').forEach((b) => b.addEventListener('click', () => setTool(b.dataset.tool)));
+$('#bCalcoNav').addEventListener('click', () => { if (S.doc.calco) { S.sel = null; render(); mensaje('El calco se ajusta en el panel derecho'); } else abrirCalco(); });
+$('#bDeshacer').addEventListener('click', deshacer); $('#bRehacer').addEventListener('click', rehacer);
+$('#bAjustar').addEventListener('click', verTodo);
+$('#bAyuda').addEventListener('click', () => el.ayuda.classList.add('visible'));
+$('#bCerrarAyuda').addEventListener('click', () => el.ayuda.classList.remove('visible'));
+$('#bNuevo').addEventListener('click', () => {
+  if ((S.doc.entidades.length || S.doc.calco) && !confirm('¿Empezar un plano nuevo? Lo que no hayas guardado como .json se pierde.')) return;
+  S.doc = docNuevo(); S.sel = null; S.draft = null; S.undo.length = 0; S.redo.length = 0; S.inicioOculto = false; S.tool = 'select'; guia(null);
+  S.view = { vx: -1, vy: -1, zoom: 60 }; cambio();
+});
+$('#bAbrir').addEventListener('click', () => { el.fJson.value = ''; el.fJson.click(); });
+$('#bGuardar').addEventListener('click', () => guardarJson());
+el.nombre.addEventListener('input', () => { S.doc.nombre = el.nombre.value; document.title = (S.doc.nombre ? S.doc.nombre + ' · ' : '') + 'plano-sala'; autosave(); });
+el.fCalco.addEventListener('change', () => { const f = el.fCalco.files[0]; if (f) cargarCalco(f); });
+el.fJson.addEventListener('change', () => { const f = el.fJson.files[0]; if (f) importarJson(f); });
+window.addEventListener('resize', () => pedirRender());
+document.addEventListener('click', (ev) => { const b = ev.target.closest && ev.target.closest('button'); if (b) b.blur(); });
+
+// ── archivos
+const nombreArchivo = () => (S.doc.nombre || 'plano-sala').replace(/[^\w\-áéíóúñü ]+/gi, '').trim().replace(/\s+/g, '-') || 'plano-sala';
+const descargar = (blob, nombre) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 3000); };
+const exportarCsvObras = () => {
+  if (!S.doc.entidades.some(G.esObra)) return mensaje('Todavía no hay obras', true);
+  descargar(new Blob(['\ufeff' + G.csvObras(S.doc)], { type: 'text/csv;charset=utf-8' }), nombreArchivo() + '-obras.csv'); mensaje('Lista de obras exportada');
+};
+const guardarJson = () => { descargar(new Blob([JSON.stringify(S.doc)], { type: 'application/json' }), nombreArchivo() + '.json'); mensaje('Proyecto guardado'); };
+const esPunto = (p) => p && Number.isFinite(p.x) && Number.isFinite(p.y);
+const validarDoc = (d) => {
+  if (!d || typeof d !== 'object' || !Array.isArray(d.entidades)) throw new Error('El .json no es un plano de plano-sala');
+  const ok = d.entidades.filter((e) => e && (
+    (e.tipo === 'linea' && Array.isArray(e.pts) && e.pts.length >= 2 && e.pts.every(esPunto)) ||
+    (e.tipo === 'circulo' && esPunto(e.c) && e.r > 0) ||
+    ((e.tipo === 'puerta' || e.tipo === 'ventana') && esPunto(e.a) && esPunto(e.b)) ||
+    (e.tipo === 'cota' && ((Array.isArray(e.pts) && e.pts.length >= 2 && e.pts.every(esPunto)) || (esPunto(e.a) && esPunto(e.b)))) ||
+    (e.tipo === 'texto' && Number.isFinite(e.x) && Number.isFinite(e.y) && e.tam > 0) ||
+    ((e.tipo === 'obra' || e.tipo === 'region') && Array.isArray(e.pts) && e.pts.length >= 3 && e.pts.every(esPunto)) ||
+    (e.tipo === 'cuadro' && esPunto(e.a) && esPunto(e.b))));
+  const descartadas = d.entidades.length - ok.length;
+  ok.forEach((e) => { e.id ||= G.nuevoId(); e.color ||= COLORES[0]; if (e.tipo === 'cota' && !Array.isArray(e.pts)) { e.pts = [e.a, e.b]; delete e.a; delete e.b; } });
+  const c = d.calco && d.calco.src && d.calco.w > 0 && d.calco.h > 0 && d.calco.mpp > 0 ? d.calco : null;
+  return { doc: { ...docNuevo(), ...d, entidades: ok, calco: c, rotulo: d.rotulo > 0 ? d.rotulo : 0.2 }, descartadas };
+};
+const cargarDoc = (d) => { const r = validarDoc(d); S.doc = r.doc; S.sel = null; S.draft = null; S.undo.length = 0; S.redo.length = 0; S.inicioOculto = true; guia(null); S.tool = 'select'; render(); verTodo(); return r; };
+const importarJson = (file) => {
+  const fr = new FileReader();
+  fr.onload = () => { try { const r = cargarDoc(JSON.parse(fr.result)); autosave(); mensaje(`Plano «${S.doc.nombre || 'sin nombre'}» abierto` + (r.descartadas ? ` · ${r.descartadas} elementos dañados omitidos` : '')); } catch (e) { mensaje(e.message || 'No se pudo abrir el archivo', true); } };
+  fr.onerror = () => mensaje('No se pudo leer el archivo', true);
+  fr.readAsText(file);
+};
+
+// ── exportación
+const EX = { formato: 'svg' };
+const exEscala = $('#exEscala');
+exEscala.innerHTML = G.ESCALAS.map((e) => `<option value="${e}" ${e === 50 ? 'selected' : ''}>1:${e}</option>`).join('');
+const opcionesEx = () => ({ escala: EX.formato === 'svg' ? +exEscala.value : null, pxAncho: +$('#exAncho').value, titulo: $('#exTitulo').checked, barra: $('#exBarra').checked, calco: $('#exCalco').checked });
+const actualizarEx = () => {
+  $$('#exFormato button').forEach((b) => b.classList.toggle('activo', b.dataset.v === EX.formato));
+  $('#exOpSvg').style.display = EX.formato === 'svg' ? '' : 'none'; $('#exOpPng').style.display = EX.formato === 'png' ? '' : 'none';
+  $('#exCalcoFila').style.display = S.doc.calco ? '' : 'none';
+  const r = G.construirSVG(S.doc, { ...opcionesEx(), escala: +exEscala.value });
+  if (!r) { $('#exPapel').textContent = 'No hay nada que exportar todavía.'; return; }
+  const wmm = r.W * 1000 / +exEscala.value, hmm = r.H * 1000 / +exEscala.value; const p = G.papelPara(wmm, hmm);
+  const sug = ['A4', 'A3'].map((hoja) => { const e = G.ESCALAS.find((n) => { const q = G.papelPara(r.W * 1000 / n, r.H * 1000 / n); return q && ['A4', 'A3'].indexOf(q.nombre) <= ['A4', 'A3'].indexOf(hoja); }); return e ? `${hoja}: 1:${e}` : null; }).filter(Boolean);
+  $('#exPapel').innerHTML = `ocupa <b>${G.fmtNum(wmm, 0)} × ${G.fmtNum(hmm, 0)} mm</b> → ${p ? `cabe en <b>${p.nombre} ${p.orient}</b>` : 'más grande que A0: prueba una escala menor'}` + (sug.length ? `<br>escala mínima por hoja · ${sug.join(' · ')}` : '');
+};
+$('#bExportar').addEventListener('click', () => { if (!cajaTodo()) return mensaje('Dibuja algo antes de exportar', true); $('#exCalco').checked = false; actualizarEx(); el.exportar.classList.add('visible'); });
+$$('#exFormato button').forEach((b) => b.addEventListener('click', () => { EX.formato = b.dataset.v; actualizarEx(); }));
+$$('#exEscala,#exTitulo,#exBarra,#exCalco,#exAncho').forEach((i) => i.addEventListener('change', actualizarEx));
+$('#exCancelar').addEventListener('click', () => el.exportar.classList.remove('visible'));
+$('#exObras').addEventListener('click', () => exportarCsvObras());
+el.exportar.addEventListener('pointerdown', (ev) => { if (ev.target === el.exportar) el.exportar.classList.remove('visible'); });
+$('#exDescargar').addEventListener('click', () => {
+  const o = opcionesEx(); const r = G.construirSVG(S.doc, o);
+  if (!r) return mensaje('No hay nada que exportar', true);
+  const base = nombreArchivo();
+  if (EX.formato === 'svg') { descargar(new Blob([r.svg], { type: 'image/svg+xml' }), `${base}-1-${o.escala}.svg`); mensaje(`SVG a escala 1:${o.escala} exportado`); el.exportar.classList.remove('visible'); return; }
+  const img = new Image();
+  img.onload = () => {
+    const cv = document.createElement('canvas'); cv.width = r.ancho; cv.height = r.alto;
+    const ctx = cv.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+    cv.toBlob((b) => { if (b) { descargar(b, base + '.png'); mensaje('PNG exportado'); } else mensaje('No se pudo generar el PNG (imagen demasiado grande)', true); }, 'image/png');
+  };
+  img.onerror = () => mensaje('No se pudo dibujar el PNG', true);
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(r.svg);
+  el.exportar.classList.remove('visible');
+});
+
+// ── arranque
+const arrancar = () => {
+  let d = null; try { const s = localStorage.getItem(LS); if (s) d = JSON.parse(s); } catch (e) { d = null; }
+  if (d) { try { const r = cargarDoc(d); if (S.doc.entidades.length || S.doc.calco) mensaje('Plano recuperado de este navegador'); else S.inicioOculto = false; if (r.descartadas) mensaje(`${r.descartadas} elementos dañados omitidos`, true); } catch (e) { S.doc = docNuevo(); } }
+  render(); if (S.doc.entidades.length || S.doc.calco) verTodo();
+};
+arrancar();
+window.PS = { S, G, render, setTool, clicDibujo, terminarLinea, aplicarBuffer, crearSala, cargarDoc, calibrar, verTodo, deshacer, rehacer, borrarSel };
+})();
+</script>
+</body>
+</html>

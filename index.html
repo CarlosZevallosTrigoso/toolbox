@@ -148,9 +148,18 @@
 
   <!-- Categoría 2 -->
   <section class="category">
-    <h2 class="category-title">2. Imagen, Video & Impresión</h2>
+    <h2 class="category-title">2. Museografía & Espacio</h2>
     <ul class="tool-list">
       <li><a href="apps/anotador-planos.html" class="card"><span class="title">anotador-planos</span> <span class="desc">Anotador de planos sobre imagen: marcadores, textos, imágenes incrustadas, cotas calibradas (dos clics sobre una medida conocida), áreas de polígonos y zonas, capas y enlaces internos entre planos. Capa SVG con viewBox para pan/zoom; exporta JSON, PNG, CSV y un HTML de lectura autónomo con los enlaces activos.</span></a></li>
+      <li><a href="apps/museodraft.html" class="card"><span class="title">museodraft</span> <span class="desc">Mesa de montaje en alzado: muros en centímetros con eje visual, obras con imagen o ficha (título, autor, año, técnica), vanos y personas de referencia. Alinea y distribuye con separaciones fijas, ajusta a guías y cuadrícula, calibra el 100 % real de la pantalla y ofrece vista isométrica. Exporta PNG/SVG con cotas configurables y una hoja de montaje en CSV.</span></a></li>
+      <li><a href="apps/plano-sala.html" class="card"><span class="title">plano-sala</span> <span class="desc">Planos de sala en planta y a escala real: muros con espesor y altura, puertas, ventanas, cotas encadenadas, cuadros adosados al muro, obras y regiones por lazo poligonal con lista de obras en CSV. Calco tipo papel de cebolla calibrado con una medida conocida; imanes a vértices y muros, medidas tecleadas y rótulos que se colocan solos evitando choques. Exporta SVG en milímetros de 1:20 a 1:200, PNG y JSON.</span></a></li>
+    </ul>
+  </section>
+
+  <!-- Categoría 3 -->
+  <section class="category">
+    <h2 class="category-title">3. Imagen, Video & Impresión</h2>
+    <ul class="tool-list">
       <li><a href="apps/bnpro-v2.html" class="card"><span class="title">bnpro</span> <span class="desc">Conversor a blanco y negro de grado profesional. Implementa curvas spline para el Sistema de Zonas de Adams, mezcla de canales HSL, Guided Filter para contraste local y simulación de grano sobre ImageData.</span></a></li>
       <li><a href="apps/compositor.html" class="card"><span class="title">compositor</span> <span class="desc">Editor visual de collages para impresión térmica. Incluye un motor de binarización propio y capacidad para segmentar lienzos verticales largos en múltiples archivos de imagen de salida.</span></a></li>
       <li><a href="apps/contacto.html" class="card"><span class="title">contacto</span> <span class="desc">Generador de hojas de contacto a partir de video. Captura fotogramas mediante eventos asíncronos en un &lt;video&gt; oculto y lee los primeros bytes del archivo en un DataView para detectar códecs HEVC.</span></a></li>
@@ -165,9 +174,9 @@
     </ul>
   </section>
 
-  <!-- Categoría 3 -->
+  <!-- Categoría 4 -->
   <section class="category">
-    <h2 class="category-title">3. Texto, Documentos & Markdown</h2>
+    <h2 class="category-title">4. Texto, Documentos & Markdown</h2>
     <ul class="tool-list">
       <li><a href="apps/anotadormd.html" class="card"><span class="title">anotador</span> <span class="desc">Lector y anotador de Markdown basado en marked.js. Emplea la API nativa CSS.highlights para realizar selecciones visuales no destructivas y calcula offsets sobre el texto plano para exportar notas.</span></a></li>
       <li><a href="apps/textgen-ig.html" class="card"><span class="title">ig-text</span> <span class="desc">Generador tipográfico para redes sociales. Implementa un algoritmo propio de text-wrap: balance mediante búsqueda binaria de anchos en Canvas y control táctil sobre coordenadas relativas normalizadas.</span></a></li>
@@ -181,9 +190,9 @@
     </ul>
   </section>
 
-  <!-- Categoría 4 -->
+  <!-- Categoría 5 -->
   <section class="category">
-    <h2 class="category-title">4. Criptografía & Esteganografía</h2>
+    <h2 class="category-title">5. Criptografía & Esteganografía</h2>
     <ul class="tool-list">
       <li><a href="apps/crypta.html" class="card"><span class="title">crypta</span> <span class="desc">Suite de cifrado simétrico multiprotocolo. Integra Web Crypto API y tweetnacl.js con derivación PBKDF2. Empaqueta cabeceras binarias y cuenta con un visualizador hexadecimal de difusión de bytes.</span></a></li>
       <li><a href="https://n0t3.xyz/" target="_blank" class="card"><span class="title">n0t3.xyz ↗</span> <span class="desc">Bloc de notas criptográfico de extremo a extremo. Cifra el texto directamente en el navegador antes de cualquier transmisión de datos.</span></a></li>
@@ -194,18 +203,18 @@
     </ul>
   </section>
 
-  <!-- Categoría 5 -->
+  <!-- Categoría 6 -->
   <section class="category">
-    <h2 class="category-title">5. Hardware & Sensores</h2>
+    <h2 class="category-title">6. Hardware & Sensores</h2>
     <ul class="tool-list">
       <li><a href="apps/captura.html" class="card"><span class="title">captura</span> <span class="desc">Agregador de telemetría de hardware. Captura geolocalización, aceleración espacial, audio y frames de video, persistiendo el estado del bloque JSON de manera transaccional en IndexedDB.</span></a></li>
       <li><a href="apps/ojo.html" class="card"><span class="title">ojo</span> <span class="desc">Cámara "ciega" de captura rápida. Enmascara el feed de video, activa el WakeLock para evitar bloqueos de pantalla e inyecta telemetría GPS directa a la captura guardada en IndexedDB.</span></a></li>
     </ul>
   </section>
 
-  <!-- Categoría 6 -->
+  <!-- Categoría 7 -->
   <section class="category">
-    <h2 class="category-title">6. Desarrollo & Utilidades Web</h2>
+    <h2 class="category-title">7. Desarrollo & Utilidades Web</h2>
     <ul class="tool-list">
       <li><a href="apps/canvas-builder.html" class="card"><span class="title">canvas-builder</span> <span class="desc">Maquetador visual de posicionamiento absoluto. Permite la edición freeform de elementos del DOM y soporta la exportación a HTML estático auto-contenido o captura a PDF vía jsPDF.</span></a></li>
       <li><a href="apps/chixi.html" class="card"><span class="title">ch'ixi</span> <span class="desc">Generador de ruido aleatorio determinista (mulberry32). Opera a la resolución nativa física del dispositivo, manipulando directamente arrays de píxeles para generar texturas de alto rendimiento.</span></a></li>
