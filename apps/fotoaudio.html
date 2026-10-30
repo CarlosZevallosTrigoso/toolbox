@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>foto+audio</title>
+<style>
+  :root {
+    --bg: #ffffff; --ink: #111111; --mut: #6b6b64; --line: #e2e2dc; --soft: #f5f5f1;
+    --moss: #586a45; --moss2: #8fa676; --steel: #4f6b82; --ora: #b06a36;
+    --r: 2px;
+    --mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--mono); }
+  .app {
+    max-width: 520px; margin: 0 auto;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding-bottom: 12px; border-bottom: 1px solid var(--ink); }
+  h1 { margin: 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; cursor: pointer; }
+  h1 b { color: var(--moss); font-weight: 600; }
+  .sub { font-size: 12px; font-weight: 400; color: var(--mut); }
+  #volver { font-size: 12px; color: var(--mut); text-decoration: none; white-space: nowrap; }
+  #volver:hover { color: var(--moss); }
+
+  .vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+  .slot { display: block; border: 1px dashed #b5b5ab; border-radius: var(--r); background: var(--soft);
+    cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .slot.lleno { border-style: solid; border-color: var(--line); }
+  .slot:active { background: #ecece6; }
+  .vh:focus-visible + .slot { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .vacio { display: flex; flex-direction: column; gap: 2px; padding: 20px 16px; }
+  .num { font-size: 11px; color: var(--moss); }
+  .que { font-size: 20px; }
+  .hint { font-size: 12px; color: var(--mut); }
+  .lleno .vacio { display: none; }
+  .slot:not(.lleno) .contenido { display: none; }
+
+  .contenido { display: block; }
+  #imgPrev { display: block; max-width: 100%; max-height: 50vh; margin: 0 auto; padding: 10px; }
+  .pista { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; }
+  .pista .nombre { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meta { margin: 6px 0 0; font-size: 12px; color: var(--mut); display: flex; justify-content: space-between; gap: 10px; }
+  .meta:empty { display: none; }
+  .cambiar { color: var(--steel); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; white-space: nowrap; }
+  .aviso { margin: 4px 0 0; font-size: 12px; color: var(--ora); }
+  .aviso:empty { display: none; }
+  audio { display: block; width: 100%; margin-top: 8px; }
+  audio:not([src]) { display: none; }
+
+  .btn { appearance: none; -webkit-appearance: none; display: flex; align-items: center; justify-content: center;
+    width: 100%; min-height: 52px; padding: 0 16px; border-radius: var(--r);
+    border: 1px solid var(--moss); background: var(--moss); color: #fff;
+    font: 600 15px/1 var(--mono); text-decoration: none; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .btn:active { background: #4a5a3a; }
+  .btn:disabled { background: var(--soft); color: #a6a69d; border-color: var(--line); cursor: default; }
+  .btn.sec { background: #fff; color: var(--ink); border-color: var(--ink); }
+  .btn.parar { background: #fff; color: var(--ora); border-color: var(--ora); }
+  .btn[hidden] { display: none; }
+
+  .barra { height: 4px; background: var(--line); border-radius: var(--r); overflow: hidden; margin-top: 12px; }
+  .barra i { display: block; height: 100%; width: 0; background: var(--steel); transition: width .15s linear; }
+  .barra[hidden] { display: none; }
+  #estado { margin: 6px 0 0; min-height: 1.5em; font-size: 12px; color: var(--mut); }
+  #estado.error { color: var(--ora); }
+
+  #resultado { border-top: 1px solid var(--ink); padding-top: 14px; }
+  #resultado[hidden] { display: none; }
+  .rotulo { margin: 0 0 8px; font-size: 11px; color: var(--moss); }
+  video { display: block; width: 100%; max-height: 60vh; background: #000; border-radius: var(--r); }
+  .acciones { display: grid; gap: 8px; margin-top: 12px; }
+  .nota { margin: 10px 0 0; font-size: 12px; color: var(--mut); }
+
+  footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11px; color: var(--mut); }
+  :focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="titulo" title="recargar">foto<b>+</b>audio <span class="sub">→ mp4</span></h1>
+    <a id="volver" href="../index.html" title="Volver al toolbox">← toolbox/</a>
+  </header>
+
+  <section aria-label="imagen">
+    <input id="inImg" class="vh" type="file" accept="image/*">
+    <label for="inImg" id="slotImg" class="slot">
+      <span class="vacio"><span class="num">01</span><span class="que">imagen</span><span class="hint">toca para elegir</span></span>
+      <span class="contenido"><img id="imgPrev" alt="imagen elegida"></span>
+    </label>
+    <p class="meta"><span id="metaImg"></span><label for="inImg" class="cambiar" id="cambiarImg" hidden>cambiar</label></p>
+  </section>
+
+  <section aria-label="audio">
+    <input id="inAud" class="vh" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff,.caf">
+    <label for="inAud" id="slotAud" class="slot">
+      <span class="vacio"><span class="num">02</span><span class="que">audio</span><span class="hint">toca para elegir · m4a, mp3, wav</span></span>
+      <span class="contenido pista"><span class="num">02 · audio</span><span class="nombre" id="nomAud"></span></span>
+    </label>
+    <p class="meta"><span id="metaAud"></span><label for="inAud" class="cambiar" id="cambiarAud" hidden>cambiar</label></p>
+    <p class="aviso" id="avisoAud"></p>
+    <audio id="audPrev" controls preload="metadata"></audio>
+  </section>
+
+  <section aria-label="exportar">
+    <button id="btnExportar" class="btn" type="button" disabled>exportar mp4</button>
+    <div class="barra" id="barra" hidden><i></i></div>
+    <p id="estado" role="status" aria-live="polite"></p>
+  </section>
+
+  <section id="resultado" aria-label="resultado" hidden>
+    <p class="rotulo">03 · listo</p>
+    <video id="vidPrev" controls playsinline preload="metadata"></video>
+    <p class="meta"><span id="metaRes"></span></p>
+    <div class="acciones">
+      <button id="btnCompartir" class="btn" type="button" hidden>guardar / compartir</button>
+      <a id="btnBajar" class="btn sec" download>descargar</a>
+    </div>
+    <p class="nota" id="notaRes"></p>
+  </section>
+
+  <footer>se procesa en este dispositivo; nada se sube a ningún servidor · mediabunny 1.64.0 (MPL-2.0)</footer>
+</div>
+
+<script src="vendor/mediabunny-1.64.0.min.js"></script>
+<script src="vendor/mediabunny-aac-encoder-1.64.0.min.js"></script>
+<script>
+(() => {
+'use strict';
+
+// ── lógica pura (sin DOM, sin Mediabunny) ─────────────────────────────
+const LADO_MAX = 1920;   // tope del lado largo del video, en px
+const FPS = 30;          // cuadros por segundo del video
+const SEG_TRAMO = 1;     // segundos de audio por tramo al intercalar pistas
+
+// Tamaño del video: misma proporción que la imagen, sin agrandar,
+// lado largo ≤ ladoMax, ambos lados pares (H.264 4:2:0 lo exige).
+function dimensionesVideo(w, h, ladoMax = LADO_MAX) {
+  if (!(w > 0 && h > 0) || !Number.isFinite(w) || !Number.isFinite(h)) {
+    throw new Error('dimensiones de imagen inválidas');
+  }
+  const escala = Math.min(1, ladoMax / Math.max(w, h));
+  const par = (n) => Math.max(2, Math.floor(Math.round(n * escala) / 2) * 2);
+  return { w: par(w), h: par(h), escala };
+}
+
+// Divide el audio en tramos de `segundos` y asigna a cada tramo los
+// cuadros de video cuyo timestamp cae dentro de él.
+// Devuelve [{ a0, a1, f0, f1 }]: muestras [a0, a1) y cuadros [f0, f1).
+function planTramos(totalMuestras, sampleRate, fps = FPS, segundos = SEG_TRAMO) {
+  if (!(totalMuestras > 0) || !(sampleRate > 0)) throw new Error('audio vacío');
+  const techo = (x) => Math.max(0, Math.ceil(x - 1e-9)); // tolera error de coma flotante
+  const duracion = totalMuestras / sampleRate;
+  const totalCuadros = Math.max(1, techo(duracion * fps));
+  const porTramo = Math.round(sampleRate * segundos);
+  const tramos = [];
+  for (let a0 = 0, i = 0; a0 < totalMuestras; a0 += porTramo, i++) {
+    const a1 = Math.min(totalMuestras, a0 + porTramo);
+    const esUltimo = a1 === totalMuestras;
+    const f0 = Math.min(totalCuadros, techo(i * segundos * fps));
+    const f1 = esUltimo ? totalCuadros : Math.min(totalCuadros, techo((i + 1) * segundos * fps));
+    tramos.push({ a0, a1, f0, f1 });
+  }
+  return { duracion, totalCuadros, tramos };
+}
+
+// Instagram parte en tarjetas de 60 s lo que dure más.
+function historiasNecesarias(duracion, tope = 60) {
+  return Math.max(1, Math.ceil(duracion / tope - 1e-9));
+}
+
+function formatoTiempo(s) {
+  const t = Math.max(0, Math.round(s));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+
+function formatoBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b / 1024).toFixed(0)} kB`;
+  return `${(b / 1048576).toFixed(1)} MB`;
+}
+
+function nombreSalida(nombreImagen) {
+  const base = String(nombreImagen || '').replace(/\.[^./\\]*$/, '').trim();
+  const limpio = base.replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '');
+  return (limpio || 'historia') + '.mp4';
+}
+// ── fin lógica pura ───────────────────────────────────────────────────
+
+// ── app ───────────────────────────────────────────────────────────────
+const SR = 48000;            // frecuencia de muestreo del audio de salida
+const BITRATE_AUDIO = 192000;
+
+const $ = (id) => document.getElementById(id);
+const el = {
+  titulo: $('titulo'),
+  inImg: $('inImg'), slotImg: $('slotImg'), imgPrev: $('imgPrev'), metaImg: $('metaImg'), cambiarImg: $('cambiarImg'),
+  inAud: $('inAud'), slotAud: $('slotAud'), nomAud: $('nomAud'), metaAud: $('metaAud'), cambiarAud: $('cambiarAud'),
+  avisoAud: $('avisoAud'), audPrev: $('audPrev'),
+  btnExportar: $('btnExportar'), barra: $('barra'), estado: $('estado'),
+  resultado: $('resultado'), vidPrev: $('vidPrev'), metaRes: $('metaRes'),
+  btnCompartir: $('btnCompartir'), btnBajar: $('btnBajar'), notaRes: $('notaRes'),
+};
+const est = { img: null, aud: null, res: null, exportando: false, cancelar: false, ocupado: false, sinSoporte: null };
+
+class Cancelado extends Error {}
+const ceder = () => new Promise((r) => setTimeout(r, 0));
+
+function estado(texto, esError = false) {
+  el.estado.textContent = texto || '';
+  el.estado.classList.toggle('error', !!esError);
+}
+function barra(frac) {
+  el.barra.hidden = frac == null;
+  el.barra.firstElementChild.style.width = `${Math.round(Math.max(0, Math.min(1, frac || 0)) * 100)}%`;
+}
+
+// ── soporte ───────────────────────────────────────────────────────────
+function revisarSoporte() {
+  const faltan = [];
+  if (!window.Mediabunny || !window.MediabunnyAacEncoder) faltan.push('las librerías de vendor/');
+  if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') faltan.push('codificación de video (WebCodecs)');
+  if (typeof WebAssembly === 'undefined') faltan.push('WebAssembly');
+  if (typeof OfflineAudioContext === 'undefined' && typeof webkitOfflineAudioContext === 'undefined') faltan.push('Web Audio');
+  if (faltan.length) return `Este navegador no tiene ${faltan.join(', ')}. En iPhone hace falta iOS 16.4 o posterior.`;
+  try {
+    // Mismo encoder AAC (FFmpeg en WASM) en todos los navegadores: iOS < 26 no
+    // trae AudioEncoder, y así lo que se prueba en escritorio es lo que corre en el iPhone.
+    window.MediabunnyAacEncoder.registerAacEncoder();
+  } catch (e) {
+    console.error(e);
+    return 'No se pudo iniciar el codificador de audio.';
+  }
+  return null;
+}
+
+// ── entrada: imagen ───────────────────────────────────────────────────
+function cargarImagen(file) {
+  return new Promise((ok, mal) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => ok({ img, url });
+    img.onerror = () => { URL.revokeObjectURL(url); mal(new Error('No pude leer esa imagen. Prueba con JPG o PNG.')); };
+    img.src = url;
+  });
+}
+
+async function ponerImagen(file) {
+  const { img, url } = await cargarImagen(file);
+  const w = img.naturalWidth, h = img.naturalHeight;
+  dimensionesVideo(w, h); // valida
+  if (est.img) URL.revokeObjectURL(est.img.url);
+  est.img = { img, url, nombre: file.name, w, h };
+  el.imgPrev.src = url;
+  invalidarResultado();
+}
+
+// ── entrada: audio ────────────────────────────────────────────────────
+function decodificar(datos) {
+  const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const ctx = new Ctx(2, 1, SR); // decodeAudioData remuestrea a la frecuencia del contexto
+  return new Promise((ok, mal) => {
+    const fallo = () => mal(new Error('No pude leer ese audio. Prueba con .m4a, .mp3 o .wav.'));
+    const p = ctx.decodeAudioData(datos, ok, fallo);
+    if (p && typeof p.catch === 'function') p.catch(fallo);
+  });
+}
+
+async function aEstereo(buf) { // solo para audio de más de 2 canales
+  const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const off = new Ctx(2, buf.length, buf.sampleRate);
+  const src = off.createBufferSource();
+  src.buffer = buf;
+  src.connect(off.destination);
+  src.start(0);
+  return off.startRendering();
+}
+
+async function ponerAudio(file) {
+  estado('leyendo audio…');
+  let buf = await decodificar(await file.arrayBuffer());
+  if (buf.numberOfChannels > 2) buf = await aEstereo(buf);
+  if (!(buf.length > 0)) throw new Error('El audio está vacío.');
+  if (est.aud) URL.revokeObjectURL(est.aud.url);
+  const url = URL.createObjectURL(file);
+  est.aud = { buf, url, nombre: file.name, duracion: buf.length / buf.sampleRate };
+  el.audPrev.src = url;
+  estado('');
+  invalidarResultado();
+}
+
+function subBuffer(buf, a0, a1) {
+  const sub = new AudioBuffer({ length: a1 - a0, numberOfChannels: buf.numberOfChannels, sampleRate: buf.sampleRate });
+  for (let c = 0; c < buf.numberOfChannels; c++) sub.copyToChannel(buf.getChannelData(c).subarray(a0, a1), c);
+  return sub;
+}
+
+// ── exportación ───────────────────────────────────────────────────────
+async function elegirDimensiones(MB, w, h, quality) {
+  for (const lado of [LADO_MAX, 1280, 960]) {
+    const d = dimensionesVideo(w, h, lado);
+    try {
+      if (await MB.canEncodeVideo('avc', { width: d.w, height: d.h, frameRate: FPS, quality })) return d;
+    } catch (e) { console.warn(e); }
+  }
+  return null;
+}
+
+function componer(img, d) {
+  const c = document.createElement('canvas');
+  c.width = d.w; c.height = d.h;
+  const g = c.getContext('2d', { alpha: false });
+  g.fillStyle = '#000';
+  g.fillRect(0, 0, d.w, d.h);
+  g.imageSmoothingEnabled = true;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(img, 0, 0, d.w, d.h);
+  return c;
+}
+
+async function pedirPantallaEncendida() {
+  try { return navigator.wakeLock ? await navigator.wakeLock.request('screen') : null; } catch (e) { return null; }
+}
+
+async function exportar() {
+  const MB = window.Mediabunny;
+  est.exportando = true; est.cancelar = false;
+  invalidarResultado();
+  pintar();
+  barra(0);
+  estado('preparando…');
+  const t0 = performance.now();
+  const bloqueo = await pedirPantallaEncendida();
+  let output = null;
+  try {
+    const calidadVideo = new MB.Quality('high');
+    const d = await elegirDimensiones(MB, est.img.w, est.img.h, calidadVideo);
+    if (!d) throw new Error('Este navegador no puede codificar H.264 a este tamaño.');
+    const lienzo = componer(est.img.img, d);
+
+    output = new MB.Output({
+      format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }),
+      target: new MB.BufferTarget(),
+    });
+    const fuenteVideo = new MB.CanvasSource(lienzo, { codec: 'avc', quality: calidadVideo });
+    const fuenteAudio = new MB.AudioBufferSource({ codec: 'aac', quality: new MB.Quality({ bitrate: BITRATE_AUDIO }) });
+    output.addVideoTrack(fuenteVideo, { frameRate: FPS });
+    output.addAudioTrack(fuenteAudio);
+    await output.start();
+
+    // Pistas intercaladas por tramos de 1 s: el muxer no acumula una pista esperando a la otra.
+    const buf = est.aud.buf;
+    const plan = planTramos(buf.length, buf.sampleRate);
+    for (const tr of plan.tramos) {
+      if (est.cancelar) throw new Cancelado();
+      await fuenteAudio.add(subBuffer(buf, tr.a0, tr.a1));
+      for (let f = tr.f0; f < tr.f1; f++) await fuenteVideo.add(f / FPS, 1 / FPS);
+      const hecho = tr.a1 / buf.sampleRate;
+      barra(0.97 * hecho / plan.duracion);
+      estado(`codificando ${formatoTiempo(hecho)} / ${formatoTiempo(plan.duracion)}`);
+      await ceder();
+    }
+    if (est.cancelar) throw new Cancelado();
+    estado('empaquetando mp4…');
+    await output.finalize();
+
+    const blob = new Blob([output.target.buffer], { type: 'video/mp4' });
+    const nombre = nombreSalida(est.img.nombre);
+    est.res = {
+      blob, nombre, d,
+      url: URL.createObjectURL(blob),
+      file: typeof File === 'function' ? new File([blob], nombre, { type: 'video/mp4' }) : null,
+      segundos: (performance.now() - t0) / 1000,
+      duracion: plan.duracion,
+    };
+    barra(null);
+    estado('');
+    mostrarResultado();
+  } catch (e) {
+    if (output && output.state !== 'finalized' && output.state !== 'canceled') {
+      try { await output.cancel(); } catch (_) { /* nada */ }
+    }
+    barra(null);
+    if (e instanceof Cancelado) estado('exportación cancelada');
+    else {
+      console.error(e);
+      const msg = (e && e.message) || String(e);
+      estado(`Falló la exportación: ${msg}. Si la app pasó a segundo plano, vuelve a intentarlo con la pantalla abierta.`, true);
+    }
+  } finally {
+    if (bloqueo) { try { await bloqueo.release(); } catch (_) { /* nada */ } }
+    est.exportando = false;
+    pintar();
+  }
+}
+
+// ── resultado ─────────────────────────────────────────────────────────
+function puedeCompartir(file) {
+  try { return !!(file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] })); }
+  catch (e) { return false; }
+}
+
+function mostrarResultado() {
+  const r = est.res;
+  el.vidPrev.poster = est.img.url; // sin poster, iOS muestra negro hasta dar play
+  el.vidPrev.src = r.url;
+  el.btnBajar.href = r.url;
+  el.btnBajar.download = r.nombre;
+  el.metaRes.textContent = `${r.nombre} · ${r.d.w}×${r.d.h} · ${formatoTiempo(r.duracion)} · ${formatoBytes(r.blob.size)} · ${r.segundos.toFixed(1)} s`;
+  const compartir = puedeCompartir(r.file);
+  el.btnCompartir.hidden = !compartir;
+  el.btnBajar.classList.toggle('sec', compartir);
+  el.notaRes.textContent = compartir
+    ? 'En la hoja de compartir, «Guardar video» lo deja en Fotos, desde donde Instagram lo ve.'
+    : 'En iPhone, «descargar» lo deja en Archivos; para Instagram conviene «guardar / compartir».';
+  el.resultado.hidden = false;
+  el.resultado.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function invalidarResultado() {
+  if (est.res) URL.revokeObjectURL(est.res.url);
+  est.res = null;
+  el.resultado.hidden = true;
+  el.vidPrev.removeAttribute('src');
+  el.vidPrev.removeAttribute('poster');
+  el.vidPrev.load();
+  el.btnBajar.removeAttribute('href');
+  pintar();
+}
+
+async function compartir() {
+  const r = est.res;
+  if (!r || !r.file) return;
+  try {
+    await navigator.share({ files: [r.file] });
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // la persona cerró la hoja
+    console.error(e);
+    estado('No se pudo abrir la hoja de compartir; usa «descargar».', true);
+  }
+}
+
+// ── pintado ───────────────────────────────────────────────────────────
+function pintar() {
+  const { img, aud } = est;
+  el.slotImg.classList.toggle('lleno', !!img);
+  el.cambiarImg.hidden = !img;
+  if (img) {
+    const d = dimensionesVideo(img.w, img.h);
+    const mismo = d.w === img.w && d.h === img.h;
+    el.metaImg.textContent = mismo ? `${img.w}×${img.h}` : `${img.w}×${img.h} → video ${d.w}×${d.h}`;
+  } else el.metaImg.textContent = '';
+
+  el.slotAud.classList.toggle('lleno', !!aud);
+  el.cambiarAud.hidden = !aud;
+  if (aud) {
+    el.nomAud.textContent = aud.nombre;
+    el.metaAud.textContent = `${formatoTiempo(aud.duracion)} · ${aud.buf.numberOfChannels === 1 ? 'mono' : 'estéreo'}`;
+    const n = historiasNecesarias(aud.duracion);
+    el.avisoAud.textContent = n > 1 ? `dura más de 60 s: Instagram lo partirá en ${n} historias` : '';
+  } else { el.nomAud.textContent = ''; el.metaAud.textContent = ''; el.avisoAud.textContent = ''; }
+
+  const b = el.btnExportar;
+  if (est.exportando) {
+    b.textContent = 'cancelar';
+    b.classList.add('parar');
+    b.disabled = est.cancelar;
+  } else {
+    b.textContent = 'exportar mp4';
+    b.classList.remove('parar');
+    b.disabled = !!est.sinSoporte || est.ocupado || !img || !aud;
+  }
+  el.inImg.disabled = el.inAud.disabled = est.exportando || est.ocupado;
+}
+
+// ── eventos ───────────────────────────────────────────────────────────
+function alElegir(input, accion) {
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    input.value = ''; // permite volver a elegir el mismo archivo
+    if (!file || est.exportando) return;
+    est.ocupado = true; pintar();
+    try { await accion(file); }
+    catch (e) { console.error(e); estado((e && e.message) || 'No se pudo cargar el archivo.', true); }
+    finally { est.ocupado = false; pintar(); }
+  });
+}
+
+el.titulo.addEventListener('click', () => location.reload());
+alElegir(el.inImg, ponerImagen);
+alElegir(el.inAud, ponerAudio);
+el.btnExportar.addEventListener('click', () => {
+  if (est.exportando) { est.cancelar = true; estado('cancelando…'); pintar(); return; }
+  exportar();
+});
+el.btnCompartir.addEventListener('click', compartir);
+window.addEventListener('beforeunload', (e) => { if (est.exportando) { e.preventDefault(); e.returnValue = ''; } });
+
+est.sinSoporte = revisarSoporte();
+if (est.sinSoporte) estado(est.sinSoporte, true);
+pintar();
+})();
+</script>
+</body>
+</html>
