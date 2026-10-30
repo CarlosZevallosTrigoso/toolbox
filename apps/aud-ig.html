@@ -1,0 +1,2157 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>AUD·IG — historias con audio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff; --ink: #111111; --mut: #6b6b64; --line: #e2e2dc; --soft: #f5f5f1;
+    --moss: #586a45; --moss2: #8fa676; --steel: #4f6b82; --ora: #b06a36;
+    --r: 2px;
+    --mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.5 var(--mono); }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .app { max-width: 1180px; margin: 0 auto;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(28px, env(safe-area-inset-bottom)); }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+    padding-bottom: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--ink); }
+  h1 { margin: 0; font-size: 16px; font-weight: 600; cursor: pointer; }
+  h1 b { color: var(--moss); font-weight: 600; }
+  h1 span { font-size: 11px; font-weight: 400; color: var(--mut); }
+  #volver { font-size: 12px; color: var(--mut); text-decoration: none; white-space: nowrap; }
+  #volver:hover { color: var(--moss); }
+  [hidden] { display: none !important; }
+  .vh { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; pointer-events: none; }
+  :focus-visible { outline: 2px solid var(--steel); outline-offset: 2px; }
+
+  /* audio */
+  .slot { display: flex; flex-direction: column; gap: 2px; padding: 22px 16px; border: 1px dashed #b5b5ab;
+    border-radius: var(--r); background: var(--soft); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .slot:active { background: #ecece6; }
+  .vh:focus-visible + .slot { outline: 2px solid var(--steel); outline-offset: 2px; }
+  .num { font-size: 11px; color: var(--moss); }
+  .que { font-size: 20px; }
+  .hint { font-size: 12px; color: var(--mut); }
+  .audinfo { display: flex; gap: 12px; align-items: baseline; font-size: 12px; color: var(--mut); margin-bottom: 10px; }
+  .audinfo .link { margin-left: auto; }
+  .audinfo b { color: var(--ink); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .link { color: var(--steel); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; background: none;
+    border: 0; padding: 0; white-space: nowrap; }
+
+  /* estudio */
+  .estudio { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .estudio > * { min-width: 0; }
+  @media (min-width: 900px) {
+    .estudio { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; }
+    .escenario { position: sticky; top: 12px; }
+  }
+  .lienzo-wrap { position: relative; margin: 0 auto; background: var(--soft); border: 1px solid var(--line); }
+  #lienzo { display: block; width: 100%; height: 100%; }
+  .lienzo-vacio { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    padding: 20px; text-align: center; font-size: 12px; color: var(--mut); pointer-events: none; }
+  .box-overlay { position: absolute; inset: 0; pointer-events: none; }
+  .box-rect { position: absolute; border: 1.5px solid var(--moss); background: rgba(88, 106, 69, 0.05);
+    outline: 1px solid rgba(255, 255, 255, 0.5); pointer-events: auto; cursor: move; touch-action: none; }
+  .box-handle { position: absolute; width: 14px; height: 14px; background: var(--moss); border: 1.5px solid #fff;
+    border-radius: var(--r); transform: translate(-50%, -50%); pointer-events: auto; touch-action: none; }
+  .box-handle::after { content: ""; position: absolute; inset: -10px; } /* área táctil */
+  .box-handle[data-h="nw"] { left: 0; top: 0; cursor: nwse-resize; }
+  .box-handle[data-h="n"]  { left: 50%; top: 0; cursor: ns-resize; }
+  .box-handle[data-h="ne"] { left: 100%; top: 0; cursor: nesw-resize; }
+  .box-handle[data-h="e"]  { left: 100%; top: 50%; cursor: ew-resize; }
+  .box-handle[data-h="se"] { left: 100%; top: 100%; cursor: nwse-resize; }
+  .box-handle[data-h="s"]  { left: 50%; top: 100%; cursor: ns-resize; }
+  .box-handle[data-h="sw"] { left: 0; top: 100%; cursor: nesw-resize; }
+  .box-handle[data-h="w"]  { left: 0; top: 50%; cursor: ew-resize; }
+  .meta-lienzo { margin: 6px 0 0; text-align: center; font-size: 11px; color: var(--mut); }
+
+  .transporte { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .reloj { font-size: 12px; color: var(--mut); margin-right: auto; font-variant-numeric: tabular-nums; }
+  .onda-wrap { position: relative; margin-top: 8px; }
+  #onda { display: block; width: 100%; height: 96px; touch-action: none; cursor: crosshair;
+    background: var(--soft); border: 1px solid var(--line); border-radius: var(--r); }
+  #desplazar { width: 100%; margin: 6px 0 0; accent-color: var(--steel); }
+  .ayuda { margin: 6px 0 0; font-size: 11px; color: var(--mut); }
+
+  /* botones */
+  .btn { appearance: none; -webkit-appearance: none; display: inline-flex; align-items: center; justify-content: center;
+    min-height: 40px; padding: 0 12px; border-radius: var(--r); border: 1px solid var(--ink); background: #fff;
+    cursor: pointer; -webkit-tap-highlight-color: transparent; white-space: nowrap; text-decoration: none; }
+  .btn:active { background: var(--soft); }
+  .btn:disabled { color: #a6a69d; border-color: var(--line); background: var(--soft); cursor: default; }
+  .btn.prim { background: var(--moss); border-color: var(--moss); color: #fff; font-weight: 600; }
+  .btn.prim:active { background: #4a5a3a; }
+  .btn.prim:disabled { background: var(--soft); color: #a6a69d; border-color: var(--line); }
+  .btn.peligro { color: var(--ora); border-color: var(--ora); }
+  .btn.ancho { width: 100%; min-height: 50px; }
+  .btn.mini { min-height: 34px; min-width: 40px; padding: 0 8px; }
+  .btn[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+  /* pestañas */
+  .pestanas { display: flex; gap: 0; overflow-x: auto; border-bottom: 1px solid var(--ink); margin-top: 4px;
+    scrollbar-width: none; }
+  .pestanas::-webkit-scrollbar { display: none; }
+  .pestanas button { appearance: none; border: 0; background: none; padding: 10px 12px 9px; cursor: pointer; color: var(--mut);
+    border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .pestanas button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--moss); font-weight: 500; }
+  .panel { padding: 14px 0 4px; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+  fieldset:disabled { opacity: 0.45; }
+  .aviso-sel { margin: 0 0 12px; font-size: 12px; color: var(--mut); }
+  .fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+  .fila > label, .rot { font-size: 12px; color: var(--mut); white-space: nowrap; }
+  .pila { margin-bottom: 14px; }
+  .pila > .rot { display: block; margin-bottom: 6px; }
+  .grupo { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .tiempo { min-width: 78px; text-align: center; font-variant-numeric: tabular-nums; font-size: 14px; }
+  .seg { display: inline-flex; border: 1px solid var(--ink); border-radius: var(--r); overflow: hidden; }
+  .seg button { appearance: none; border: 0; border-right: 1px solid var(--line); background: #fff; padding: 8px 10px;
+    cursor: pointer; min-height: 36px; }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: var(--ink); color: #fff; }
+  select, input[type="number"] { min-height: 36px; padding: 0 8px; border: 1px solid var(--ink); border-radius: var(--r);
+    background: #fff; max-width: 100%; }
+  input[type="color"] { width: 48px; height: 36px; padding: 2px; border: 1px solid var(--ink); border-radius: var(--r); background: #fff; }
+  input[type="range"] { flex: 1; min-width: 0; accent-color: var(--moss); }
+  input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--moss); }
+  textarea { width: 100%; min-height: 110px; padding: 10px; border: 1px solid var(--ink); border-radius: var(--r);
+    resize: vertical; background: #fff; font-size: 15px; line-height: 1.45; }
+  .val { min-width: 54px; text-align: right; font-size: 12px; color: var(--mut); font-variant-numeric: tabular-nums; }
+  .chip { appearance: none; border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; cursor: pointer; min-height: 34px; }
+  .miniatura { width: 72px; height: 72px; object-fit: cover; border: 1px solid var(--line); border-radius: var(--r); background: var(--soft); }
+  .miniatura.vacia { display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--mut); }
+  .formatos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .formatos button { appearance: none; border: 1px solid var(--line); border-radius: var(--r); background: #fff; padding: 8px 4px;
+    cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--mut); }
+  .formatos button.on { border-color: var(--ink); color: var(--ink); }
+  .formatos i { display: block; border: 1.5px solid currentColor; }
+  .nota { margin: 8px 0 0; font-size: 12px; color: var(--mut); }
+  .aviso { color: var(--ora); }
+  .sep { border: 0; border-top: 1px solid var(--line); margin: 16px 0; }
+
+  .barra { height: 4px; background: var(--line); border-radius: var(--r); overflow: hidden; margin-top: 12px; }
+  .barra i { display: block; height: 100%; width: 0; background: var(--steel); transition: width .15s linear; }
+  #estado { margin: 6px 0 0; min-height: 1.5em; font-size: 12px; color: var(--mut); }
+  #estado.error { color: var(--ora); }
+  #resultado { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--ink); }
+  #resultado video { display: block; width: 100%; max-height: 60vh; background: #000; border-radius: var(--r); }
+  .acciones { display: grid; gap: 8px; margin-top: 10px; }
+
+  footer { margin-top: 22px; padding-top: 10px; border-top: 1px solid var(--line); font-size: 11px; color: var(--mut); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1 id="titulo" title="recargar"><b>AUD</b>·IG <span>// partes de audio → mp4</span></h1>
+    <a id="volver" href="../index.html" title="Volver al toolbox">← toolbox/</a>
+  </header>
+
+  <section aria-label="audio">
+    <input id="inAud" class="vh" type="file" accept="audio/*,.m4a,.mp3,.wav,.aac,.aif,.aiff,.caf">
+    <label for="inAud" id="slotAud" class="slot">
+      <span class="num">01</span><span class="que">audio</span>
+      <span class="hint">toca para elegir · m4a, mp3, wav</span>
+    </label>
+    <div class="audinfo" id="audInfo" hidden>
+      <b id="audNombre"></b><span id="audDur"></span>
+      <label for="inAud" class="link">cambiar</label>
+    </div>
+  </section>
+
+  <section id="estudio" class="estudio" aria-label="estudio" hidden>
+    <div class="escenario">
+      <div class="lienzo-wrap" id="wrap">
+        <canvas id="lienzo" aria-label="vista previa"></canvas>
+        <div class="lienzo-vacio" id="lienzoVacio">arrastra sobre la onda para crear una parte</div>
+        <div class="box-overlay" id="boxOverlay" hidden>
+          <div class="box-rect" id="boxRect" title="arrastra para mover; las asas redimensionan">
+            <div class="box-handle" data-h="nw"></div><div class="box-handle" data-h="n"></div>
+            <div class="box-handle" data-h="ne"></div><div class="box-handle" data-h="e"></div>
+            <div class="box-handle" data-h="se"></div><div class="box-handle" data-h="s"></div>
+            <div class="box-handle" data-h="sw"></div><div class="box-handle" data-h="w"></div>
+          </div>
+        </div>
+      </div>
+      <p class="meta-lienzo" id="metaLienzo"></p>
+    </div>
+
+    <div class="mesa">
+      <div class="transporte">
+        <span class="reloj" id="reloj">0:00.0</span>
+        <span class="grupo" style="gap:4px">
+          <button class="btn mini" id="zoomMenos" type="button" aria-label="alejar">−</button>
+          <span class="val" id="zoomVal" style="min-width:28px;text-align:center">1×</span>
+          <button class="btn mini" id="zoomMas" type="button" aria-label="acercar">+</button>
+        </span>
+      </div>
+      <div class="onda-wrap">
+        <canvas id="onda" tabindex="0" aria-label="forma de onda: arrastra para crear partes; flechas mueven el cabezal"></canvas>
+      </div>
+      <input type="range" id="desplazar" min="0" max="1000" value="0" aria-label="desplazar la vista" hidden>
+      <div class="grupo" style="margin-top:8px">
+        <button class="btn" id="btnAudio" type="button" title="escuchar el audio desde el cabezal">▶ audio</button>
+        <button class="btn" id="btnResultado" type="button" title="escuchar solo las partes, en orden">▶ resultado</button>
+      </div>
+      <p class="ayuda" id="ayudaOnda">arrastra sobre la onda para crear una parte · tócala para editarla · arrastra sus bordes para ajustarla</p>
+
+      <nav class="pestanas" role="tablist" aria-label="edición">
+        <button type="button" role="tab" data-p="parte" aria-selected="true">parte</button>
+        <button type="button" role="tab" data-p="fondo" aria-selected="false">fondo</button>
+        <button type="button" role="tab" data-p="texto" aria-selected="false">texto</button>
+        <button type="button" role="tab" data-p="tipo" aria-selected="false">tipo</button>
+        <button type="button" role="tab" data-p="layout" aria-selected="false">layout</button>
+        <button type="button" role="tab" data-p="exportar" aria-selected="false">exportar</button>
+      </nav>
+
+      <!-- parte -->
+      <div class="panel" data-panel="parte" role="tabpanel">
+        <p class="aviso-sel" id="avisoSel">sin parte seleccionada: arrastra sobre la onda para crear una.</p>
+        <fieldset id="fsParte">
+          <div class="fila">
+            <span class="rot" id="parteN">parte –</span>
+            <span class="grupo">
+              <button class="btn mini" id="partePrev" type="button" aria-label="parte anterior">‹</button>
+              <button class="btn mini" id="parteSig" type="button" aria-label="parte siguiente">›</button>
+            </span>
+          </div>
+          <div class="fila">
+            <label>inicio</label>
+            <span class="grupo">
+              <button class="btn mini" type="button" data-nudge="a" data-d="-0.1">−0.1</button>
+              <span class="tiempo" id="tA">–</span>
+              <button class="btn mini" type="button" data-nudge="a" data-d="0.1">+0.1</button>
+            </span>
+          </div>
+          <div class="fila">
+            <label>fin</label>
+            <span class="grupo">
+              <button class="btn mini" type="button" data-nudge="b" data-d="-0.1">−0.1</button>
+              <span class="tiempo" id="tB">–</span>
+              <button class="btn mini" type="button" data-nudge="b" data-d="0.1">+0.1</button>
+            </span>
+          </div>
+          <div class="fila"><label>duración</label><span class="val" id="tDur">–</span></div>
+          <div class="grupo">
+            <button class="btn" id="btnEscuchar" type="button">▶ escuchar parte</button>
+            <button class="btn peligro" id="btnBorrar" type="button">borrar parte</button>
+          </div>
+        </fieldset>
+        <p class="nota" id="resumen"></p>
+      </div>
+
+      <!-- fondo -->
+      <div class="panel" data-panel="fondo" role="tabpanel" hidden>
+        <fieldset class="fs-sel">
+          <div class="pila">
+            <span class="rot">imagen</span>
+            <div class="grupo">
+              <img id="miniImg" class="miniatura" alt="" hidden>
+              <span id="miniVacia" class="miniatura vacia">sin imagen</span>
+              <input id="inImg" class="vh" type="file" accept="image/*">
+              <label for="inImg" class="btn" id="btnImg">elegir imagen</label>
+              <button class="btn" id="btnQuitarImg" type="button">quitar</button>
+            </div>
+          </div>
+          <div class="fila"><label>ajuste</label>
+            <span class="seg" id="segAjuste"><button type="button" data-v="llenar">llenar</button><button type="button" data-v="entera">entera</button></span>
+          </div>
+          <div class="fila"><label for="bgColor">color de fondo</label>
+            <span class="grupo">
+              <button class="chip" type="button" data-bg="#ffffff" data-fg="#000000" style="background:#fff;color:#000">b/n</button>
+              <button class="chip" type="button" data-bg="#000000" data-fg="#ffffff" style="background:#000;color:#fff">n/b</button>
+              <button class="chip" type="button" data-bg="#1a1a1a" data-fg="#5a7a3a" style="background:#1a1a1a;color:#5a7a3a">verde</button>
+              <button class="chip" type="button" data-bg="#f5e9d0" data-fg="#1a1a1a" style="background:#f5e9d0;color:#1a1a1a">crema</button>
+              <input type="color" id="bgColor">
+            </span>
+          </div>
+          <hr class="sep">
+          <div class="fila"><label for="banda">banda bajo el texto</label><input type="checkbox" id="banda"></div>
+          <div class="fila"><label for="bandaColor">color de la banda</label><input type="color" id="bandaColor"></div>
+          <div class="fila"><label for="bandaOpacidad">opacidad</label>
+            <input type="range" id="bandaOpacidad" min="0" max="1" step="0.05"><span class="val" id="vBandaOpacidad"></span></div>
+        </fieldset>
+      </div>
+
+      <!-- texto -->
+      <div class="panel" data-panel="texto" role="tabpanel" hidden>
+        <fieldset class="fs-sel">
+          <textarea id="texto" placeholder="texto de esta parte…" aria-label="texto de la parte"></textarea>
+          <div class="fila" style="margin-top:10px"><label for="textTransform">mayúsculas</label>
+            <select id="textTransform"><option value="none">como está</option><option value="uppercase">MAYÚSCULAS</option><option value="lowercase">minúsculas</option></select>
+          </div>
+        </fieldset>
+      </div>
+
+      <!-- tipo -->
+      <div class="panel" data-panel="tipo" role="tabpanel" hidden>
+        <fieldset class="fs-sel">
+          <div class="fila"><label for="fontFamily">familia</label><select id="fontFamily"></select></div>
+          <div class="fila"><label for="fontWeight">peso</label>
+            <select id="fontWeight"><option value="300">300 light</option><option value="400">400 regular</option><option value="500">500 medium</option><option value="700">700 bold</option><option value="900">900 black</option></select>
+          </div>
+          <div class="fila"><label for="fontStyle">itálica</label>
+            <select id="fontStyle"><option value="normal">normal</option><option value="italic">italic</option></select>
+          </div>
+          <div class="fila"><label for="autoFit">tamaño automático (llena la caja)</label><input type="checkbox" id="autoFit"></div>
+          <div class="fila"><label for="fontSize">tamaño</label>
+            <input type="range" id="fontSize" min="12" max="400" step="1"><span class="val" id="vFontSize"></span></div>
+          <div class="fila"><label for="lineHeight">interlineado</label>
+            <input type="range" id="lineHeight" min="0.8" max="2.5" step="0.05"><span class="val" id="vLineHeight"></span></div>
+          <div class="fila"><label for="letterSpacing">espaciado</label>
+            <input type="range" id="letterSpacing" min="-10" max="40" step="0.5"><span class="val" id="vLetterSpacing"></span></div>
+          <div class="fila"><label for="textColor">color del texto</label><input type="color" id="textColor"></div>
+          <hr class="sep">
+          <div class="grupo">
+            <input id="inPreset" class="vh" type="file" accept="application/json,.json">
+            <label for="inPreset" class="btn">cargar preset TXT·IG</label>
+            <button class="btn" id="btnGuardarPreset" type="button">guardar preset</button>
+          </div>
+          <p class="nota">los presets son los mismos JSON de TXT·IG: se pueden usar en las dos apps.</p>
+        </fieldset>
+      </div>
+
+      <!-- layout -->
+      <div class="panel" data-panel="layout" role="tabpanel" hidden>
+        <fieldset class="fs-sel">
+          <div class="fila"><label>plantilla</label>
+            <span class="grupo"><button class="btn mini" type="button" data-plantilla="subtitulo">subtítulo</button>
+            <button class="btn mini" type="button" data-plantilla="tarjeta">tarjeta</button></span>
+          </div>
+          <div class="fila"><label>horizontal</label>
+            <span class="seg" id="segAlignH"><button type="button" data-v="left">izq</button><button type="button" data-v="center">centro</button><button type="button" data-v="right">der</button><button type="button" data-v="justify">just</button></span>
+          </div>
+          <div class="fila"><label>vertical</label>
+            <span class="seg" id="segAlignV"><button type="button" data-v="top">arriba</button><button type="button" data-v="middle">centro</button><button type="button" data-v="bottom">abajo</button></span>
+          </div>
+          <div class="fila"><label>corte de líneas</label>
+            <span class="seg" id="segWrap"><button type="button" data-v="greedy">normal</button><button type="button" data-v="balance">balanceado</button></span>
+          </div>
+          <div class="fila"><label for="avoidWidows">evitar viudas</label><input type="checkbox" id="avoidWidows"></div>
+          <p class="nota">arrastra la caja en la vista previa para moverla; las asas la redimensionan.</p>
+          <hr class="sep">
+          <div class="grupo">
+            <button class="btn" id="btnCajaReset" type="button">restablecer caja</button>
+            <button class="btn" id="btnATodas" type="button">aplicar estilo a todas</button>
+          </div>
+          <p class="nota" id="notaTodas"></p>
+        </fieldset>
+      </div>
+
+      <!-- exportar -->
+      <div class="panel" data-panel="exportar" role="tabpanel" hidden>
+        <div class="pila"><span class="rot">formato</span><div class="formatos" id="formatos"></div></div>
+        <p class="nota" id="resumenExp"></p>
+        <button id="btnExportar" class="btn prim ancho" type="button" disabled>exportar mp4</button>
+        <div class="barra" id="barra" hidden><i></i></div>
+        <p id="estado" role="status" aria-live="polite"></p>
+        <div id="resultado" hidden>
+          <video id="vidPrev" controls playsinline preload="metadata"></video>
+          <p class="nota" id="metaRes"></p>
+          <div class="acciones">
+            <button id="btnCompartir" class="btn prim ancho" type="button" hidden>guardar / compartir</button>
+            <a id="btnBajar" class="btn ancho" download>descargar</a>
+          </div>
+          <p class="nota" id="notaRes"></p>
+        </div>
+        <hr class="sep">
+        <button id="btnNuevo" class="btn peligro" type="button">nuevo proyecto</button>
+        <p class="nota" id="notaGuardado"></p>
+      </div>
+    </div>
+  </section>
+
+  <p id="estadoGeneral" class="nota" role="status" aria-live="polite"></p>
+
+  <footer>se procesa en este dispositivo; nada se sube a ningún servidor (las fuentes vienen de Google Fonts) · mediabunny 1.64.0 (MPL-2.0) · composición tipográfica de TXT·IG</footer>
+</div>
+
+<script src="vendor/mediabunny-1.64.0.min.js"></script>
+<script src="vendor/mediabunny-aac-encoder-1.64.0.min.js"></script>
+<script>
+(() => {
+'use strict';
+
+// ── lógica pura de AUD·IG (sin DOM; probada en Node) ──────────────────
+const FPS = 30;          // cuadros por segundo del video
+const SEG_TRAMO = 1;     // segundos por tramo al intercalar audio y video
+const DUR_MIN = 0.3;     // duración mínima de una parte, en s
+const FUNDIDO = 0.01;    // fundido en cada corte del audio, en s
+
+let state = null;        // estilo activo para las funciones copiadas de TXT·IG
+
+// Claves de estilo compatibles con los presets de TXT·IG + las propias.
+const CLAVES_TXTIG = ['bgColor', 'textColor', 'fontFamily', 'fontWeight', 'fontStyle', 'fontSize',
+  'autoFit', 'lineHeight', 'letterSpacing', 'textTransform', 'alignH', 'alignV', 'wrapMode', 'avoidWidows', 'box'];
+const CLAVES_PROPIAS = ['banda', 'bandaColor', 'bandaOpacidad'];
+
+const PLANTILLAS = {
+  subtitulo: {
+    fontSize: 60, autoFit: false, lineHeight: 1.25, alignH: 'center', alignV: 'bottom',
+    wrapMode: 'balance', banda: true, textColor: '#ffffff', bandaColor: '#000000',
+    box: { x: 0.08, y: 0.56, w: 0.84, h: 0.29 },
+  },
+  tarjeta: {
+    autoFit: true, lineHeight: 1.2, alignH: 'center', alignV: 'middle',
+    wrapMode: 'balance', banda: false, box: { x: 80 / 1080, y: 0.14, w: 920 / 1080, h: 0.72 },
+  },
+};
+
+const ESTILO_BASE = {
+  bgColor: '#111111', textColor: '#ffffff', fontFamily: 'DM Sans', fontWeight: '500',
+  fontStyle: 'normal', fontSize: 60, autoFit: false, lineHeight: 1.25, letterSpacing: 0,
+  textTransform: 'none', alignH: 'center', alignV: 'bottom', wrapMode: 'balance', avoidWidows: true,
+  box: { x: 0.08, y: 0.56, w: 0.84, h: 0.29 },
+  banda: true, bandaColor: '#000000', bandaOpacidad: 0.55,
+};
+
+const esColor = (v) => typeof v === 'string' && /^#[0-9a-f]{6}$/i.test(v);
+const enLista = (v, lista) => lista.includes(v);
+
+// Copia de un estilo validando tipos; lo inválido cae a `base`.
+// Sirve para presets de TXT·IG, proyectos guardados y estilos heredados.
+function sanearEstilo(obj, base = ESTILO_BASE) {
+  const o = obj && typeof obj === 'object' ? obj : {};
+  const b = base;
+  const num = (v, d, lo, hi) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
+  const box = o.box && typeof o.box === 'object' ? o.box : b.box;
+  const bx = (k) => (typeof box[k] === 'number' && isFinite(box[k]) ? box[k] : b.box[k]);
+  const caja = { x: bx('x'), y: bx('y'), w: Math.min(1, Math.max(0.05, bx('w'))), h: Math.min(1, Math.max(0.05, bx('h'))) };
+  caja.x = Math.min(1 - caja.w, Math.max(0, caja.x));
+  caja.y = Math.min(1 - caja.h, Math.max(0, caja.y));
+  return {
+    bgColor: esColor(o.bgColor) ? o.bgColor : b.bgColor,
+    textColor: esColor(o.textColor) ? o.textColor : b.textColor,
+    fontFamily: typeof o.fontFamily === 'string' && o.fontFamily.trim() ? o.fontFamily : b.fontFamily,
+    fontWeight: enLista(String(o.fontWeight), ['300', '400', '500', '700', '900']) ? String(o.fontWeight) : b.fontWeight,
+    fontStyle: enLista(o.fontStyle, ['normal', 'italic']) ? o.fontStyle : b.fontStyle,
+    fontSize: num(o.fontSize, b.fontSize, 12, 400),
+    autoFit: typeof o.autoFit === 'boolean' ? o.autoFit : b.autoFit,
+    lineHeight: num(o.lineHeight, b.lineHeight, 0.8, 2.5),
+    letterSpacing: num(o.letterSpacing, b.letterSpacing, -10, 40),
+    textTransform: enLista(o.textTransform, ['none', 'uppercase', 'lowercase']) ? o.textTransform : b.textTransform,
+    alignH: enLista(o.alignH, ['left', 'center', 'right', 'justify']) ? o.alignH : b.alignH,
+    alignV: enLista(o.alignV, ['top', 'middle', 'bottom']) ? o.alignV : b.alignV,
+    wrapMode: enLista(o.wrapMode, ['greedy', 'balance']) ? o.wrapMode : b.wrapMode,
+    avoidWidows: typeof o.avoidWidows === 'boolean' ? o.avoidWidows : b.avoidWidows,
+    box: caja,
+    banda: typeof o.banda === 'boolean' ? o.banda : b.banda,
+    bandaColor: esColor(o.bandaColor) ? o.bandaColor : b.bandaColor,
+    bandaOpacidad: num(o.bandaOpacidad, b.bandaOpacidad, 0, 1),
+  };
+}
+
+// Aplica un preset de TXT·IG sobre un estilo: solo sus claves; lo propio se conserva.
+function aplicarPresetTxtIg(estilo, preset) {
+  const p = preset && typeof preset === 'object' ? preset : {};
+  const mezcla = { ...estilo };
+  for (const k of CLAVES_TXTIG) if (k in p) mezcla[k] = p[k];
+  return sanearEstilo(mezcla, estilo);
+}
+
+// Exporta un estilo como preset que TXT·IG puede cargar.
+function presetTxtIg(estilo, texto, formato) {
+  const p = { format: formato, text: texto || '' };
+  for (const k of CLAVES_TXTIG) p[k] = k === 'box' ? { ...estilo.box } : estilo[k];
+  p.jpgQuality = 0.92;
+  return p;
+}
+
+// ── partes ────────────────────────────────────────────────────────────
+const ordenarPartes = (partes) => partes.slice().sort((p, q) => p.a - q.a);
+
+// Hueco libre [ini, fin] que contiene t, o null si t cae dentro de una parte.
+function huecoEn(partes, t, dur) {
+  let ini = 0, fin = dur;
+  for (const p of partes) {
+    if (t > p.a && t < p.b) return null;
+    if (p.b <= t) ini = Math.max(ini, p.b);
+    if (p.a >= t) fin = Math.min(fin, p.a);
+  }
+  return t >= 0 && t <= dur ? [ini, fin] : null;
+}
+
+// Rango de una parte nueva arrastrada de t0 a t1, recortado al hueco donde empezó.
+function rangoNuevo(partes, t0, t1, dur, min = DUR_MIN) {
+  const h = huecoEn(partes, t0, dur);
+  if (!h) return null;
+  const a = Math.max(h[0], Math.min(t0, t1));
+  const b = Math.min(h[1], Math.max(t0, t1));
+  return b - a >= min - 1e-9 ? { a, b } : null;
+}
+
+// Nuevo valor para un borde ('a' o 'b') de la parte `id`, sin solapar vecinas.
+function moverBorde(partes, id, lado, t, dur, min = DUR_MIN) {
+  const orden = ordenarPartes(partes);
+  const i = orden.findIndex((p) => p.id === id);
+  if (i < 0) return null;
+  const p = orden[i];
+  if (lado === 'a') {
+    const lo = i > 0 ? orden[i - 1].b : 0;
+    return Math.min(p.b - min, Math.max(lo, t));
+  }
+  const hi = i < orden.length - 1 ? orden[i + 1].a : dur;
+  return Math.max(p.a + min, Math.min(hi, t));
+}
+
+// Parte que contiene t en el audio original (índice en el arreglo ordenado), o -1.
+function parteEnOriginal(orden, t) {
+  for (let i = 0; i < orden.length; i++) if (t >= orden[i].a && t < orden[i].b) return i;
+  return -1;
+}
+
+// ── línea de tiempo de salida (las partes, en orden, sin los huecos) ──
+function lineaSalida(partes, sr) {
+  const orden = ordenarPartes(partes);
+  const tramos = [];
+  let o = 0;
+  for (const p of orden) {
+    const a0 = Math.round(p.a * sr), a1 = Math.round(p.b * sr);
+    if (a1 <= a0) continue;
+    tramos.push({ id: p.id, a0, a1, o0: o, o1: o + (a1 - a0) });
+    o += a1 - a0;
+  }
+  return { tramos, total: o };
+}
+
+// Índice del tramo de salida que contiene la muestra s (búsqueda binaria).
+function tramoEnSalida(tramos, s) {
+  let lo = 0, hi = tramos.length - 1;
+  if (hi < 0) return -1;
+  if (s >= tramos[hi].o1) return hi;
+  while (lo < hi) {
+    const m = (lo + hi) >> 1;
+    if (s >= tramos[m].o1) lo = m + 1; else hi = m;
+  }
+  return lo;
+}
+
+// Concatena los tramos de cada canal con fundidos lineales en los cortes.
+// No funde entre tramos contiguos en el original (no hay discontinuidad).
+function concatenar(canales, tramos, total, nFundido) {
+  return canales.map((src) => {
+    const out = new Float32Array(total);
+    tramos.forEach((tr, k) => {
+      out.set(src.subarray(tr.a0, tr.a1), tr.o0);
+      const len = tr.a1 - tr.a0;
+      const f = Math.min(nFundido, len >> 1);
+      const pegadoAntes = k > 0 && tramos[k - 1].a1 === tr.a0;
+      const pegadoDespues = k < tramos.length - 1 && tramos[k + 1].a0 === tr.a1;
+      if (!pegadoAntes) for (let j = 0; j < f; j++) out[tr.o0 + j] *= j / f;
+      if (!pegadoDespues) for (let j = 0; j < f; j++) out[tr.o1 - 1 - j] *= j / f;
+    });
+    return out;
+  });
+}
+
+// Tramos de ~1 s de audio de salida con los cuadros de video que les tocan.
+function planTramos(totalMuestras, sampleRate, fps = FPS, segundos = SEG_TRAMO) {
+  if (!(totalMuestras > 0) || !(sampleRate > 0)) throw new Error('audio vacío');
+  const techo = (x) => Math.max(0, Math.ceil(x - 1e-9)); // tolera error de coma flotante
+  const duracion = totalMuestras / sampleRate;
+  const totalCuadros = Math.max(1, techo(duracion * fps));
+  const porTramo = Math.round(sampleRate * segundos);
+  const tramos = [];
+  for (let a0 = 0, i = 0; a0 < totalMuestras; a0 += porTramo, i++) {
+    const a1 = Math.min(totalMuestras, a0 + porTramo);
+    const esUltimo = a1 === totalMuestras;
+    const f0 = Math.min(totalCuadros, techo(i * segundos * fps));
+    const f1 = esUltimo ? totalCuadros : Math.min(totalCuadros, techo((i + 1) * segundos * fps));
+    tramos.push({ a0, a1, f0, f1 });
+  }
+  return { duracion, totalCuadros, tramos };
+}
+
+// ── forma de onda y vista ─────────────────────────────────────────────
+// Mín/máx por columna de `n` columnas entre las muestras [s0, s1).
+function picos(canal, s0, s1, n) {
+  const mn = new Float32Array(n), mx = new Float32Array(n);
+  const paso = (s1 - s0) / n;
+  for (let c = 0; c < n; c++) {
+    const i0 = Math.floor(s0 + c * paso), i1 = Math.max(i0 + 1, Math.floor(s0 + (c + 1) * paso));
+    let lo = 0, hi = 0;
+    for (let i = Math.max(0, i0); i < Math.min(canal.length, i1); i++) {
+      const v = canal[i];
+      if (v < lo) lo = v;
+      if (v > hi) hi = v;
+    }
+    mn[c] = lo; mx[c] = hi;
+  }
+  return { mn, mx };
+}
+
+// Ventana visible [ini, ini+largo] para un zoom, centrada en `centro`.
+function vistaZoom(dur, zoom, centro) {
+  const largo = dur / Math.max(1, zoom);
+  const ini = Math.min(Math.max(0, centro - largo / 2), Math.max(0, dur - largo));
+  return { ini, largo };
+}
+const tiempoAX = (t, vista, ancho) => ((t - vista.ini) / vista.largo) * ancho;
+const xATiempo = (x, vista, ancho) => vista.ini + (x / ancho) * vista.largo;
+
+// ── formatos de texto ─────────────────────────────────────────────────
+function formatoTiempo(s, decimas = false) {
+  const t = Math.max(0, s);
+  if (!decimas) {
+    const r = Math.round(t);
+    return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, '0')}`;
+  }
+  const d = Math.round(t * 10);
+  const m = Math.floor(d / 600), seg = Math.floor((d % 600) / 10), dec = d % 10;
+  return `${m}:${String(seg).padStart(2, '0')}.${dec}`;
+}
+
+function formatoBytes(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b / 1024).toFixed(0)} kB`;
+  return `${(b / 1048576).toFixed(1)} MB`;
+}
+
+function nombreSalida(nombreAudio) {
+  const base = String(nombreAudio || '').replace(/\.[^./\\]*$/, '').trim();
+  const limpio = base.replace(/[^\p{L}\p{N}._-]+/gu, '-').replace(/^-+|-+$/g, '');
+  return (limpio || 'aud-ig') + '.mp4';
+}
+
+function historiasNecesarias(duracion, tope = 60) {
+  return Math.max(1, Math.ceil(duracion / tope - 1e-9));
+}
+
+// Rectángulo cubriendo (llenar) o contenido (entera) para una imagen iw×ih en W×H.
+function encuadre(iw, ih, W, H, modo) {
+  const e = modo === 'entera' ? Math.min(W / iw, H / ih) : Math.max(W / iw, H / ih);
+  const w = iw * e, h = ih * e;
+  return { x: (W - w) / 2, y: (H - h) / 2, w, h };
+}
+
+// Proyecto guardado → proyecto válido (descarta lo corrupto, recorta a la duración).
+function sanearProyecto(obj, dur) {
+  const o = obj && typeof obj === 'object' ? obj : {};
+  const formato = ['square', 'landscape', 'portrait', 'story'].includes(o.formato) ? o.formato : 'story';
+  const partes = [];
+  for (const p of Array.isArray(o.partes) ? o.partes : []) {
+    if (!p || typeof p.id !== 'string') continue;
+    let a = Number(p.a), b = Number(p.b);
+    if (!isFinite(a) || !isFinite(b)) continue;
+    a = Math.max(0, a); b = Math.min(dur, b);
+    if (b - a < DUR_MIN - 1e-9) continue;
+    if (partes.some((q) => a < q.b && b > q.a)) continue; // solapada
+    partes.push({
+      id: p.id, a, b,
+      texto: typeof p.texto === 'string' ? p.texto : '',
+      imagen: typeof p.imagen === 'string' ? p.imagen : null,
+      ajuste: p.ajuste === 'entera' ? 'entera' : 'llenar',
+      estilo: sanearEstilo(p.estilo),
+    });
+  }
+  return { formato, partes: ordenarPartes(partes) };
+}
+// ── fin lógica pura ───────────────────────────────────────────────────
+
+// ── copiado idéntico de textgen-ig.html (TXT·IG, toolbox@3622619) ──
+// layoutLines y calculateAutoFitSize leen la variable `state`: aquí es el
+// estilo de la parte que se está dibujando (lo fija usarEstilo()).
+
+// [textgen-ig 1103-1156] FORMATS + FONTS
+const FORMATS = {
+  square:    { w: 1080, h: 1080, label: 'cuadrado',  ratio: '1:1' },
+  landscape: { w: 1080, h: 566,  label: 'apaisado',  ratio: '1.91:1' },
+  portrait:  { w: 1080, h: 1350, label: 'estirado',  ratio: '4:5' },
+  story:     { w: 1080, h: 1920, label: 'historia',  ratio: '9:16' }
+};
+
+// ============================================================
+// FUENTES (curadas, editoriales)
+// ============================================================
+const FONTS = [
+  { name: 'Playfair Display',    cat: 'serif' },
+  { name: 'Cormorant Garamond',  cat: 'serif' },
+  { name: 'EB Garamond',         cat: 'serif' },
+  { name: 'Fraunces',            cat: 'serif' },
+  { name: 'Bodoni Moda',         cat: 'serif' },
+  { name: 'DM Serif Display',    cat: 'serif' },
+  { name: 'DM Serif Text',       cat: 'serif' },
+  { name: 'Spectral',            cat: 'serif' },
+  { name: 'Lora',                cat: 'serif' },
+  { name: 'Libre Baskerville',   cat: 'serif' },
+  { name: 'Crimson Pro',         cat: 'serif' },
+  { name: 'Italiana',            cat: 'serif' },
+  { name: 'Cinzel',              cat: 'serif' },
+  { name: 'Yeseva One',          cat: 'serif' },
+  { name: 'Work Sans',           cat: 'sans' },
+  { name: 'Manrope',             cat: 'sans' },
+  { name: 'DM Sans',             cat: 'sans' },
+  { name: 'Archivo',             cat: 'sans' },
+  { name: 'Space Grotesk',       cat: 'sans' },
+  { name: 'IBM Plex Sans',       cat: 'sans' },
+  { name: 'Syne',                cat: 'sans' },
+  { name: 'Outfit',              cat: 'sans' },
+  { name: 'Plus Jakarta Sans',   cat: 'sans' },
+  { name: 'Bricolage Grotesque', cat: 'sans' },
+  { name: 'Instrument Sans',     cat: 'sans' },
+  { name: 'Sora',                cat: 'sans' },
+  { name: 'Public Sans',         cat: 'sans' },
+  { name: 'Abril Fatface',       cat: 'display' },
+  { name: 'Anton',               cat: 'display' },
+  { name: 'Big Shoulders Display', cat: 'display' },
+  { name: 'Unbounded',           cat: 'display' },
+  { name: 'Major Mono Display',  cat: 'display' },
+  { name: 'Bungee',              cat: 'display' },
+  { name: 'JetBrains Mono',      cat: 'mono' },
+  { name: 'IBM Plex Mono',       cat: 'mono' },
+  { name: 'Space Mono',          cat: 'mono' },
+  { name: 'Fira Code',           cat: 'mono' },
+  { name: 'DM Mono',             cat: 'mono' },
+  { name: 'Roboto Slab',         cat: 'slab' },
+  { name: 'Zilla Slab',          cat: 'slab' },
+  { name: 'Bitter',              cat: 'slab' }
+];
+
+// [textgen-ig 1160-1203] DEFAULTS … sanitizeBox
+const DEFAULTS = {
+  format: 'square',
+  text: 'El presente no termina nunca de pasar.',
+  bgColor: '#ffffff',
+  textColor: '#000000',
+  fontFamily: 'EB Garamond',
+  fontWeight: '400',
+  fontStyle: 'normal',
+  fontSize: 68,
+  autoFit: true,
+  lineHeight: 1.2,
+  letterSpacing: 0,
+  textTransform: 'none',
+  alignH: 'center',
+  alignV: 'middle',
+  wrapMode: 'greedy',     // greedy | balance
+  avoidWidows: true,
+  // Caja de texto en coordenadas normalizadas (0–1) relativas al lienzo.
+  // Normalizado a propósito: se mantiene proporcional al cambiar de formato.
+  // Default = margen de 80px sobre 1080 (≈ área de contenido completa).
+  box: { x: 80/1080, y: 80/1080, w: 920/1080, h: 920/1080 },
+  jpgQuality: 0.92
+};
+
+// Caja mínima (5% del lienzo) para no degenerar el rectángulo.
+const MIN_BOX = 0.05;
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const numOr = (v, d) => (typeof v === 'number' && isFinite(v)) ? v : d;
+
+// Clona DEFAULTS con una copia FRESCA de box (objeto mutable: nunca
+// compartir la referencia de DEFAULTS.box o el arrastre lo mutaría).
+function freshDefaults() {
+  return { ...DEFAULTS, box: { ...DEFAULTS.box } };
+}
+
+// Sanea una caja: tipos válidos, tamaño ≥ MIN_BOX, dentro de [0,1].
+function sanitizeBox(b) {
+  const d = DEFAULTS.box;
+  if (!b || typeof b !== 'object') return { ...d };
+  let x = numOr(b.x, d.x), y = numOr(b.y, d.y), w = numOr(b.w, d.w), h = numOr(b.h, d.h);
+  w = clamp(w, MIN_BOX, 1); x = clamp(x, 0, 1 - w);
+  h = clamp(h, MIN_BOX, 1); y = clamp(y, 0, 1 - h);
+  return { x, y, w, h };
+}
+
+// [textgen-ig 1275-1303] fontCache … loadFont
+const fontCache = new Set();
+function fontKey(name, weight, style) {
+  return `${name}|${weight}|${style}`;
+}
+async function loadFont(family, weight, style) {
+  const key = fontKey(family, weight, style);
+  if (fontCache.has(key)) return;
+  fontCache.add(key);
+
+  const ital = style === 'italic' ? '1' : '0';
+  const familyParam = family.replace(/ /g, '+');
+  const url = `https://fonts.googleapis.com/css2?family=${familyParam}:ital,wght@${ital},${weight}&display=swap`;
+
+  return new Promise((resolve) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = url;
+    link.onload = async () => {
+      try {
+        await document.fonts.load(`${style} ${weight} 16px "${family}"`);
+        await document.fonts.ready;
+      } catch (e) {}
+      resolve();
+    };
+    link.onerror = () => resolve();
+    document.head.appendChild(link);
+  });
+}
+
+// [textgen-ig 1323-1585] transformText … calculateAutoFitSize
+function transformText(s, t) {
+  if (t === 'uppercase') return s.toUpperCase();
+  if (t === 'lowercase') return s.toLowerCase();
+  return s;
+}
+
+// Ancho de un string con tracking entre caracteres
+function measureRun(ctx, str, letterSpacing) {
+  const m = ctx.measureText(str);
+  const tracking = letterSpacing * Math.max(0, str.length - 1);
+  return m.width + tracking;
+}
+
+// ------------------------------------------------------------
+// WRAP GREEDY: rellena cada línea hasta el ancho máximo.
+// Respeta saltos manuales (\n) como límites de párrafo.
+// Devuelve [{ words:[], hard:bool }]  (hard = última línea de su párrafo)
+// ------------------------------------------------------------
+function wrapGreedy(ctx, text, maxWidth, letterSpacing) {
+  const paragraphs = text.split('\n');
+  const lines = [];
+  paragraphs.forEach((p, pi) => {
+    if (p.trim() === '') {
+      lines.push({ words: [], hard: true });
+      return;
+    }
+    const words = p.split(/\s+/).filter(w => w.length > 0);
+    let current = [];
+    let currentWidth = 0;
+    const spaceW = ctx.measureText(' ').width + letterSpacing;
+
+    words.forEach((word) => {
+      const wWidth = measureRun(ctx, word, letterSpacing);
+      const tentative = current.length === 0 ? wWidth : currentWidth + spaceW + wWidth;
+      if (tentative > maxWidth && current.length > 0) {
+        lines.push({ words: current, hard: false });
+        current = [word];
+        currentWidth = wWidth;
+      } else {
+        current.push(word);
+        currentWidth = tentative;
+      }
+    });
+    if (current.length > 0) {
+      lines.push({ words: current, hard: true });
+    }
+  });
+  return lines;
+}
+
+// Nº de líneas que produce un ancho dado (solo para balanceo, por párrafo)
+function countLinesForWidth(ctx, words, maxWidth, letterSpacing) {
+  let count = 1;
+  let currentWidth = 0;
+  const spaceW = ctx.measureText(' ').width + letterSpacing;
+  for (const word of words) {
+    const wWidth = measureRun(ctx, word, letterSpacing);
+    const tentative = currentWidth === 0 ? wWidth : currentWidth + spaceW + wWidth;
+    if (tentative > maxWidth && currentWidth > 0) {
+      count++;
+      currentWidth = wWidth;
+    } else {
+      currentWidth = tentative;
+    }
+  }
+  return count;
+}
+
+// ------------------------------------------------------------
+// WRAP BALANCEADO: por cada párrafo, busca el ancho efectivo
+// más angosto que mantenga el MISMO número de líneas que el
+// greedy. Eso reparte las palabras de forma pareja (igual que
+// CSS text-wrap: balance, hecho a mano sobre canvas).
+// No cambia el número de líneas → compatible con auto-fit.
+// ------------------------------------------------------------
+function wrapBalanced(ctx, text, maxWidth, letterSpacing) {
+  const paragraphs = text.split('\n');
+  const out = [];
+  paragraphs.forEach((p) => {
+    if (p.trim() === '') {
+      out.push({ words: [], hard: true });
+      return;
+    }
+    const words = p.split(/\s+/).filter(w => w.length > 0);
+    const targetLines = countLinesForWidth(ctx, words, maxWidth, letterSpacing);
+
+    if (targetLines <= 1) {
+      out.push({ words, hard: true });
+      return;
+    }
+
+    // Búsqueda binaria del ancho mínimo que aún da targetLines
+    let lo = 1, hi = maxWidth, best = maxWidth;
+    for (let iter = 0; iter < 24; iter++) {
+      const mid = (lo + hi) / 2;
+      if (countLinesForWidth(ctx, words, mid, letterSpacing) <= targetLines) {
+        best = mid; hi = mid;
+      } else {
+        lo = mid;
+      }
+      if (hi - lo < 0.5) break;
+    }
+    // Reconstruir líneas con el ancho balanceado
+    const lines = wrapGreedy(ctx, p, best, letterSpacing);
+    lines.forEach(l => out.push(l));
+  });
+  return out;
+}
+
+// ------------------------------------------------------------
+// EVITAR HUÉRFANAS: si la última línea de un párrafo es una sola
+// palabra y la anterior tiene ≥2, baja una palabra para que la
+// última quede con dos. Trabaja sobre el array ya partido.
+// Reagrupa por párrafo usando el flag `hard`.
+// ------------------------------------------------------------
+function fixWidows(lines) {
+  // Agrupar líneas en párrafos
+  const paragraphs = [];
+  let cur = [];
+  lines.forEach(l => {
+    cur.push(l);
+    if (l.hard) { paragraphs.push(cur); cur = []; }
+  });
+  if (cur.length) paragraphs.push(cur);
+
+  const result = [];
+  paragraphs.forEach(par => {
+    if (par.length >= 2) {
+      const last = par[par.length - 1];
+      const prev = par[par.length - 2];
+      if (last.words.length === 1 && prev.words.length >= 2) {
+        // mover la última palabra de prev al inicio de last
+        const moved = prev.words.pop();
+        last.words.unshift(moved);
+      }
+    }
+    par.forEach(l => result.push(l));
+  });
+  return result;
+}
+
+// Punto de entrada del layout de líneas
+function layoutLines(ctx, text, maxWidth, letterSpacing) {
+  let lines = state.wrapMode === 'balance'
+    ? wrapBalanced(ctx, text, maxWidth, letterSpacing)
+    : wrapGreedy(ctx, text, maxWidth, letterSpacing);
+  if (state.avoidWidows && state.alignH !== 'justify') {
+    lines = fixWidows(lines);
+  }
+  return lines;
+}
+
+// ============================================================
+// DIBUJO de líneas
+// ============================================================
+function drawLineTracked(ctx, str, x, y, letterSpacing) {
+  if (letterSpacing === 0) {
+    ctx.fillText(str, x, y);
+    return;
+  }
+  let cx = x;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i];
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + letterSpacing;
+  }
+}
+
+function drawJustifiedLine(ctx, words, x, y, maxWidth, letterSpacing) {
+  if (words.length === 0) return;
+  if (words.length === 1) {
+    drawLineTracked(ctx, words[0], x, y, letterSpacing);
+    return;
+  }
+  let totalWordsWidth = 0;
+  words.forEach(w => { totalWordsWidth += measureRun(ctx, w, letterSpacing); });
+  const totalSpace = maxWidth - totalWordsWidth;
+  const gap = totalSpace / (words.length - 1);
+
+  let cx = x;
+  words.forEach((w) => {
+    drawLineTracked(ctx, w, cx, y, letterSpacing);
+    cx += measureRun(ctx, w, letterSpacing) + gap;
+  });
+}
+
+// ============================================================
+// MÉTRICAS VERTICALES REALES
+// Calcula ascent de la 1ª línea y descent de la última usando
+// actualBoundingBox*, con fallback a aproximación si el navegador
+// no los reporta. Devuelve { firstAscent, lastDescent }.
+// ============================================================
+function blockVerticalMetrics(ctx, lines, fontSize) {
+  const fallbackAscent = fontSize * 0.82;
+  const fallbackDescent = fontSize * 0.20;
+
+  function lineStr(l) { return l.words.join(' '); }
+
+  let firstAscent = fallbackAscent;
+  let lastDescent = fallbackDescent;
+
+  const firstNonEmpty = lines.find(l => l.words.length > 0);
+  const lastNonEmpty = [...lines].reverse().find(l => l.words.length > 0);
+
+  if (firstNonEmpty) {
+    const m = ctx.measureText(lineStr(firstNonEmpty));
+    if (typeof m.actualBoundingBoxAscent === 'number' && m.actualBoundingBoxAscent > 0) {
+      firstAscent = m.actualBoundingBoxAscent;
+    }
+  }
+  if (lastNonEmpty) {
+    const m = ctx.measureText(lineStr(lastNonEmpty));
+    if (typeof m.actualBoundingBoxDescent === 'number' && m.actualBoundingBoxDescent >= 0) {
+      lastDescent = m.actualBoundingBoxDescent;
+    }
+  }
+  return { firstAscent, lastDescent, fallbackAscent };
+}
+
+// ============================================================
+// AUTO-FIT: búsqueda binaria del tamaño máximo que cabe
+// ============================================================
+function calculateAutoFitSize(measureCtx) {
+  const fmt = FORMATS[state.format];
+  const colW = Math.max(1, state.box.w * fmt.w);
+  const contentH = Math.max(1, state.box.h * fmt.h);
+  const txt = transformText(state.text, state.textTransform);
+
+  if (!txt.trim() || colW <= 0 || contentH <= 0) return 12;
+
+  const allWords = txt.split(/\s+/).filter(w => w.length > 0);
+
+  function fits(size) {
+    measureCtx.font = `${state.fontStyle} ${state.fontWeight} ${size}px "${state.fontFamily}", serif`;
+    for (const w of allWords) {
+      if (measureRun(measureCtx, w, state.letterSpacing) > colW) return false;
+    }
+    // auto-fit mide con greedy (cota superior de nº de líneas);
+    // balanceo y huérfanas no aumentan el nº de líneas, salvo el caso
+    // raro de huérfana que crea línea nueva, cubierto por el margen.
+    const lines = wrapGreedy(measureCtx, txt, colW, state.letterSpacing);
+    if (lines.length === 0) return true;
+    const lineHeightPx = size * state.lineHeight;
+    const { firstAscent, lastDescent } = blockVerticalMetrics(measureCtx, lines, size);
+    // alto óptico = ascent 1ª + interlineados intermedios + descent última
+    const totalH = firstAscent + (lines.length - 1) * lineHeightPx + lastDescent;
+    return totalH <= contentH;
+  }
+
+  let lo = 6;
+  let hi = 600;
+  if (!fits(lo)) return lo;
+  if (fits(hi)) return hi;
+
+  for (let iter = 0; iter < 22; iter++) {
+    const mid = (lo + hi) / 2;
+    if (fits(mid)) lo = mid;
+    else hi = mid;
+    if (hi - lo < 0.5) break;
+  }
+  return Math.floor(lo);
+}
+
+// [textgen-ig 2002-2014] applyBoxDrag
+function applyBoxDrag(box0, mode, dxN, dyN) {
+  let { x, y, w, h } = box0;
+  if (mode === 'move') {
+    x = clamp(x + dxN, 0, 1 - w);
+    y = clamp(y + dyN, 0, 1 - h);
+  } else {
+    if (mode.includes('w')) { const nx = clamp(x + dxN, 0, x + w - MIN_BOX); w = w + (x - nx); x = nx; }
+    if (mode.includes('e')) { w = clamp(w + dxN, MIN_BOX, 1 - x); }
+    if (mode.includes('n')) { const ny = clamp(y + dyN, 0, y + h - MIN_BOX); h = h + (y - ny); y = ny; }
+    if (mode.includes('s')) { h = clamp(h + dyN, MIN_BOX, 1 - y); }
+  }
+  return { x, y, w, h };
+}
+// ── fin de lo copiado de textgen-ig.html ──
+
+// ── app ───────────────────────────────────────────────────────────────
+const SR = 48000;
+const BITRATE_AUDIO = 192000;
+const LADO_IMG = 2560;          // lado largo máximo de las imágenes guardadas
+const ZOOMS = [1, 2, 4, 8, 16];
+const TOQUE_BORDE = 16;         // px CSS para agarrar un borde de la parte seleccionada
+
+const $ = (id) => document.getElementById(id);
+const est = {
+  audio: null,                  // { buf, canal, dur, nombre, tipo, datos, url }
+  formato: 'story',
+  partes: [],
+  sel: null,
+  imgs: new Map(),              // id → { bmp, url, w, h }
+  zoom: 1, centro: 0, cabezal: 0,
+  arrastre: null, rep: null,
+  pestana: 'parte',
+  exportando: false, cancelar: false, res: null, ocupado: false, sinSoporte: null,
+  bd: null,
+};
+const audioEl = new Audio();
+audioEl.preload = 'auto';
+audioEl.setAttribute('playsinline', '');
+
+class Cancelado extends Error {}
+const ceder = () => new Promise((r) => setTimeout(r, 0));
+const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
+const nuevoId = (p) => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const orden = () => ordenarPartes(est.partes);
+const parteSel = () => est.partes.find((p) => p.id === est.sel) || null;
+const parteId = (id) => est.partes.find((p) => p.id === id) || null;
+
+function estado(texto, esError = false) {
+  $('estado').textContent = texto || '';
+  $('estado').classList.toggle('error', !!esError);
+}
+function estadoGeneral(texto, esError = false) {
+  $('estadoGeneral').textContent = texto || '';
+  $('estadoGeneral').classList.toggle('aviso', !!esError);
+}
+function barra(frac) {
+  $('barra').hidden = frac == null;
+  $('barra').firstElementChild.style.width = `${Math.round(Math.max(0, Math.min(1, frac || 0)) * 100)}%`;
+}
+
+// ── soporte ───────────────────────────────────────────────────────────
+function revisarSoporte() {
+  const faltan = [];
+  if (!window.Mediabunny || !window.MediabunnyAacEncoder) faltan.push('las librerías de vendor/');
+  if (typeof VideoEncoder === 'undefined' || typeof VideoFrame === 'undefined') faltan.push('codificación de video (WebCodecs)');
+  if (typeof WebAssembly === 'undefined') faltan.push('WebAssembly');
+  if (typeof OfflineAudioContext === 'undefined' && typeof webkitOfflineAudioContext === 'undefined') faltan.push('Web Audio');
+  if (typeof createImageBitmap === 'undefined') faltan.push('createImageBitmap');
+  if (faltan.length) return `Este navegador no tiene ${faltan.join(', ')}. En iPhone hace falta iOS 16.4 o posterior.`;
+  try { window.MediabunnyAacEncoder.registerAacEncoder(); } // mismo encoder AAC en todos lados
+  catch (e) { console.error(e); return 'No se pudo iniciar el codificador de audio.'; }
+  return null;
+}
+
+// ── fuentes (cargador de TXT·IG, con promesa compartida y tope de espera) ──
+const promesasFuente = new Map();
+const fuentesListas = new Set();
+const esperandoFuente = new Set();
+function fuente(st) {
+  const k = fontKey(st.fontFamily, st.fontWeight, st.fontStyle);
+  if (!promesasFuente.has(k)) {
+    const p = Promise.race([loadFont(st.fontFamily, st.fontWeight, st.fontStyle), esperar(8000)])
+      .then(() => { fuentesListas.add(k); });
+    promesasFuente.set(k, p);
+  }
+  return promesasFuente.get(k);
+}
+// document.fonts.check() da true para fuentes que nunca se declararon; se compara contra genéricas.
+function fuenteDisponible(st) {
+  const g = document.createElement('canvas').getContext('2d');
+  const muestra = 'mmmmmmmmmmlli0OWQ@#áñ';
+  const ancho = (f) => { g.font = `${st.fontStyle} ${st.fontWeight} 40px ${f}`; return g.measureText(muestra).width; };
+  return ancho(`"${st.fontFamily}", monospace`) !== ancho('monospace') || ancho(`"${st.fontFamily}", serif`) !== ancho('serif');
+}
+
+// ── base de datos local (autoguardado) ────────────────────────────────
+function abrirBD() {
+  return new Promise((ok, mal) => {
+    if (!window.indexedDB) return mal(new Error('sin IndexedDB'));
+    const r = indexedDB.open('aud-ig', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => ok(r.result);
+    r.onerror = () => mal(r.error);
+  });
+}
+function bdOp(modo, fn) {
+  return new Promise((ok, mal) => {
+    if (!est.bd) return ok(undefined);
+    const tx = est.bd.transaction('kv', modo);
+    const req = fn(tx.objectStore('kv'));
+    tx.oncomplete = () => ok(req && req.result);
+    tx.onerror = () => mal(tx.error);
+    tx.onabort = () => mal(tx.error);
+  });
+}
+const bdGet = (k) => bdOp('readonly', (s) => s.get(k));
+const bdPut = (k, v) => bdOp('readwrite', (s) => s.put(v, k));
+const bdDel = (k) => bdOp('readwrite', (s) => s.delete(k));
+const bdClaves = () => bdOp('readonly', (s) => s.getAllKeys());
+const bdVaciar = () => bdOp('readwrite', (s) => s.clear());
+
+let tGuardar = null;
+function guardarDiferido() {
+  clearTimeout(tGuardar);
+  tGuardar = setTimeout(guardarProyecto, 400);
+}
+async function guardarProyecto() {
+  if (!est.bd || !est.audio) return;
+  try {
+    await bdPut('proyecto', {
+      v: 1, formato: est.formato, sel: est.sel,
+      partes: est.partes.map((p) => ({ id: p.id, a: p.a, b: p.b, texto: p.texto, imagen: p.imagen, ajuste: p.ajuste, estilo: p.estilo })),
+    });
+    // imágenes que ya ninguna parte usa (se consulta en vivo: puede entrar una nueva mientras tanto)
+    const enUso = (id) => est.partes.some((p) => p.imagen === id);
+    for (const k of await bdClaves()) {
+      if (typeof k === 'string' && k.startsWith('img:') && !enUso(k.slice(4)) && !est.imgs.has(k.slice(4))) await bdDel(k);
+    }
+    for (const id of [...est.imgs.keys()]) {
+      if (!enUso(id)) { soltarImagen(id); try { await bdDel('img:' + id); } catch (e) { console.warn(e); } }
+    }
+    $('notaGuardado').textContent = 'el proyecto se guarda solo en este dispositivo.';
+  } catch (e) {
+    console.warn(e);
+    $('notaGuardado').textContent = 'no se pudo guardar el proyecto en este dispositivo.';
+  }
+}
+
+// ── audio ─────────────────────────────────────────────────────────────
+function decodificar(datos) {
+  const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const ctx = new Ctx(2, 1, SR); // decodeAudioData remuestrea a la frecuencia del contexto
+  return new Promise((ok, mal) => {
+    const fallo = () => mal(new Error('No pude leer ese audio. Prueba con .m4a, .mp3 o .wav.'));
+    const p = ctx.decodeAudioData(datos, ok, fallo);
+    if (p && typeof p.catch === 'function') p.catch(fallo);
+  });
+}
+async function aEstereo(buf) {
+  const Ctx = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const off = new Ctx(2, buf.length, buf.sampleRate);
+  const src = off.createBufferSource();
+  src.buffer = buf; src.connect(off.destination); src.start(0);
+  return off.startRendering();
+}
+function mezclaMono(buf) {
+  const n = buf.numberOfChannels, out = new Float32Array(buf.length);
+  for (let c = 0; c < n; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) out[i] += d[i] / n; }
+  return out;
+}
+async function ponerAudio(datos, nombre, tipo) {
+  estadoGeneral('leyendo audio…');
+  let buf = await decodificar(datos.slice(0)); // decodeAudioData consume el buffer
+  if (buf.numberOfChannels > 2) buf = await aEstereo(buf);
+  if (!(buf.length > 0)) throw new Error('El audio está vacío.');
+  pararReproduccion();
+  if (est.audio && est.audio.url) URL.revokeObjectURL(est.audio.url);
+  const url = URL.createObjectURL(new Blob([datos], { type: tipo || 'audio/mpeg' }));
+  est.audio = { buf, canal: mezclaMono(buf), dur: buf.length / buf.sampleRate, nombre, tipo, datos, url };
+  audioEl.src = url;
+  cachePicos = null;
+  const p = sanearProyecto({ formato: est.formato, partes: est.partes }, est.audio.dur);
+  est.partes = p.partes;
+  if (!parteSel()) est.sel = null;
+  est.cabezal = 0; est.zoom = 1; est.centro = 0;
+  estadoGeneral('');
+  invalidarResultado();
+}
+
+// ── imágenes ──────────────────────────────────────────────────────────
+async function prepararImagen(file) {
+  const bmp0 = await createImageBitmap(file);
+  const esc = Math.min(1, LADO_IMG / Math.max(bmp0.width, bmp0.height));
+  const w = Math.max(1, Math.round(bmp0.width * esc)), h = Math.max(1, Math.round(bmp0.height * esc));
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(bmp0, 0, 0, w, h);
+  bmp0.close && bmp0.close();
+  const tipo = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+  const blob = await new Promise((ok, mal) => c.toBlob((b) => (b ? ok(b) : mal(new Error('No pude procesar la imagen.'))), tipo, 0.9));
+  return { tipo, datos: await blob.arrayBuffer(), w, h };
+}
+async function cargarImagen(id, reg) {
+  const blob = new Blob([reg.datos], { type: reg.tipo });
+  const bmp = await createImageBitmap(blob);
+  est.imgs.set(id, { bmp, url: URL.createObjectURL(blob), w: bmp.width, h: bmp.height });
+}
+function soltarImagen(id) {
+  const im = est.imgs.get(id);
+  if (!im) return;
+  URL.revokeObjectURL(im.url);
+  im.bmp.close && im.bmp.close();
+  est.imgs.delete(id);
+}
+async function ponerImagen(file) {
+  const p = parteSel();
+  if (!p) return;
+  estadoGeneral('preparando imagen…');
+  let reg;
+  try { reg = await prepararImagen(file); }
+  catch (e) { console.error(e); throw new Error('No pude leer esa imagen. Prueba con JPG o PNG.'); }
+  const id = nuevoId('i');
+  await cargarImagen(id, reg);
+  p.imagen = id; // antes de guardar: así la limpieza de imágenes sin uso no la borra
+  estadoGeneral('');
+  sincronizarUI();
+  cambio();
+  try { await bdPut('img:' + id, reg); } catch (e) { console.warn(e); }
+}
+
+// ── dibujo (el mismo para la vista previa y para el video) ────────────
+function usarEstilo(parte, fmtKey) {
+  state = { ...parte.estilo, text: parte.texto || '', format: fmtKey };
+}
+function dibujarTexto(g, parte, fmtKey) {
+  const txt0 = parte.texto || '';
+  if (!txt0.trim()) return;
+  const fmt = FORMATS[fmtKey];
+  const st = parte.estilo;
+  usarEstilo(parte, fmtKey);
+  const fontSize = st.autoFit ? calculateAutoFitSize(g) : st.fontSize;
+  const lineHeightPx = fontSize * st.lineHeight;
+  g.font = `${st.fontStyle} ${st.fontWeight} ${fontSize}px "${st.fontFamily}", serif`;
+  g.textBaseline = 'alphabetic';
+  g.textAlign = 'left';
+  const boxX = st.box.x * fmt.w, boxY = st.box.y * fmt.h, colW = st.box.w * fmt.w, boxH = st.box.h * fmt.h;
+  const txt = transformText(txt0, st.textTransform);
+  let lines = layoutLines(g, txt, colW, st.letterSpacing);
+  // fixWidows (TXT·IG) no mira el ancho: si al bajar una palabra la línea se sale de la caja, se rehace sin esa regla
+  if (state.avoidWidows && lines.some((l) => l.words.length && measureRun(g, l.words.join(' '), st.letterSpacing) > colW + 0.5)) {
+    state = { ...state, avoidWidows: false };
+    lines = layoutLines(g, txt, colW, st.letterSpacing);
+  }
+  const { firstAscent, lastDescent } = blockVerticalMetrics(g, lines, fontSize);
+  const blockH = firstAscent + Math.max(0, lines.length - 1) * lineHeightPx + lastDescent;
+  let topY;
+  if (st.alignV === 'top') topY = boxY + firstAscent;
+  else if (st.alignV === 'bottom') topY = boxY + boxH - blockH + firstAscent;
+  else topY = boxY + (boxH - blockH) / 2 + firstAscent;
+
+  // posición de cada línea (misma regla que el render de TXT·IG)
+  const pos = lines.map((line, idx) => {
+    if (line.words.length === 0) return null;
+    const lineStr = line.words.join(' ');
+    const width = measureRun(g, lineStr, st.letterSpacing);
+    const ultima = line.hard || idx === lines.length - 1;
+    let x = boxX, justificar = false;
+    if (st.alignH === 'right') x = boxX + colW - width;
+    else if (st.alignH === 'center') x = boxX + (colW - width) / 2;
+    else if (st.alignH === 'justify' && !ultima && line.words.length > 1) justificar = true;
+    return { line, lineStr, x, width: justificar ? colW : width, baseY: topY + idx * lineHeightPx, justificar };
+  });
+
+  if (st.banda && st.bandaOpacidad > 0) {
+    const vis = pos.filter(Boolean);
+    if (vis.length) {
+      const pad = fontSize * 0.4;
+      const x0 = Math.min(...vis.map((p) => p.x)) - pad;
+      const x1 = Math.max(...vis.map((p) => p.x + p.width)) + pad;
+      const y0 = topY - firstAscent - pad * 0.7;
+      const y1 = topY - firstAscent + blockH + pad * 0.7;
+      g.globalAlpha = st.bandaOpacidad;
+      g.fillStyle = st.bandaColor;
+      g.fillRect(x0, y0, x1 - x0, y1 - y0);
+      g.globalAlpha = 1;
+    }
+  }
+  g.fillStyle = st.textColor;
+  for (const p of pos) {
+    if (!p) continue;
+    if (p.justificar) drawJustifiedLine(g, p.line.words, boxX, p.baseY, colW, st.letterSpacing);
+    else drawLineTracked(g, p.lineStr, p.x, p.baseY, st.letterSpacing);
+  }
+}
+function dibujarParte(g, parte, fmtKey, W, H) {
+  const fmt = FORMATS[fmtKey];
+  g.setTransform(W / fmt.w, 0, 0, H / fmt.h, 0, 0);
+  const st = parte ? parte.estilo : ESTILO_BASE;
+  g.fillStyle = st.bgColor;
+  g.fillRect(0, 0, fmt.w, fmt.h);
+  if (!parte) return;
+  const im = parte.imagen && est.imgs.get(parte.imagen);
+  if (im) {
+    const r = encuadre(im.w, im.h, fmt.w, fmt.h, parte.ajuste);
+    g.imageSmoothingEnabled = true;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(im.bmp, r.x, r.y, r.w, r.h);
+  }
+  dibujarTexto(g, parte, fmtKey);
+}
+
+// ── vista previa ──────────────────────────────────────────────────────
+const lienzo = $('lienzo');
+const gVista = lienzo.getContext('2d', { alpha: false });
+let vistaPendiente = false;
+function parteVisible() {
+  if (est.rep) { const o = orden(); const i = parteEnOriginal(o, est.cabezal); return i >= 0 ? o[i] : null; }
+  return parteSel() || (() => { const o = orden(); const i = parteEnOriginal(o, est.cabezal); return i >= 0 ? o[i] : null; })();
+}
+function pintarVista() {
+  if (vistaPendiente) return;
+  vistaPendiente = true;
+  requestAnimationFrame(() => {
+    vistaPendiente = false;
+    const fmt = FORMATS[est.formato];
+    if (lienzo.width !== fmt.w || lienzo.height !== fmt.h) { lienzo.width = fmt.w; lienzo.height = fmt.h; ajustarWrap(); }
+    const p = parteVisible();
+    if (p) {
+      const k = fontKey(p.estilo.fontFamily, p.estilo.fontWeight, p.estilo.fontStyle);
+      if (!fuentesListas.has(k) && !esperandoFuente.has(k)) {
+        esperandoFuente.add(k);
+        fuente(p.estilo).then(() => { esperandoFuente.delete(k); pintarVista(); });
+      }
+    }
+    dibujarParte(gVista, p, est.formato, fmt.w, fmt.h);
+    $('lienzoVacio').hidden = !!p;
+    $('lienzoVacio').textContent = est.partes.length ? 'toca una parte de la onda para editarla' : 'arrastra sobre la onda para crear una parte';
+    const conCaja = !!parteSel() && !est.rep && p === parteSel();
+    $('boxOverlay').hidden = !conCaja;
+    if (conCaja) sincronizarCaja();
+    $('metaLienzo').textContent = `${fmt.w} × ${fmt.h} · ${fmt.label}` + (p ? ` · parte ${orden().indexOf(p) + 1}` : '');
+  });
+}
+function ajustarWrap() {
+  const fmt = FORMATS[est.formato];
+  const wrap = $('wrap');
+  const ancho = wrap.parentElement.clientWidth || 300;
+  const alto = Math.max(220, (window.innerWidth >= 900 ? 0.78 : 0.46) * window.innerHeight);
+  const e = Math.min(ancho / fmt.w, alto / fmt.h);
+  wrap.style.width = Math.floor(fmt.w * e) + 'px';
+  wrap.style.height = Math.floor(fmt.h * e) + 'px';
+}
+
+// caja de texto arrastrable (applyBoxDrag copiado de TXT·IG)
+let arrCaja = null;
+function sincronizarCaja() {
+  const p = parteSel();
+  if (!p) return;
+  const b = p.estilo.box, r = $('boxRect');
+  r.style.left = b.x * 100 + '%'; r.style.top = b.y * 100 + '%';
+  r.style.width = b.w * 100 + '%'; r.style.height = b.h * 100 + '%';
+}
+function iniciarCaja(e, modo) {
+  const p = parteSel();
+  if (!p) return;
+  e.preventDefault(); e.stopPropagation();
+  const wrap = $('wrap');
+  arrCaja = { modo, x: e.clientX, y: e.clientY, box0: { ...p.estilo.box }, w: wrap.clientWidth || 1, h: wrap.clientHeight || 1 };
+  window.addEventListener('pointermove', moverCaja);
+  window.addEventListener('pointerup', soltarCaja);
+  window.addEventListener('pointercancel', soltarCaja);
+}
+function moverCaja(e) {
+  const p = parteSel();
+  if (!arrCaja || !p) return;
+  p.estilo.box = applyBoxDrag(arrCaja.box0, arrCaja.modo, (e.clientX - arrCaja.x) / arrCaja.w, (e.clientY - arrCaja.y) / arrCaja.h);
+  sincronizarCaja();
+  pintarVista();
+}
+function soltarCaja() {
+  arrCaja = null;
+  window.removeEventListener('pointermove', moverCaja);
+  window.removeEventListener('pointerup', soltarCaja);
+  window.removeEventListener('pointercancel', soltarCaja);
+  cambio();
+}
+
+// ── forma de onda ─────────────────────────────────────────────────────
+const onda = $('onda');
+const gOnda = onda.getContext('2d');
+let cachePicos = null;
+function vista() {
+  return est.audio ? vistaZoom(est.audio.dur, est.zoom, est.centro) : { ini: 0, largo: 1 };
+}
+function pintarOnda() {
+  if (!est.audio) return;
+  const dpr = window.devicePixelRatio || 1;
+  const W = onda.clientWidth, H = onda.clientHeight;
+  if (!W || !H) return;
+  if (onda.width !== Math.round(W * dpr) || onda.height !== Math.round(H * dpr)) {
+    onda.width = Math.round(W * dpr); onda.height = Math.round(H * dpr); cachePicos = null;
+  }
+  const v = vista();
+  const sr = est.audio.buf.sampleRate;
+  const clave = `${v.ini.toFixed(4)}|${v.largo.toFixed(4)}|${W}`;
+  if (!cachePicos || cachePicos.clave !== clave) {
+    cachePicos = { clave, ...picos(est.audio.canal, v.ini * sr, (v.ini + v.largo) * sr, Math.max(1, Math.floor(W))) };
+  }
+  const g = gOnda;
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, W, H);
+  const mid = H / 2, amp = H / 2 - 6;
+  // partes
+  const o = orden();
+  o.forEach((p, i) => {
+    const x0 = tiempoAX(p.a, v, W), x1 = tiempoAX(p.b, v, W);
+    if (x1 < 0 || x0 > W) return;
+    const sel = p.id === est.sel;
+    g.fillStyle = sel ? 'rgba(88,106,69,0.30)' : 'rgba(88,106,69,0.14)';
+    g.fillRect(x0, 0, x1 - x0, H);
+    g.fillStyle = sel ? '#586a45' : '#8fa676';
+    g.font = '500 10px ui-monospace, Menlo, monospace';
+    g.textBaseline = 'top';
+    g.fillText(String(i + 1), Math.max(x0, 0) + 3, 3);
+    if (sel) {
+      g.fillStyle = '#586a45';
+      for (const x of [x0, x1]) { g.fillRect(x - 1.5, 0, 3, H); g.fillRect(x - 5, mid - 10, 10, 20); }
+    }
+  });
+  // arrastre de parte nueva
+  const a = est.arrastre;
+  if (a && a.modo === 'nueva' && a.movido) {
+    const r = rangoNuevo(est.partes, a.t0, a.t1, est.audio.dur, 0);
+    if (r) {
+      g.fillStyle = 'rgba(79,107,130,0.25)';
+      g.fillRect(tiempoAX(r.a, v, W), 0, tiempoAX(r.b, v, W) - tiempoAX(r.a, v, W), H);
+    }
+  }
+  // onda
+  g.fillStyle = '#111111';
+  const { mn, mx } = cachePicos;
+  for (let x = 0; x < mn.length; x++) {
+    const y0 = mid - mx[x] * amp, y1 = mid - mn[x] * amp;
+    g.fillRect(x, y0, 1, Math.max(1, y1 - y0));
+  }
+  // cabezal
+  const xc = tiempoAX(est.cabezal, v, W);
+  g.fillStyle = '#b06a36';
+  g.fillRect(xc - 1, 0, 2, H);
+  // tiempos de la vista
+  g.fillStyle = '#6b6b64';
+  g.font = '10px ui-monospace, Menlo, monospace';
+  g.textBaseline = 'bottom';
+  g.fillText(formatoTiempo(v.ini, true), 3, H - 2);
+  const fin = formatoTiempo(v.ini + v.largo, true);
+  g.fillText(fin, W - 3 - g.measureText(fin).width, H - 2);
+  // reloj y zoom
+  $('reloj').textContent = `${formatoTiempo(est.cabezal, true)} / ${formatoTiempo(est.audio.dur, true)}`;
+  $('zoomVal').textContent = est.zoom + '×';
+  $('zoomMenos').disabled = est.zoom <= ZOOMS[0];
+  $('zoomMas').disabled = est.zoom >= ZOOMS[ZOOMS.length - 1];
+  $('desplazar').hidden = est.zoom <= 1;
+  if (est.zoom > 1) {
+    const libre = Math.max(1e-9, est.audio.dur - v.largo);
+    $('desplazar').value = String(Math.round((v.ini / libre) * 1000));
+  }
+}
+function xEvento(e) {
+  const r = onda.getBoundingClientRect();
+  return { x: e.clientX - r.left, W: r.width };
+}
+onda.addEventListener('pointerdown', (e) => {
+  if (!est.audio || est.exportando) return;
+  const { x, W } = xEvento(e);
+  const v = vista();
+  const t = Math.min(est.audio.dur, Math.max(0, xATiempo(x, v, W)));
+  const sel = parteSel();
+  let modo = null, id = null;
+  if (sel) {
+    const xa = tiempoAX(sel.a, v, W), xb = tiempoAX(sel.b, v, W);
+    const da = Math.abs(x - xa), db = Math.abs(x - xb);
+    if (Math.min(da, db) <= TOQUE_BORDE) { modo = da <= db ? 'a' : 'b'; id = sel.id; }
+  }
+  if (!modo) {
+    const o = orden(), i = parteEnOriginal(o, t);
+    if (i >= 0) { id = o[i].id; modo = id === est.sel ? 'mover' : 'tocar'; }
+    else modo = 'nueva';
+  }
+  const p = id && parteId(id);
+  est.arrastre = { modo, id, t0: t, t1: t, x0: x, movido: false, a0: p && p.a, b0: p && p.b };
+  onda.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+onda.addEventListener('pointermove', (e) => {
+  const a = est.arrastre;
+  if (!a) return;
+  const { x, W } = xEvento(e);
+  const v = vista();
+  const t = Math.min(est.audio.dur, Math.max(0, xATiempo(x, v, W)));
+  a.t1 = t;
+  if (Math.abs(x - a.x0) > 4) a.movido = true;
+  if (!a.movido) return;
+  const p = a.id && parteId(a.id);
+  if ((a.modo === 'a' || a.modo === 'b') && p) {
+    p[a.modo] = moverBorde(est.partes, p.id, a.modo, t, est.audio.dur);
+    est.cabezal = p[a.modo];
+    sincronizarParte();
+  } else if (a.modo === 'mover' && p) {
+    const o = orden(), i = o.indexOf(p);
+    const lo = i > 0 ? o[i - 1].b : 0, hi = i < o.length - 1 ? o[i + 1].a : est.audio.dur;
+    const d = Math.min(hi - a.b0, Math.max(lo - a.a0, t - a.t0));
+    p.a = a.a0 + d; p.b = a.b0 + d;
+    sincronizarParte();
+  }
+  pintarOnda();
+});
+function finArrastre() {
+  const a = est.arrastre;
+  if (!a) return;
+  est.arrastre = null;
+  if (a.modo === 'nueva') {
+    const r = a.movido ? rangoNuevo(est.partes, a.t0, a.t1, est.audio.dur) : null;
+    if (r) crearParte(r);
+    else { est.cabezal = a.t0; if (!a.movido) { est.sel = null; sincronizarUI(); } }
+  } else if (a.modo === 'tocar' && !a.movido) {
+    est.sel = a.id; est.cabezal = a.t0; sincronizarUI();
+  } else if (a.modo === 'mover' && !a.movido) {
+    est.cabezal = a.t0;
+  } else if (a.movido) {
+    cambio();
+  }
+  pintarOnda(); pintarVista();
+}
+onda.addEventListener('pointerup', finArrastre);
+onda.addEventListener('pointercancel', finArrastre);
+onda.addEventListener('keydown', (e) => {
+  if (!est.audio) return;
+  const d = e.key === 'ArrowLeft' ? -0.1 : e.key === 'ArrowRight' ? 0.1 : 0;
+  if (!d) return;
+  e.preventDefault();
+  est.cabezal = Math.min(est.audio.dur, Math.max(0, est.cabezal + d * (e.shiftKey ? 10 : 1)));
+  seguirCabezal(); pintarOnda(); pintarVista();
+});
+function seguirCabezal() {
+  const v = vista();
+  if (est.cabezal < v.ini || est.cabezal > v.ini + v.largo) est.centro = est.cabezal;
+}
+function zoom(dir) {
+  const i = ZOOMS.indexOf(est.zoom);
+  const j = Math.min(ZOOMS.length - 1, Math.max(0, i + dir));
+  if (j === i) return;
+  const sel = parteSel();
+  est.centro = sel ? (sel.a + sel.b) / 2 : est.cabezal;
+  est.zoom = ZOOMS[j];
+  pintarOnda();
+}
+$('zoomMenos').addEventListener('click', () => zoom(-1));
+$('zoomMas').addEventListener('click', () => zoom(1));
+$('desplazar').addEventListener('input', () => {
+  const v = vista();
+  const ini = (Number($('desplazar').value) / 1000) * Math.max(0, est.audio.dur - v.largo);
+  est.centro = ini + v.largo / 2;
+  pintarOnda();
+});
+
+// ── partes ────────────────────────────────────────────────────────────
+function crearParte(r) {
+  const o = orden();
+  const previa = parteSel() || [...o].reverse().find((p) => p.b <= r.a) || o[0] || null;
+  const p = {
+    id: nuevoId('p'), a: r.a, b: r.b, texto: '',
+    imagen: previa ? previa.imagen : null,
+    ajuste: previa ? previa.ajuste : 'llenar',
+    estilo: sanearEstilo(previa ? previa.estilo : ESTILO_BASE),
+  };
+  est.partes.push(p);
+  est.sel = p.id;
+  est.cabezal = r.a;
+  sincronizarUI();
+  cambio();
+}
+function borrarParte() {
+  const p = parteSel();
+  if (!p) return;
+  const o = orden(), i = o.indexOf(p);
+  est.partes = est.partes.filter((q) => q.id !== p.id);
+  const o2 = orden();
+  est.sel = o2.length ? o2[Math.min(i, o2.length - 1)].id : null;
+  sincronizarUI();
+  cambio();
+}
+function irParte(dir) {
+  const o = orden();
+  if (!o.length) return;
+  const i = o.findIndex((p) => p.id === est.sel);
+  const j = i < 0 ? (dir > 0 ? 0 : o.length - 1) : Math.min(o.length - 1, Math.max(0, i + dir));
+  est.sel = o[j].id;
+  est.cabezal = o[j].a;
+  seguirCabezal();
+  sincronizarUI();
+}
+
+// ── reproducción ──────────────────────────────────────────────────────
+function pararReproduccion() {
+  if (!est.rep) return;
+  est.rep = null;
+  audioEl.pause();
+  $('btnAudio').textContent = '▶ audio';
+  $('btnResultado').textContent = '▶ resultado';
+  $('btnEscuchar').textContent = '▶ escuchar parte';
+  pintarVista();
+}
+async function reproducir(modo) {
+  if (!est.audio) return;
+  if (est.rep) { const era = est.rep.modo; pararReproduccion(); if (era === modo) return; }
+  const o = orden();
+  let ini, fin, idx = -1;
+  if (modo === 'parte') { const p = parteSel(); if (!p) return; ini = p.a; fin = p.b; }
+  else if (modo === 'resultado') { if (!o.length) return; idx = 0; ini = o[0].a; fin = o[0].b; }
+  else { ini = est.cabezal >= est.audio.dur - 0.05 ? 0 : est.cabezal; fin = est.audio.dur; }
+  est.rep = { modo, fin, idx };
+  audioEl.currentTime = ini;
+  try { await audioEl.play(); }
+  catch (e) { console.warn(e); est.rep = null; estadoGeneral('No se pudo reproducir el audio.', true); return; }
+  const rot = { audio: ['btnAudio', '❚❚ audio'], resultado: ['btnResultado', '❚❚ resultado'], parte: ['btnEscuchar', '❚❚ parar'] }[modo];
+  $(rot[0]).textContent = rot[1];
+  requestAnimationFrame(tick);
+}
+function tick() {
+  const r = est.rep;
+  if (!r) return;
+  const t = audioEl.currentTime;
+  if (t >= r.fin - 0.015 || audioEl.ended) {
+    const o = orden();
+    if (r.modo === 'resultado' && r.idx < o.length - 1) {
+      r.idx++; r.fin = o[r.idx].b; audioEl.currentTime = o[r.idx].a; est.cabezal = o[r.idx].a;
+    } else { est.cabezal = Math.min(r.fin, est.audio.dur); pararReproduccion(); pintarOnda(); return; }
+  } else est.cabezal = t;
+  seguirCabezal();
+  pintarOnda();
+  pintarVista();
+  requestAnimationFrame(tick);
+}
+$('btnAudio').addEventListener('click', () => reproducir('audio'));
+$('btnResultado').addEventListener('click', () => reproducir('resultado'));
+$('btnEscuchar').addEventListener('click', () => reproducir('parte'));
+
+// ── controles ─────────────────────────────────────────────────────────
+function cambio() {
+  invalidarResultado();
+  pintarVista();
+  pintarOnda();
+  resumen();
+  guardarDiferido();
+}
+function resumen() {
+  const o = orden();
+  const total = o.reduce((s, p) => s + (p.b - p.a), 0);
+  const n = historiasNecesarias(total);
+  const txt = o.length
+    ? `${o.length} ${o.length === 1 ? 'parte' : 'partes'} · resultado ${formatoTiempo(total, true)}` + (n > 1 ? ` · más de 60 s: Instagram lo partirá en ${n} historias` : '')
+    : 'todavía no hay partes.';
+  $('resumen').textContent = txt;
+  $('resumenExp').textContent = txt;
+  $('resumenExp').classList.toggle('aviso', n > 1);
+  pintarBotonExportar();
+}
+function marcarSeg(id, valor) {
+  for (const b of $(id).querySelectorAll('button')) b.classList.toggle('on', b.dataset.v === String(valor));
+}
+function sincronizarParte() {
+  const p = parteSel();
+  const o = orden();
+  $('parteN').textContent = p ? `parte ${o.indexOf(p) + 1} de ${o.length}` : 'parte –';
+  $('tA').textContent = p ? formatoTiempo(p.a, true) : '–';
+  $('tB').textContent = p ? formatoTiempo(p.b, true) : '–';
+  $('tDur').textContent = p ? `${(p.b - p.a).toFixed(1)} s` : '–';
+}
+function sincronizarUI() {
+  const p = parteSel();
+  $('avisoSel').hidden = !!p;
+  $('fsParte').disabled = !p;
+  for (const fs of document.querySelectorAll('.fs-sel')) fs.disabled = !p;
+  $('partePrev').disabled = $('parteSig').disabled = est.partes.length < 1;
+  sincronizarParte();
+  if (p) {
+    const st = p.estilo;
+    const im = p.imagen && est.imgs.get(p.imagen);
+    $('miniImg').hidden = !im; $('miniVacia').hidden = !!im;
+    if (im) $('miniImg').src = im.url; else $('miniImg').removeAttribute('src');
+    $('btnQuitarImg').disabled = !im;
+    marcarSeg('segAjuste', p.ajuste);
+    $('bgColor').value = st.bgColor;
+    $('banda').checked = st.banda;
+    $('bandaColor').value = st.bandaColor;
+    $('bandaOpacidad').value = st.bandaOpacidad;
+    $('vBandaOpacidad').textContent = Math.round(st.bandaOpacidad * 100) + '%';
+    if (document.activeElement !== $('texto')) $('texto').value = p.texto;
+    $('textTransform').value = st.textTransform;
+    if (![...$('fontFamily').options].some((op) => op.value === st.fontFamily)) {
+      const op = document.createElement('option'); op.value = op.textContent = st.fontFamily; $('fontFamily').appendChild(op);
+    }
+    $('fontFamily').value = st.fontFamily;
+    $('fontWeight').value = st.fontWeight;
+    $('fontStyle').value = st.fontStyle;
+    $('autoFit').checked = st.autoFit;
+    $('fontSize').value = st.fontSize; $('fontSize').disabled = st.autoFit;
+    $('vFontSize').textContent = st.autoFit ? 'auto' : String(st.fontSize);
+    $('lineHeight').value = st.lineHeight; $('vLineHeight').textContent = st.lineHeight.toFixed(2);
+    $('letterSpacing').value = st.letterSpacing; $('vLetterSpacing').textContent = String(st.letterSpacing);
+    $('textColor').value = st.textColor;
+    marcarSeg('segAlignH', st.alignH);
+    marcarSeg('segAlignV', st.alignV);
+    marcarSeg('segWrap', st.wrapMode);
+    $('avoidWidows').checked = st.avoidWidows;
+  }
+  for (const b of $('formatos').querySelectorAll('button')) b.classList.toggle('on', b.dataset.f === est.formato);
+  resumen();
+  pintarOnda();
+  pintarVista();
+}
+
+function conParte(fn) {
+  return (...args) => { const p = parteSel(); if (!p) return; fn(p, ...args); };
+}
+function enlazarEstilo(id, clave, leer, ev = 'input') {
+  $(id).addEventListener(ev, conParte((p) => { p.estilo[clave] = leer($(id)); sincronizarUI(); cambio(); }));
+}
+function enlazarSeg(id, fn) {
+  $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    const p = parteSel();
+    if (!p) return;
+    fn(p, b.dataset.v);
+    sincronizarUI(); cambio();
+  });
+}
+const num = (el) => Number(el.value);
+const val = (el) => el.value;
+const chk = (el) => el.checked;
+
+document.querySelectorAll('[data-nudge]').forEach((b) => b.addEventListener('click', conParte((p) => {
+  const lado = b.dataset.nudge;
+  p[lado] = moverBorde(est.partes, p.id, lado, p[lado] + Number(b.dataset.d), est.audio.dur);
+  est.cabezal = p[lado];
+  seguirCabezal(); sincronizarParte(); cambio();
+})));
+$('partePrev').addEventListener('click', () => irParte(-1));
+$('parteSig').addEventListener('click', () => irParte(1));
+$('btnBorrar').addEventListener('click', borrarParte);
+
+$('btnQuitarImg').addEventListener('click', conParte((p) => { p.imagen = null; sincronizarUI(); cambio(); }));
+enlazarSeg('segAjuste', (p, v) => { p.ajuste = v; });
+document.querySelectorAll('[data-bg]').forEach((b) => b.addEventListener('click', conParte((p) => {
+  p.estilo.bgColor = b.dataset.bg; p.estilo.textColor = b.dataset.fg; sincronizarUI(); cambio();
+})));
+enlazarEstilo('bgColor', 'bgColor', val);
+enlazarEstilo('banda', 'banda', chk, 'change');
+enlazarEstilo('bandaColor', 'bandaColor', val);
+enlazarEstilo('bandaOpacidad', 'bandaOpacidad', num);
+
+$('texto').addEventListener('input', conParte((p) => { p.texto = $('texto').value; cambio(); }));
+enlazarEstilo('textTransform', 'textTransform', val, 'change');
+
+enlazarEstilo('fontFamily', 'fontFamily', val, 'change');
+enlazarEstilo('fontWeight', 'fontWeight', val, 'change');
+enlazarEstilo('fontStyle', 'fontStyle', val, 'change');
+enlazarEstilo('autoFit', 'autoFit', chk, 'change');
+enlazarEstilo('fontSize', 'fontSize', num);
+enlazarEstilo('lineHeight', 'lineHeight', num);
+enlazarEstilo('letterSpacing', 'letterSpacing', num);
+enlazarEstilo('textColor', 'textColor', val);
+
+document.querySelectorAll('[data-plantilla]').forEach((b) => b.addEventListener('click', conParte((p) => {
+  const pl = PLANTILLAS[b.dataset.plantilla];
+  p.estilo = sanearEstilo({ ...p.estilo, ...pl, box: { ...pl.box } }, p.estilo);
+  sincronizarUI(); cambio();
+})));
+enlazarSeg('segAlignH', (p, v) => { p.estilo.alignH = v; });
+enlazarSeg('segAlignV', (p, v) => { p.estilo.alignV = v; });
+enlazarSeg('segWrap', (p, v) => { p.estilo.wrapMode = v; });
+enlazarEstilo('avoidWidows', 'avoidWidows', chk, 'change');
+$('btnCajaReset').addEventListener('click', conParte((p) => {
+  p.estilo.box = { ...(p.estilo.banda ? PLANTILLAS.subtitulo.box : PLANTILLAS.tarjeta.box) };
+  sincronizarUI(); cambio();
+}));
+let tTodas = null;
+$('btnATodas').addEventListener('click', conParte((p) => {
+  for (const q of est.partes) if (q !== p) q.estilo = sanearEstilo(p.estilo);
+  $('notaTodas').textContent = `estilo aplicado a ${est.partes.length} partes.`;
+  clearTimeout(tTodas); tTodas = setTimeout(() => { $('notaTodas').textContent = ''; }, 3000);
+  cambio();
+}));
+
+$('btnGuardarPreset').addEventListener('click', conParte((p) => {
+  const blob = new Blob([JSON.stringify(presetTxtIg(p.estilo, p.texto, est.formato), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `txt-ig_preset_${Date.now()}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}));
+
+// pestañas
+document.querySelector('.pestanas').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-p]');
+  if (!b) return;
+  est.pestana = b.dataset.p;
+  for (const t of document.querySelectorAll('.pestanas button')) t.setAttribute('aria-selected', String(t === b));
+  for (const pn of document.querySelectorAll('.panel')) pn.hidden = pn.dataset.panel !== est.pestana;
+});
+
+// formatos
+function construirFormatos() {
+  const cont = $('formatos');
+  for (const [k, f] of Object.entries(FORMATS)) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.dataset.f = k;
+    const r = f.w / f.h, s = 34;
+    const w = r >= 1 ? s : s * r, h = r >= 1 ? s / r : s;
+    b.innerHTML = `<i style="width:${w}px;height:${h}px"></i><span>${f.label}</span>`;
+    b.addEventListener('click', () => { est.formato = k; ajustarWrap(); sincronizarUI(); cambio(); });
+    cont.appendChild(b);
+  }
+}
+function construirFuentes() {
+  const sel = $('fontFamily');
+  for (const cat of ['serif', 'sans', 'display', 'mono', 'slab']) {
+    const og = document.createElement('optgroup');
+    og.label = cat;
+    for (const f of FONTS.filter((x) => x.cat === cat)) {
+      const op = document.createElement('option'); op.value = op.textContent = f.name; og.appendChild(op);
+    }
+    sel.appendChild(og);
+  }
+}
+
+// ── exportación ───────────────────────────────────────────────────────
+const par = (n) => Math.max(2, Math.floor(n / 2) * 2);
+function bufferDe(canales, sr, a0, a1) {
+  const b = new AudioBuffer({ length: a1 - a0, numberOfChannels: canales.length, sampleRate: sr });
+  canales.forEach((c, i) => b.copyToChannel(c.subarray(a0, a1), i));
+  return b;
+}
+async function pedirPantallaEncendida() {
+  try { return navigator.wakeLock ? await navigator.wakeLock.request('screen') : null; } catch (e) { return null; }
+}
+function pintarBotonExportar() {
+  const b = $('btnExportar');
+  if (est.exportando) { b.textContent = 'cancelar'; b.classList.remove('prim'); b.classList.add('peligro'); b.disabled = est.cancelar; return; }
+  b.textContent = 'exportar mp4'; b.classList.add('prim'); b.classList.remove('peligro');
+  b.disabled = !!est.sinSoporte || !est.audio || est.partes.length === 0;
+}
+async function exportar() {
+  const MB = window.Mediabunny;
+  pararReproduccion();
+  est.exportando = true; est.cancelar = false;
+  invalidarResultado();
+  pintarBotonExportar();
+  barra(0);
+  estado('preparando…');
+  const t0 = performance.now();
+  const bloqueo = await pedirPantallaEncendida();
+  let output = null;
+  try {
+    const fmtKey = est.formato, fmt = FORMATS[fmtKey];
+    const o = orden();
+    const calidad = new MB.Quality('high');
+    let dim = null;
+    for (const e of [1, 0.75, 0.5]) {
+      const w = par(fmt.w * e), h = par(fmt.h * e);
+      try { if (await MB.canEncodeVideo('avc', { width: w, height: h, frameRate: FPS, quality: calidad })) { dim = { w, h }; break; } }
+      catch (err) { console.warn(err); }
+    }
+    if (!dim) throw new Error('Este navegador no puede codificar H.264 a este tamaño.');
+
+    estado('cargando fuentes…');
+    await Promise.all(o.map((p) => fuente(p.estilo)));
+    const sinFuente = [...new Set(o.filter((p) => (p.texto || '').trim() && !fuenteDisponible(p.estilo)).map((p) => p.estilo.fontFamily))];
+
+    const buf = est.audio.buf, sr = buf.sampleRate;
+    const { tramos, total } = lineaSalida(o, sr);
+    const canales = [];
+    for (let c = 0; c < buf.numberOfChannels; c++) canales.push(buf.getChannelData(c));
+    const salida = concatenar(canales, tramos, total, Math.round(FUNDIDO * sr));
+    const porId = new Map(o.map((p) => [p.id, p]));
+
+    const lienzoExp = document.createElement('canvas');
+    lienzoExp.width = dim.w; lienzoExp.height = dim.h;
+    const g = lienzoExp.getContext('2d', { alpha: false });
+
+    output = new MB.Output({ format: new MB.Mp4OutputFormat({ fastStart: 'in-memory' }), target: new MB.BufferTarget() });
+    const fuenteVideo = new MB.CanvasSource(lienzoExp, { codec: 'avc', quality: calidad });
+    const fuenteAudio = new MB.AudioBufferSource({ codec: 'aac', quality: new MB.Quality({ bitrate: BITRATE_AUDIO }) });
+    output.addVideoTrack(fuenteVideo, { frameRate: FPS });
+    output.addAudioTrack(fuenteAudio);
+    await output.start();
+
+    const plan = planTramos(total, sr);
+    let actual = -1;
+    for (const tr of plan.tramos) {
+      if (est.cancelar) throw new Cancelado();
+      await fuenteAudio.add(bufferDe(salida, sr, tr.a0, tr.a1));
+      for (let f = tr.f0; f < tr.f1; f++) {
+        const s = Math.min(total - 1, Math.floor((f / FPS) * sr));
+        const k = tramoEnSalida(tramos, s);
+        const nuevo = k !== actual;
+        if (nuevo) { actual = k; dibujarParte(g, porId.get(tramos[k].id), fmtKey, dim.w, dim.h); }
+        await fuenteVideo.add(f / FPS, 1 / FPS, nuevo ? { keyFrame: true } : undefined);
+      }
+      const hecho = tr.a1 / sr;
+      barra((0.97 * hecho) / plan.duracion);
+      estado(`codificando ${formatoTiempo(hecho)} / ${formatoTiempo(plan.duracion)}`);
+      await ceder();
+    }
+    if (est.cancelar) throw new Cancelado();
+    estado('empaquetando mp4…');
+    await output.finalize();
+
+    const blob = new Blob([output.target.buffer], { type: 'video/mp4' });
+    const nombre = nombreSalida(est.audio.nombre);
+    dibujarParte(g, porId.get(tramos[0].id), fmtKey, dim.w, dim.h);
+    const poster = await new Promise((ok) => lienzoExp.toBlob((b) => ok(b ? URL.createObjectURL(b) : ''), 'image/jpeg', 0.8));
+    est.res = {
+      blob, nombre, dim, poster,
+      url: URL.createObjectURL(blob),
+      file: typeof File === 'function' ? new File([blob], nombre, { type: 'video/mp4' }) : null,
+      segundos: (performance.now() - t0) / 1000,
+      duracion: plan.duracion,
+      sinFuente,
+    };
+    barra(null);
+    estado('');
+    mostrarResultado();
+  } catch (e) {
+    if (output && output.state !== 'finalized' && output.state !== 'canceled') { try { await output.cancel(); } catch (_) { /* nada */ } }
+    barra(null);
+    if (e instanceof Cancelado) estado('exportación cancelada');
+    else {
+      console.error(e);
+      estado(`Falló la exportación: ${(e && e.message) || e}. Si la app pasó a segundo plano, vuelve a intentarlo con la pantalla abierta.`, true);
+    }
+  } finally {
+    if (bloqueo) { try { await bloqueo.release(); } catch (_) { /* nada */ } }
+    est.exportando = false;
+    pintarBotonExportar();
+  }
+}
+function puedeCompartir(file) {
+  try { return !!(file && navigator.canShare && navigator.share && navigator.canShare({ files: [file] })); } catch (e) { return false; }
+}
+function mostrarResultado() {
+  const r = est.res;
+  $('vidPrev').poster = r.poster;
+  $('vidPrev').src = r.url;
+  $('btnBajar').href = r.url;
+  $('btnBajar').download = r.nombre;
+  $('metaRes').textContent = `${r.nombre} · ${r.dim.w}×${r.dim.h} · ${formatoTiempo(r.duracion, true)} · ${formatoBytes(r.blob.size)} · ${r.segundos.toFixed(1)} s`;
+  const compartir = puedeCompartir(r.file);
+  $('btnCompartir').hidden = !compartir;
+  $('btnBajar').classList.toggle('prim', !compartir);
+  let nota = compartir
+    ? 'En la hoja de compartir, «Guardar video» lo deja en Fotos, desde donde Instagram lo ve.'
+    : 'En iPhone, «descargar» lo deja en Archivos; para Instagram conviene «guardar / compartir».';
+  if (r.sinFuente.length) nota += ` Ojo: no cargó ${r.sinFuente.join(', ')}; se usó una fuente genérica.`;
+  $('notaRes').textContent = nota;
+  $('resultado').hidden = false;
+  $('resultado').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function invalidarResultado() {
+  if (!est.res) return;
+  URL.revokeObjectURL(est.res.url);
+  if (est.res.poster) URL.revokeObjectURL(est.res.poster);
+  est.res = null;
+  $('resultado').hidden = true;
+  $('vidPrev').removeAttribute('src'); $('vidPrev').removeAttribute('poster'); $('vidPrev').load();
+  $('btnBajar').removeAttribute('href');
+}
+$('btnExportar').addEventListener('click', () => {
+  if (est.exportando) { est.cancelar = true; estado('cancelando…'); pintarBotonExportar(); return; }
+  exportar();
+});
+$('btnCompartir').addEventListener('click', async () => {
+  const r = est.res;
+  if (!r || !r.file) return;
+  try { await navigator.share({ files: [r.file] }); }
+  catch (e) { if (e && e.name === 'AbortError') return; console.error(e); estado('No se pudo abrir la hoja de compartir; usa «descargar».', true); }
+});
+
+// nuevo proyecto (dos toques, sin diálogos)
+let armadoNuevo = null;
+$('btnNuevo').addEventListener('click', async () => {
+  if (!armadoNuevo) {
+    $('btnNuevo').textContent = 'toca otra vez para borrar todo';
+    armadoNuevo = setTimeout(() => { armadoNuevo = null; $('btnNuevo').textContent = 'nuevo proyecto'; }, 3000);
+    return;
+  }
+  clearTimeout(armadoNuevo); armadoNuevo = null;
+  $('btnNuevo').textContent = 'nuevo proyecto';
+  pararReproduccion();
+  invalidarResultado();
+  for (const id of [...est.imgs.keys()]) soltarImagen(id);
+  if (est.audio) URL.revokeObjectURL(est.audio.url);
+  audioEl.removeAttribute('src');
+  Object.assign(est, { audio: null, partes: [], sel: null, cabezal: 0, zoom: 1, centro: 0 });
+  try { await bdVaciar(); } catch (e) { console.warn(e); }
+  pintarTodo();
+});
+
+// ── entrada de archivos ───────────────────────────────────────────────
+function alElegir(input, accion) {
+  input.addEventListener('change', async () => {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file || est.exportando) return;
+    est.ocupado = true;
+    try { await accion(file); }
+    catch (e) { console.error(e); estadoGeneral((e && e.message) || 'No se pudo cargar el archivo.', true); }
+    finally { est.ocupado = false; }
+  });
+}
+alElegir($('inAud'), async (file) => {
+  const datos = await file.arrayBuffer();
+  await ponerAudio(datos, file.name, file.type);
+  try { await bdPut('audio', { nombre: file.name, tipo: file.type, datos }); } catch (e) { console.warn(e); }
+  pintarTodo();
+  guardarDiferido();
+});
+alElegir($('inImg'), ponerImagen);
+alElegir($('inPreset'), async (file) => {
+  const p = parteSel();
+  if (!p) return;
+  let obj;
+  try { obj = JSON.parse(await file.text()); } catch (e) { throw new Error('Ese archivo no es un preset JSON válido.'); }
+  p.estilo = aplicarPresetTxtIg(p.estilo, obj);
+  sincronizarUI(); cambio();
+});
+
+function pintarTodo() {
+  const hay = !!est.audio;
+  $('slotAud').hidden = hay;
+  $('audInfo').hidden = !hay;
+  $('estudio').hidden = !hay;
+  if (hay) {
+    $('audNombre').textContent = est.audio.nombre;
+    $('audDur').textContent = formatoTiempo(est.audio.dur, true) + (est.audio.buf.numberOfChannels === 1 ? ' · mono' : ' · estéreo');
+    ajustarWrap();
+  }
+  sincronizarUI();
+}
+
+// ── inicio ────────────────────────────────────────────────────────────
+$('titulo').addEventListener('click', () => location.reload());
+$('boxRect').addEventListener('pointerdown', (e) => { if (!e.target.classList.contains('box-handle')) iniciarCaja(e, 'move'); });
+for (const h of document.querySelectorAll('.box-handle')) h.addEventListener('pointerdown', (e) => iniciarCaja(e, h.dataset.h));
+window.addEventListener('resize', () => { if (est.audio) { ajustarWrap(); cachePicos = null; pintarOnda(); } });
+window.addEventListener('beforeunload', (e) => { if (est.exportando) { e.preventDefault(); e.returnValue = ''; } });
+document.addEventListener('visibilitychange', () => { if (document.hidden) { pararReproduccion(); guardarProyecto(); } });
+
+async function iniciar() {
+  construirFormatos();
+  construirFuentes();
+  est.sinSoporte = revisarSoporte();
+  if (est.sinSoporte) estadoGeneral(est.sinSoporte, true);
+  try { est.bd = await abrirBD(); } catch (e) { console.warn(e); est.bd = null; }
+  if (est.bd) {
+    try {
+      const aud = await bdGet('audio');
+      if (aud && aud.datos) {
+        estadoGeneral('recuperando proyecto…');
+        const pr = (await bdGet('proyecto')) || {};
+        est.formato = sanearProyecto(pr, 1e9).formato;
+        est.partes = sanearProyecto(pr, 1e9).partes;
+        await ponerAudio(aud.datos, aud.nombre, aud.tipo);
+        for (const id of new Set(est.partes.map((p) => p.imagen).filter(Boolean))) {
+          const reg = await bdGet('img:' + id);
+          if (reg && reg.datos) { try { await cargarImagen(id, reg); } catch (e) { console.warn(e); } }
+        }
+        for (const p of est.partes) if (p.imagen && !est.imgs.has(p.imagen)) p.imagen = null;
+        est.sel = parteId(pr.sel) ? pr.sel : null;
+        estadoGeneral('');
+      }
+    } catch (e) {
+      console.error(e);
+      estadoGeneral('No se pudo recuperar el proyecto guardado.', true);
+    }
+  } else {
+    $('notaGuardado').textContent = 'este navegador no permite guardar el proyecto: si recargas, se pierde.';
+  }
+  pintarTodo();
+}
+iniciar();
+})();
+</script>
+</body>
+</html>
