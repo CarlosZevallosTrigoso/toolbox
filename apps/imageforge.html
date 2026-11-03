@@ -469,10 +469,13 @@ function detectJxlEncode() {
   } catch { return false; }
 }
 
+let heicNative = false; // true solo donde el navegador decodifica HEIC por sí mismo (Safari)
+
 async function initFormatSupport() {
   const avifDecode = await detectAvifDecode();
   const avifEncode = detectAvifEncode();
-  const heicDecode = await detectHeicDecode();
+  heicNative = await detectHeicDecode();
+  const heicDecode = true; // siempre: nativo o vía libheif (wasm)
   const jxlDecode = await detectJxlDecode();
   const jxlEncode = detectJxlEncode();
 
@@ -493,6 +496,51 @@ function renderFormatBadges() {
 }
 
 initFormatSupport();
+
+/* ─── HEIC fallback (libheif en WASM, carga perezosa) ───
+   Solo Safari decodifica HEIC nativamente. En el resto se inyecta
+   libheif-js la primera vez que llega un .heic (~1.4 MB, wasm embebido). */
+const LIBHEIF_URL = 'https://cdn.jsdelivr.net/npm/libheif-js@1.19.8/libheif-wasm/libheif-bundle.js';
+let libheifModule = null;   // módulo inicializado
+let libheifLoading = null;  // promesa compartida mientras carga
+
+function loadLibheif() {
+  if (libheifModule) return Promise.resolve(libheifModule);
+  if (libheifLoading) return libheifLoading;
+  showToast('cargando decodificador heic…');
+  libheifLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = LIBHEIF_URL;
+    s.onload = () => {
+      try {
+        libheifModule = window.libheif();   // factory síncrona del bundle
+        resolve(libheifModule);
+      } catch (err) { reject(err); }
+    };
+    s.onerror = () => reject(new Error('no se pudo descargar libheif'));
+    document.head.appendChild(s);
+  }).catch(err => { libheifLoading = null; throw err; });
+  return libheifLoading;
+}
+
+async function decodeHeicToCanvas(arrayBuf) {
+  const lib = await loadLibheif();
+  const decoder = new lib.HeifDecoder();
+  const imgs = decoder.decode(new Uint8Array(arrayBuf));
+  if (!imgs || !imgs.length) throw new Error('archivo sin imágenes');
+  const img = imgs[0];                 // imagen principal
+  const w = img.get_width(), h = img.get_height();
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const imgData = ctx.createImageData(w, h);
+  await new Promise((resolve, reject) => {
+    img.display(imgData, ok => ok ? resolve() : reject(new Error('fallo al decodificar')));
+  });
+  ctx.putImageData(imgData, 0, 0);
+  imgs.forEach(i => i.free && i.free());
+  return canvas;
+}
 
 /* ─── Accepted file extensions ─── */
 const ACCEPTED_EXT = /\.(tiff|tif|jpg|jpeg|png|webp|avif|bmp|gif|ico|svg|heic|heif|jxl)$/i;
@@ -526,8 +574,14 @@ function handleFiles(files) {
 function processImage(file, arrayBuf, id) {
   const isTiff = file.name.match(/\.(tiff|tif)$/i) || file.type === 'image/tiff';
   const isSvg = file.name.match(/\.svg$/i) || file.type === 'image/svg+xml';
+  const isHeic = file.name.match(/\.(heic|heif)$/i) || /^image\/hei[cf]$/.test(file.type);
 
-  if (isTiff) {
+  if (isHeic && !heicNative) {
+    // Navegador sin HEIC nativo: decodificar con libheif
+    decodeHeicToCanvas(arrayBuf)
+      .then(canvas => addImage(id, file, canvas.toDataURL('image/png'), canvas.width, canvas.height))
+      .catch(err => showToast('error al leer heic (' + file.name + '): ' + err.message, true));
+  } else if (isTiff) {
     try {
       const ifds = UTIF.decode(arrayBuf);
       UTIF.decodeImage(arrayBuf, ifds[0]);
@@ -578,6 +632,13 @@ function processImage(file, arrayBuf, id) {
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
+      if (isHeic) {
+        // La ruta nativa falló (p. ej. Safari con un perfil HEVC raro): reintentar con libheif
+        decodeHeicToCanvas(arrayBuf)
+          .then(canvas => addImage(id, file, canvas.toDataURL('image/png'), canvas.width, canvas.height))
+          .catch(err => showToast('error al leer heic (' + file.name + '): ' + err.message, true));
+        return;
+      }
       const ext = file.name.split('.').pop().toUpperCase();
       showToast(`formato ${ext} no soportado en este navegador`, true);
     };
