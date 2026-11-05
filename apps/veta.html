@@ -1,0 +1,1322 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VETA</title>
+<style>
+/* FORJA clara. Interfaz en monoespaciada; las hojas conservan Times New Roman 12. Tres zonas: estructura, hojas, cifras. */
+:root{
+  --bg:#ffffff; --ink:#111111; --mute:#6b6b63; --line:#dcdcd4; --soft:#f3f3ee;
+  --moss:#586a45; --moss2:#8fa676; --steel:#4f6b82; --orange:#b06a36; --err:#a02a1a;
+  --r:2px; --mono:"Fira Code", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --z:.75;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:12px/1.45 var(--mono)}
+body{display:grid;grid-template-rows:auto auto 1fr;overflow:hidden}
+button,input,select{font:inherit;color:var(--ink)}
+button,select,input[type=number],input[type=text]{border:1px solid var(--line);border-radius:var(--r);background:#fff;padding:3px 6px;min-width:0}
+button{cursor:pointer;white-space:nowrap}
+button:hover:not(:disabled){border-color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+button.prim{background:var(--ink);color:#fff;border-color:var(--ink)}
+button.prim:hover:not(:disabled){background:var(--moss);border-color:var(--moss)}
+input::placeholder{color:#8b8b82}
+input[type=checkbox],input[type=range]{accent-color:var(--moss);margin:0}
+:focus-visible{outline:2px solid var(--steel);outline-offset:1px}
+input[type=number]{appearance:textfield;-moz-appearance:textfield}
+input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{appearance:none;-webkit-appearance:none;margin:0}
+
+header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:8px max(14px,env(safe-area-inset-right,0px)) 8px max(14px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line)}
+header h1{margin:0;font-size:15px;letter-spacing:.12em;font-weight:600;user-select:none;cursor:pointer}
+header h1:hover{color:var(--moss)}
+#volver{color:var(--mute);text-decoration:none}
+#volver:hover{color:var(--moss)}
+.sub{color:var(--mute)}
+#resumen{color:var(--ink);font-variant-numeric:tabular-nums}
+.spacer{flex:1}
+.grupo-btn{display:flex;gap:4px}
+
+nav{display:none;border-bottom:1px solid var(--line)}
+nav button{flex:1;border:0;border-radius:0;padding:8px 4px;color:var(--mute);border-bottom:2px solid transparent}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--moss)}
+
+.layout{display:grid;grid-template-columns:minmax(360px,430px) minmax(0,1fr) 290px;min-height:0}
+body.sin-cifras .layout{grid-template-columns:minmax(360px,430px) minmax(0,1fr)}
+body.sin-cifras #cifras{display:none}
+#panel,#cifras{overflow-y:auto;min-height:0;padding-bottom:40px}
+#panel{border-right:1px solid var(--line)}
+#cifras{border-left:1px solid var(--line);padding-inline:14px}
+#escena{display:grid;grid-template-rows:auto 1fr;min-height:0;min-width:0;background:var(--soft)}
+
+h2{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0;font-weight:600}
+details.doc{border-bottom:1px solid var(--line);padding:0 14px}
+details.doc>summary{cursor:pointer;padding:10px 0;list-style-position:inside}
+details.doc>summary h2{display:inline}
+.campos{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;padding-bottom:12px}
+.campo{display:grid;gap:2px;min-width:0}
+.campo span{color:var(--mute);font-size:11px}
+.campo input{width:100%}
+.campo.todo,.nota-fija{grid-column:1/-1}
+.nota-fija{color:var(--mute);font-size:11px;margin:0}
+fieldset{border:0;padding:0;margin:0;grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+legend{color:var(--mute);font-size:11px;padding:0;margin-bottom:2px}
+
+.est-cab{display:flex;align-items:center;gap:6px;padding:10px 14px;position:sticky;top:0;background:#fff;z-index:2;border-bottom:1px solid var(--line)}
+.est-cab h2{flex:1}
+.leyenda{margin:8px 14px 0;color:var(--mute);font-size:11px}
+#avisoEjemplo{margin:6px 14px 0;padding:5px 8px;background:var(--soft);color:#333;font-size:11px;border-radius:var(--r)}
+#arbol{padding:6px 10px 0 14px;display:grid;gap:8px}
+.vacio{color:var(--mute);padding:14px 4px;margin:0}
+
+.sec{display:grid;gap:4px;min-width:0}
+.subs{display:grid;gap:8px;margin-left:8px;padding-left:8px;border-left:1px solid var(--line);margin-top:4px}
+.cab{display:grid;grid-template-columns:18px auto minmax(0,1fr) auto;gap:5px;align-items:center;border-radius:var(--r)}
+.cab .num{font-weight:600;font-variant-numeric:tabular-nums}
+.cab .num:empty{display:none}
+.cab input.tit{width:100%;font-weight:600}
+.n2 .cab input.tit{font-style:italic}
+.n3 .cab input.tit{font-style:italic;font-weight:400}
+.plegar{border:0;padding:0;background:none;width:18px;color:var(--mute)}
+.stp{display:flex;align-items:center;gap:2px}
+.stp input{width:38px;text-align:center}
+.stp button{width:22px;padding:3px 0}
+.stp .u{color:var(--mute);margin-right:3px}
+.cuerpo{display:grid;gap:4px;margin-left:23px}
+.aj{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:center;color:var(--mute);font-size:11px}
+.chk{display:inline-flex;gap:4px;align-items:center;cursor:pointer}
+.mini{display:inline-flex;align-items:center;gap:3px;color:var(--mute);font-size:11px}
+.mini input{width:36px;text-align:right;padding:2px 4px;color:var(--ink);font-size:12px}
+.por{color:var(--mute);margin-inline:-5px}
+.ops{display:inline-flex;gap:1px;margin-left:auto}
+.ops button{border-color:transparent;background:none;padding:1px 4px;color:var(--mute)}
+.ops button:hover:not(:disabled){color:var(--ink)}
+.blos{display:grid;gap:3px}
+.blo{display:flex;flex-wrap:wrap;gap:3px 8px;align-items:center;padding:4px 4px 4px 6px;border:1px solid var(--line);border-radius:var(--r)}
+.tag{min-width:30px;font-weight:600;font-variant-numeric:tabular-nums}
+.blo.p .tag{color:var(--moss)} .blo.cita .tag{color:var(--steel)} .blo.fig .tag{color:var(--orange)}
+.lect{color:var(--mute);font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap}
+input.nota{flex:1 1 100%;min-width:0;font-size:11.5px;border-color:transparent;border-bottom-color:var(--line);padding:2px 2px;border-radius:0}
+input.nota:focus{border-color:var(--steel)}
+.add{display:flex;flex-wrap:wrap;gap:4px}
+.add button{font-size:11px;color:var(--mute);padding:2px 6px}
+.add button:hover{color:var(--ink)}
+.seleccion>.cab,.blo.seleccion,#fBib.seleccion{background:#eef1e8;box-shadow:0 0 0 1px var(--moss2)}
+#fBib{border-top:1px solid var(--line);padding:10px 4px 4px;margin-top:4px;display:grid;gap:6px;border-radius:var(--r)}
+#fBib .fila{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+#fBib input.tit{flex:1 1 150px;font-weight:600;min-width:0}
+#fBib .mini input{width:48px}
+
+.barra{display:flex;flex-wrap:wrap;align-items:center;gap:6px 7px;padding:6px 14px;background:#fff;border-bottom:1px solid var(--line)}
+.barra label{display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+#rangoZoom{width:72px}
+#salidaZoom{min-width:40px;text-align:right;font-variant-numeric:tabular-nums}
+#hojasCaja{overflow:auto;min-height:0;position:relative;padding:14px 8px 40px;overscroll-behavior:contain}
+#hojas{text-align:center;font-size:0}
+.hoja{display:inline-block;vertical-align:top;margin:6px 8px 12px;font-size:11px;text-align:center}
+.lienzo{width:calc(210mm*var(--z));height:calc(297mm*var(--z));background:#fff;box-shadow:0 1px 3px rgba(40,40,30,.28);cursor:pointer}
+.lienzo svg{display:block;width:100%;height:100%}
+.rotulo{color:var(--mute);margin-top:3px;font-variant-numeric:tabular-nums}
+#estado{position:sticky;left:8px;bottom:6px;display:inline-block;font-size:11px;background:rgba(243,243,238,.94);color:var(--mute);padding:2px 6px;border-radius:var(--r);margin-top:8px}
+#estado:empty{display:none}
+#estado.error{color:var(--err)}
+
+.cifra-g{padding:12px 0;border-bottom:1px solid var(--line);display:grid;gap:8px}
+.cifra-g:last-child{border-bottom:0}
+.dl{display:grid;grid-template-columns:1fr auto;gap:2px 10px;margin:0;font-variant-numeric:tabular-nums}
+.dl dt{color:var(--mute)} .dl dd{margin:0;text-align:right}
+.dl .fuerte{color:var(--ink);font-weight:600}
+.medidor{height:6px;background:var(--soft);border-radius:var(--r);overflow:hidden}
+.medidor i{display:block;height:100%;background:var(--moss)}
+.medidor.exceso i{background:var(--orange)}
+.meta-txt{margin:0;color:#333}
+.dist{display:grid;gap:5px}
+.dist button{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:1px 8px;text-align:left;border:0;background:none;padding:2px;width:100%}
+.dist button:hover{background:var(--soft)}
+.dist .nom{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dist .det{color:var(--mute);font-size:11px;grid-column:1/-1}
+.dist .val{font-variant-numeric:tabular-nums}
+.dist .pista{grid-column:1/-1;height:4px;background:var(--soft)}
+.dist .pista i{display:block;height:100%;background:var(--moss2)}
+.dist .niv2{padding-left:10px} .dist .niv3{padding-left:20px}
+.avisos{margin:0;padding:0;list-style:none;display:grid;gap:4px;color:var(--orange);font-size:11px}
+
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+@media (max-width:1100px){.sub{display:none}}
+@media (pointer:coarse){
+  button,select,input[type=number],input[type=text]{min-height:32px}
+  .stp button{width:30px}
+  .ops button{padding:1px 8px}
+}
+@media (max-width:860px){
+  nav{display:flex}
+  .layout,body.sin-cifras .layout{display:block;overflow:hidden}
+  #panel,#escena,#cifras{height:100%;border:0}
+  body[data-tab=estructura] #escena,body[data-tab=estructura] #cifras,
+  body[data-tab=hojas] #panel,body[data-tab=hojas] #cifras,
+  body[data-tab=cifras] #panel,body[data-tab=cifras] #escena{display:none}
+  body[data-tab=cifras] #cifras{display:block}
+  #cifraBtn{display:none}
+  header{padding-inline:max(16px,env(safe-area-inset-left,0px)) max(16px,env(safe-area-inset-right,0px))}
+  #panel{padding-bottom:60px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+
+/* Impresión: cada hoja SVG ocupa una hoja A4 física, sin márgenes añadidos por el navegador. */
+@page{size:A4 portrait;margin:0}
+@media print{
+  html,body{height:auto;overflow:visible;display:block;background:#fff}
+  body>:not(.layout),#panel,#cifras,.barra,.rotulo,#estado{display:none!important}
+  .layout,body.sin-cifras .layout{display:block!important;overflow:visible}
+  #escena,#hojasCaja{display:block!important;overflow:visible;padding:0;background:#fff;height:auto}
+  #hojas{display:block;text-align:left}
+  .hoja{display:block;margin:0;width:210mm;height:297mm;overflow:hidden;break-after:page;break-inside:avoid;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+  .hoja:last-child{break-after:auto}
+  .lienzo{width:210mm;height:297mm;box-shadow:none}
+}
+</style>
+<style id="estiloSel"></style>
+</head>
+<body data-tab="hojas">
+<header>
+  <a id="volver" href="../index.html" title="Volver al toolbox">← toolbox/</a>
+  <h1 id="marca" title="Recargar">VETA</h1>
+  <span class="sub">Visualizador Estructural de Textos Académicos</span>
+  <span id="resumen" aria-live="polite"></span>
+  <span class="spacer"></span>
+  <span class="grupo-btn">
+    <button id="deshacer" type="button" title="Deshacer" aria-label="Deshacer">↶</button>
+    <button id="rehacer" type="button" title="Rehacer" aria-label="Rehacer">↷</button>
+  </span>
+  <button id="cifraBtn" type="button" aria-pressed="true">Cifras</button>
+  <span class="grupo-btn">
+    <button id="nuevo" type="button">Nuevo</button>
+    <button id="abrir" type="button" title="Abrir un documento .json de VETA">Abrir</button>
+    <button id="guardar" type="button" title="Descargar el documento como .json">Guardar</button>
+  </span>
+  <span class="grupo-btn">
+    <button id="pdf" type="button" title="Descarga un PDF A4 listo para imprimir a tamaño real">PDF A4</button>
+    <button id="imprimir" class="prim" type="button" title="Imprime en A4 al 100 %, sin márgenes añadidos">Imprimir</button>
+  </span>
+</header>
+<nav role="tablist" aria-label="Vistas">
+  <button role="tab" type="button" data-tab="estructura" aria-selected="false">Estructura</button>
+  <button role="tab" type="button" data-tab="hojas" aria-selected="true">Hojas</button>
+  <button role="tab" type="button" data-tab="cifras" aria-selected="false">Cifras</button>
+</nav>
+<div class="layout">
+  <aside id="panel" aria-label="Estructura del documento">
+    <details class="doc" id="detDoc">
+      <summary><h2>Documento y cálculo</h2></summary>
+      <div class="campos" id="camposDoc">
+        <label class="campo todo"><span>Título del documento</span><input id="d-titulo" type="text" data-d="titulo" placeholder="Sin título"></label>
+        <label class="campo"><span>Oraciones por párrafo</span><input id="d-or" type="number" inputmode="numeric" data-d="p.oraciones" data-lim="oraciones"></label>
+        <label class="campo"><span>Palabras por oración</span><input id="d-po" type="number" inputmode="numeric" data-d="p.palabrasOracion" data-lim="palabrasOracion"></label>
+        <label class="campo"><span>Palabras por línea</span><input id="d-pl" type="number" inputmode="decimal" step="0.1" data-d="palabrasLinea" data-lim="palabrasLinea"></label>
+        <label class="campo"><span>Meta de palabras (cuerpo)</span><input id="d-meta" type="number" inputmode="numeric" data-d="meta" data-lim="meta" placeholder="sin meta"></label>
+        <label class="campo"><span>Espacio entre párrafos (pt)</span><input id="d-ep" type="number" inputmode="decimal" data-d="p.espacioParrafo" data-lim="espacioParrafo"></label>
+        <label class="campo"><span>Sangría de 1.ª línea (cm)</span><input id="d-sa" type="number" inputmode="decimal" step="0.01" data-d="p.sangria" data-lim="sangria"></label>
+        <label class="campo"><span>Antes de título (pt)</span><input id="d-ta" type="number" inputmode="decimal" data-d="p.tituloAntes" data-lim="tituloAntes"></label>
+        <label class="campo"><span>Después de título (pt)</span><input id="d-td" type="number" inputmode="decimal" data-d="p.tituloDespues" data-lim="tituloDespues"></label>
+        <fieldset>
+          <legend>Márgenes (cm): sup., inf., izq., der.</legend>
+          <input id="d-ms" type="number" inputmode="decimal" step="0.01" aria-label="Margen superior" data-d="margenes.sup" data-lim="margen">
+          <input id="d-mi" type="number" inputmode="decimal" step="0.01" aria-label="Margen inferior" data-d="margenes.inf" data-lim="margen">
+          <input id="d-ml" type="number" inputmode="decimal" step="0.01" aria-label="Margen izquierdo" data-d="margenes.izq" data-lim="margen">
+          <input id="d-mr" type="number" inputmode="decimal" step="0.01" aria-label="Margen derecho" data-d="margenes.der" data-lim="margen">
+        </fieldset>
+        <p class="nota-fija" id="notaGeo"></p>
+      </div>
+    </details>
+    <div class="est-cab">
+      <h2>Estructura</h2>
+      <button id="plegarTodo" type="button">Plegar</button>
+      <button id="desplegarTodo" type="button">Desplegar</button>
+      <button id="agregarSec" type="button">+ Sección</button>
+    </div>
+    <p class="leyenda">¶ oraciones × palabras por oración. Un campo vacío hereda el valor de arriba.</p>
+    <p id="avisoEjemplo" hidden>Documento de ejemplo. Edítalo o pulsa Nuevo para empezar el tuyo.</p>
+    <div id="arbol"></div>
+  </aside>
+  <main id="escena">
+    <div class="barra" role="toolbar" aria-label="Vista de las hojas">
+      <span class="grupo-btn">
+        <button id="zMenos" type="button" aria-label="Reducir">−</button>
+        <input id="rangoZoom" type="range" min="25" max="200" step="5" aria-label="Tamaño de las hojas en porcentaje">
+        <button id="zMas" type="button" aria-label="Ampliar">+</button>
+      </span>
+      <output id="salidaZoom" for="rangoZoom"></output>
+      <span class="grupo-btn">
+        <button id="zAncho" type="button" title="Ajustar al ancho de la zona">Ancho</button>
+        <button id="zHoja" type="button" title="Ver una hoja completa">Hoja</button>
+        <button id="z100" type="button" title="Tamaño real">100 %</button>
+      </span>
+      <select id="v-estilo" data-v="estilo" aria-label="Estilo de los párrafos">
+        <option value="barras">Barras</option>
+        <option value="lineas">Líneas</option>
+      </select>
+      <label><input id="v-notas" type="checkbox" data-v="notas">Notas</label>
+      <label><input id="v-cortes" type="checkbox" data-v="cortes">Oraciones</label>
+      <label><input id="v-marcas" type="checkbox" data-v="marcas">Marcas</label>
+      <label><input id="v-pie" type="checkbox" data-v="pie">Pie</label>
+    </div>
+    <div id="hojasCaja" tabindex="0" aria-label="Hojas A4">
+      <div id="hojas"></div>
+      <div id="estado" role="status" aria-live="polite"></div>
+    </div>
+  </main>
+  <aside id="cifras" aria-label="Cifras del documento"></aside>
+</div>
+<input id="archivo" class="sr" type="file" accept=".json,application/json" tabindex="-1" aria-hidden="true">
+<script>
+/*CORE-START*/
+// Núcleo puro de VETA: sin DOM. Todo se mide en puntos tipográficos (1 pt = 1/72 in).
+const VetaCore = (() => {
+  const A4 = { w: 595.28, h: 841.89 };   // hoja fija: el borrador se imprime en A4
+  const LINEA = 13.8;                    // Times New Roman 12, interlineado simple (Word)
+  const BASE = 10.9;                     // de la parte alta de la línea a la línea de base
+  const CM = 72 / 2.54;
+  const EPS = 0.01;
+  const MAX_NIVEL = 3;
+  const COLOR = { barra: '#d9d9d2', regla: '#8c8c84', tinta: '#111111', nota: '#4f6b82', gris: '#6b6b63', suave: '#f3f3ee', blanco: '#ffffff' };
+  const ESTILO_TITULO = ['b', 'bi', 'i'];
+
+  // Anchos por byte CP-1252 (32–255) en milésimas de em. Son compatibles con Times New Roman.
+  const ANCHOS = {"r":[250,333,408,500,500,833,778,180,333,333,500,564,250,333,250,278,500,500,500,500,500,500,500,500,500,500,278,278,564,564,564,444,921,722,667,667,722,611,556,722,722,333,389,722,611,889,722,722,556,722,667,556,611,722,722,944,722,722,611,333,278,333,469,500,333,444,500,444,500,444,333,500,500,278,278,500,278,778,500,500,500,500,333,389,278,500,500,722,500,500,444,480,200,480,541,0,500,0,333,500,444,1000,500,500,333,1000,556,333,889,0,611,0,0,333,333,444,444,350,500,1000,333,980,389,333,722,0,444,722,250,333,500,500,500,500,200,500,333,760,276,500,564,333,760,500,400,549,300,300,333,576,453,333,333,300,310,500,750,750,750,444,722,722,722,722,722,722,889,667,611,611,611,611,333,333,333,333,722,722,722,722,722,722,722,564,722,722,722,722,722,722,556,500,444,444,444,444,444,444,667,444,444,444,444,444,278,278,278,278,500,500,500,500,500,500,500,549,500,500,500,500,500,500,500,500],"b":[250,333,555,500,500,1000,833,278,333,333,500,570,250,333,250,278,500,500,500,500,500,500,500,500,500,500,333,333,570,570,570,500,930,722,667,722,722,667,611,778,778,389,500,778,667,944,722,778,611,778,722,556,667,722,722,1000,722,722,667,333,278,333,581,500,333,500,556,444,556,444,333,500,556,278,333,556,278,833,556,500,556,556,444,389,333,556,500,722,500,500,444,394,220,394,520,0,500,0,333,500,500,1000,500,500,333,1000,556,333,1000,0,667,0,0,333,333,500,500,350,500,1000,333,1000,389,333,722,0,444,722,250,333,500,500,500,500,220,500,333,747,300,500,570,333,747,500,400,549,300,300,333,576,540,333,333,300,330,500,750,750,750,500,722,722,722,722,722,722,1000,722,667,667,667,667,389,389,389,389,722,722,778,778,778,778,778,570,778,722,722,722,722,722,611,556,500,500,500,500,500,500,722,444,444,444,444,444,278,278,278,278,500,556,500,500,500,500,500,549,500,556,556,556,556,500,556,500],"i":[250,333,420,500,500,833,778,214,333,333,500,675,250,333,250,278,500,500,500,500,500,500,500,500,500,500,333,333,675,675,675,500,920,611,611,667,722,611,611,722,722,333,444,667,556,833,667,722,611,722,611,500,556,722,611,833,611,556,556,389,278,389,422,500,333,500,500,444,500,444,278,500,500,278,278,444,278,722,500,500,500,500,389,389,278,500,444,667,444,444,389,400,275,400,541,0,500,0,333,500,556,889,500,500,333,1000,500,333,944,0,556,0,0,333,333,556,556,350,500,889,333,980,389,333,667,0,389,556,250,389,500,500,500,500,275,500,333,760,276,500,675,333,760,500,400,549,300,300,333,576,523,250,333,300,310,500,750,750,750,500,611,611,611,611,611,611,889,667,611,611,611,611,333,333,333,333,722,667,722,722,722,722,722,675,722,722,722,722,722,556,611,500,500,500,500,500,500,500,667,444,444,444,444,444,278,278,278,278,500,500,500,500,500,500,500,549,500,500,500,500,500,444,500,444],"bi":[250,389,555,500,500,833,778,278,333,333,500,570,250,333,250,278,500,500,500,500,500,500,500,500,500,500,333,333,570,570,570,500,832,667,667,667,722,667,667,722,778,389,500,667,611,889,722,722,611,722,667,556,611,722,667,889,667,611,611,333,278,333,570,500,333,500,500,444,500,444,333,500,556,278,278,500,278,778,556,500,500,500,389,389,278,556,444,667,500,444,389,348,220,348,570,0,500,0,333,500,500,1000,500,500,333,1000,556,333,944,0,611,0,0,333,333,500,500,350,500,1000,333,1000,389,333,722,0,389,611,250,389,500,500,500,500,220,500,333,747,266,500,606,333,747,500,400,549,300,300,333,576,500,250,333,300,300,500,750,750,750,500,667,667,667,667,667,667,944,667,667,667,667,667,389,389,389,389,722,722,722,722,722,722,722,570,722,722,722,722,722,611,611,500,500,500,500,500,500,500,722,444,444,444,444,444,278,278,278,278,500,556,500,500,500,500,500,549,500,556,556,556,556,444,500,444]};
+  const CP1252 = { 0x20AC: 128, 0x201A: 130, 0x0192: 131, 0x201E: 132, 0x2026: 133, 0x2020: 134, 0x2021: 135, 0x02C6: 136, 0x2030: 137, 0x0160: 138, 0x2039: 139, 0x0152: 140, 0x017D: 142, 0x2018: 145, 0x2019: 146, 0x201C: 147, 0x201D: 148, 0x2022: 149, 0x2013: 150, 0x2014: 151, 0x02DC: 152, 0x2122: 153, 0x0161: 154, 0x203A: 155, 0x0153: 156, 0x017E: 158, 0x0178: 159 };
+  const byteDe = cp => (cp >= 32 && cp < 127) || (cp >= 160 && cp <= 255) ? cp : (CP1252[cp] || 63);
+
+  function medir(s, estilo, z) {
+    const t = ANCHOS[estilo] || ANCHOS.r;
+    let m = 0;
+    for (const ch of String(s)) m += t[byteDe(ch.codePointAt(0)) - 32] || 500;
+    return m * z / 1000;
+  }
+
+  // Corte de líneas voraz. Una palabra más larga que la línea se parte por caracteres.
+  function envolver(s, estilo, z, ancho) {
+    const palabras = String(s).normalize('NFC').trim().split(/\s+/).filter(Boolean);
+    const out = []; let cur = '';
+    for (let p of palabras) {
+      const prueba = cur ? cur + ' ' + p : p;
+      if (medir(prueba, estilo, z) <= ancho + EPS) { cur = prueba; continue; }
+      if (cur) { out.push(cur); cur = ''; }
+      while (medir(p, estilo, z) > ancho + EPS) {
+        let k = 1;
+        const cs = [...p];
+        while (k < cs.length && medir(cs.slice(0, k + 1).join(''), estilo, z) <= ancho + EPS) k++;
+        out.push(cs.slice(0, k).join('')); p = cs.slice(k).join('');
+      }
+      cur = p;
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
+  // ---------- límites y documento ----------
+  const LIMITES = {
+    oraciones: [1, 60, 1], palabrasOracion: [3, 150, 1], palabrasLinea: [5, 30, 0.1],
+    espacioParrafo: [0, 48, 0.5], sangria: [0, 5, 0.01], tituloAntes: [0, 72, 0.5], tituloDespues: [0, 72, 0.5],
+    margen: [0.5, 6, 0.01], meta: [0, 2000000, 1], nParrafos: [0, 300, 1], palabras: [1, 2000, 1],
+    alto: [1, 24, 0.1], items: [0, 1000, 1], lineasItem: [1, 8, 1]
+  };
+  function limitar(campo, v) {
+    const [a, b, paso] = LIMITES[campo];
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    const c = Math.min(b, Math.max(a, n));
+    return Math.round(c / paso) * paso === c ? c : +(Math.round(c / paso) * paso).toFixed(4);
+  }
+
+  let contador = 0;
+  const nuevoId = () => 'n' + (++contador).toString(36);
+  const parrafo = (nota = '') => ({ id: nuevoId(), tipo: 'p', oraciones: null, palabrasOracion: null, nota });
+  const cita = (nota = '') => ({ id: nuevoId(), tipo: 'cita', palabras: 60, nota });
+  const figura = (nota = '') => ({ id: nuevoId(), tipo: 'fig', alto: 8, nota });
+  const seccion = (titulo = '', numerada = true) => ({ id: nuevoId(), titulo, numerada, saltoAntes: false, oraciones: null, palabrasOracion: null, bloques: [], subs: [] });
+  const P_INICIAL = () => ({ oraciones: 5, palabrasOracion: 25, anchoPalabra: 451.28 / 13, espacioParrafo: 6, sangria: 0, tituloAntes: 12, tituloDespues: 6 });
+
+  function docNuevo() {
+    return {
+      formato: 'veta', version: 1, titulo: '', meta: 0, ejemplo: false,
+      margenes: { sup: 2.54, inf: 2.54, izq: 2.54, der: 2.54 },
+      p: P_INICIAL(),
+      vista: { estilo: 'barras', notas: true, cortes: true, marcas: true, pie: true },
+      secciones: [],
+      bib: { activa: true, titulo: 'Bibliografía', items: 10, lineas: 2 }
+    };
+  }
+
+  function docEjemplo() {
+    const d = docNuevo();
+    d.titulo = 'Título del artículo (ejemplo)'; d.ejemplo = true; d.meta = 4000;
+    const sec = (titulo, n, notas = [], numerada = true) => {
+      const s = seccion(titulo, numerada);
+      for (let i = 0; i < n; i++) s.bloques.push(parrafo(notas[i] || ''));
+      return s;
+    };
+    const intro = sec('Introducción', 3, ['Problema: qué se discute y por qué ahora', 'Tesis en una oración', 'Plan del texto'], false);
+    const marco = sec('Marco conceptual', 1, ['Presenta las dos categorías']);
+    marco.subs.push(sec('Antecedentes', 4));
+    const cat = sec('Categorías de análisis', 4);
+    cat.bloques.splice(2, 0, cita('Definición central del autor de referencia'));
+    marco.subs.push(cat);
+    const met = sec('Metodología', 3, ['Corpus', 'Criterios de selección', 'Límites del método']);
+    const ana = sec('Análisis', 1);
+    const c1 = sec('Primer caso', 5, ['Descripción del caso']);
+    c1.bloques.splice(1, 0, figura('Vista general del caso'));
+    const c2 = sec('Segundo caso', 5, ['Contraejemplo a la lectura del primer caso']);
+    ana.subs.push(c1, c2);
+    const con = sec('Conclusiones', 3, ['Vuelve a la tesis', 'Lo que el análisis añade', 'Preguntas abiertas'], false);
+    d.secciones = [intro, marco, met, ana, con];
+    d.bib.items = 15;
+    return d;
+  }
+
+  // Valida un documento externo. Regenera todos los ID y recorta valores fuera de rango.
+  function normalizar(o) {
+    if (!o || typeof o !== 'object' || Array.isArray(o) || o.formato !== 'veta') throw new Error('El archivo no es un documento de VETA.');
+    if (!Array.isArray(o.secciones)) throw new Error('El documento no tiene una lista de secciones.');
+    const d = docNuevo();
+    const txt = (v, max = 400) => typeof v === 'string' ? v.slice(0, max) : '';
+    const numOr = (campo, v, def) => { const n = v === null || v === undefined || v === '' ? null : limitar(campo, v); return n === null ? def : n; };
+    d.titulo = txt(o.titulo); d.meta = numOr('meta', o.meta, 0); d.ejemplo = o.ejemplo === true;
+    const m = o.margenes || {};
+    for (const k of ['sup', 'inf', 'izq', 'der']) d.margenes[k] = numOr('margen', m[k], 2.54);
+    const p = o.p || {};
+    d.p.oraciones = numOr('oraciones', p.oraciones, d.p.oraciones);
+    d.p.palabrasOracion = numOr('palabrasOracion', p.palabrasOracion, d.p.palabrasOracion);
+    d.p.espacioParrafo = numOr('espacioParrafo', p.espacioParrafo, d.p.espacioParrafo);
+    d.p.sangria = numOr('sangria', p.sangria, d.p.sangria);
+    d.p.tituloAntes = numOr('tituloAntes', p.tituloAntes, d.p.tituloAntes);
+    d.p.tituloDespues = numOr('tituloDespues', p.tituloDespues, d.p.tituloDespues);
+    const pw = Number(p.anchoPalabra);
+    if (Number.isFinite(pw) && pw >= 5 && pw <= 120) d.p.anchoPalabra = pw;
+    const v = o.vista || {};
+    d.vista.estilo = v.estilo === 'lineas' ? 'lineas' : 'barras';
+    for (const k of ['notas', 'cortes', 'marcas', 'pie']) if (typeof v[k] === 'boolean') d.vista[k] = v[k];
+    const bloque = b => {
+      if (!b || typeof b !== 'object') return null;
+      if (b.tipo === 'cita') { const x = cita(txt(b.nota)); x.palabras = numOr('palabras', b.palabras, 60); return x; }
+      if (b.tipo === 'fig') { const x = figura(txt(b.nota)); x.alto = numOr('alto', b.alto, 8); return x; }
+      if (b.tipo === 'p') { const x = parrafo(txt(b.nota)); x.oraciones = numOr('oraciones', b.oraciones, null); x.palabrasOracion = numOr('palabrasOracion', b.palabrasOracion, null); return x; }
+      return null;
+    };
+    const sec = (s, nivel) => {
+      if (!s || typeof s !== 'object') return null;
+      const x = seccion(txt(s.titulo), s.numerada !== false);
+      x.saltoAntes = s.saltoAntes === true;
+      x.oraciones = numOr('oraciones', s.oraciones, null);
+      x.palabrasOracion = numOr('palabrasOracion', s.palabrasOracion, null);
+      if (Array.isArray(s.bloques)) x.bloques = s.bloques.map(bloque).filter(Boolean);
+      if (Array.isArray(s.subs) && nivel < MAX_NIVEL) x.subs = s.subs.map(c => sec(c, nivel + 1)).filter(Boolean);
+      return x;
+    };
+    d.secciones = o.secciones.map(s => sec(s, 1)).filter(Boolean);
+    const b = o.bib || {};
+    d.bib.activa = b.activa !== false; d.bib.titulo = typeof b.titulo === 'string' ? txt(b.titulo) : 'Bibliografía';
+    d.bib.items = numOr('items', b.items, 10); d.bib.lineas = numOr('lineasItem', b.lineas, 2);
+    return d;
+  }
+
+  function geometria(doc) {
+    const m = doc.margenes;
+    const ml = m.izq * CM, mr = m.der * CM, mt = m.sup * CM, mb = m.inf * CM;
+    const ancho = A4.w - ml - mr, alto = A4.h - mt - mb;
+    return { W: A4.w, H: A4.h, ml, mr, mt, mb, ancho, alto, lineasHoja: Math.floor((alto + EPS) / LINEA) };
+  }
+
+  // ---------- operaciones sobre el árbol ----------
+  function plano(doc) { const out = []; const ir = (l, nivel, padre) => l.forEach(s => { out.push({ sec: s, nivel, padre }); ir(s.subs, nivel + 1, s); }); ir(doc.secciones, 1, null); return out; }
+  function hallar(doc, id) {
+    const ir = (lista, nivel, padre) => {
+      for (let i = 0; i < lista.length; i++) {
+        if (lista[i].id === id) return { sec: lista[i], lista, i, nivel, padre };
+        const r = ir(lista[i].subs, nivel + 1, lista[i]); if (r) return r;
+      }
+      return null;
+    };
+    return ir(doc.secciones, 1, null);
+  }
+  function hallarBloque(doc, id) {
+    for (const { sec } of plano(doc)) { const i = sec.bloques.findIndex(b => b.id === id); if (i >= 0) return { bloque: sec.bloques[i], sec, i }; }
+    return null;
+  }
+  const altura = s => 1 + (s.subs.length ? Math.max(...s.subs.map(altura)) : 0);
+
+  function agregarSeccion(doc, padreId, parrafos = 3) {
+    const nueva = seccion('');
+    for (let i = 0; i < parrafos; i++) nueva.bloques.push(parrafo());
+    if (!padreId) { doc.secciones.push(nueva); return nueva; }
+    const h = hallar(doc, padreId);
+    if (!h || h.nivel >= MAX_NIVEL) return null;
+    h.sec.subs.push(nueva); return nueva;
+  }
+  function quitarSeccion(doc, id) { const h = hallar(doc, id); if (!h) return false; h.lista.splice(h.i, 1); return true; }
+  function moverSeccion(doc, id, dir) {
+    const h = hallar(doc, id); if (!h) return false;
+    const j = h.i + dir; if (j < 0 || j >= h.lista.length) return false;
+    [h.lista[h.i], h.lista[j]] = [h.lista[j], h.lista[h.i]]; return true;
+  }
+  function subirNivel(doc, id) { // 1.2 pasa a ser hermana de 1
+    const h = hallar(doc, id); if (!h || !h.padre) return false;
+    const p = hallar(doc, h.padre.id);
+    h.lista.splice(h.i, 1); p.lista.splice(p.i + 1, 0, h.sec); return true;
+  }
+  function bajarNivel(doc, id) { // pasa a ser la última subsección de la hermana anterior
+    const h = hallar(doc, id); if (!h || h.i === 0) return false;
+    if (h.nivel + altura(h.sec) > MAX_NIVEL) return false;
+    const prev = h.lista[h.i - 1];
+    h.lista.splice(h.i, 1); prev.subs.push(h.sec); return true;
+  }
+  function contarParrafos(sec) { return sec.bloques.reduce((n, b) => n + (b.tipo === 'p' ? 1 : 0), 0); }
+  function fijarParrafos(sec, n) {
+    n = limitar('nParrafos', n); if (n === null) return false;
+    let act = contarParrafos(sec);
+    if (n === act) return false;
+    while (act < n) { // tras el último párrafo, para no separar citas y figuras finales de su lugar
+      let k = -1; sec.bloques.forEach((b, i) => { if (b.tipo === 'p') k = i; });
+      sec.bloques.splice(k < 0 ? sec.bloques.length : k + 1, 0, parrafo()); act++;
+    }
+    for (let i = sec.bloques.length - 1; i >= 0 && act > n; i--) if (sec.bloques[i].tipo === 'p') { sec.bloques.splice(i, 1); act--; }
+    return true;
+  }
+  function agregarBloque(sec, tipo) { const b = tipo === 'cita' ? cita() : tipo === 'fig' ? figura() : parrafo(); sec.bloques.push(b); return b; }
+  function quitarBloque(doc, id) { const h = hallarBloque(doc, id); if (!h) return false; h.sec.bloques.splice(h.i, 1); return true; }
+  // Mover en orden de lectura: al llegar al borde, el bloque pasa a la sección contigua.
+  function moverBloque(doc, id, dir) {
+    const h = hallarBloque(doc, id); if (!h) return false;
+    const j = h.i + dir;
+    if (j >= 0 && j < h.sec.bloques.length) { const l = h.sec.bloques; [l[h.i], l[j]] = [l[j], l[h.i]]; return true; }
+    const pl = plano(doc), k = pl.findIndex(x => x.sec === h.sec), dest = pl[k + dir];
+    if (!dest) return false;
+    h.sec.bloques.splice(h.i, 1);
+    if (dir < 0) dest.sec.bloques.push(h.bloque); else dest.sec.bloques.unshift(h.bloque);
+    return true;
+  }
+
+  // ---------- composición: del árbol a una lista de elementos medidos ----------
+  // Las líneas se calculan con un ancho medio de palabra: es una estimación continua.
+  function lineasDeTexto(palabras, pw, anchoDisp, xPrimera, xResto, xBase = 0) {
+    let resto = palabras * pw; const out = []; let i = 0;
+    while (resto > EPS) {
+      const x = i === 0 ? xPrimera : xResto, cap = anchoDisp - x;
+      const w = Math.min(cap, resto);
+      out.push({ x: xBase + x, w, cap }); resto -= w; i++;
+      if (i > 5000) break;
+    }
+    if (!out.length) out.push({ x: xBase + xPrimera, w: 0, cap: anchoDisp - xPrimera });
+    return out;
+  }
+  function cortesDeOracion(lineas, S, palabrasPorOracion, pw) {
+    const cortes = [];
+    for (let k = 1; k < S; k++) {
+      let pos = k * palabrasPorOracion * pw;
+      for (let i = 0; i < lineas.length; i++) {
+        const l = lineas[i];
+        if (pos < l.w) { if (pos > 3 && l.w - pos > 3) cortes.push({ linea: i, x: l.x + pos }); break; }
+        pos -= l.w;
+      }
+    }
+    return cortes;
+  }
+  function lineasDeNota(nota, ancho, maxLineas) {
+    const n = String(nota || '').trim(); if (!n) return [];
+    const ls = envolver(n, 'i', 10, Math.max(40, ancho - 6));
+    if (ls.length <= maxLineas) return ls;
+    const c = ls.slice(0, maxLineas); c[maxLineas - 1] = c[maxLineas - 1].replace(/\s*\S*$/, '') + '…';
+    return c;
+  }
+  const contar = s => String(s || '').trim().split(/\s+/).filter(Boolean).length;
+
+  function componer(doc, g) {
+    const P = doc.p, pw = P.anchoPalabra, items = [];
+    const sangria = P.sangria * CM, sp = P.espacioParrafo;
+    let nP = 0, nF = 0;
+    const heads = new Map();
+    const titulo = String(doc.titulo || '').trim();
+    if (titulo) {
+      const ls = envolver(titulo, 'b', 12, g.ancho);
+      items.push({ tipo: 'h', titulo: true, id: 'titulo', secId: null, antes: 0, despues: 18, unir: true, palabras: contar(titulo),
+        lineas: ls.map(t => { const w = medir(t, 'b', 12); return { x: (g.ancho - w) / 2, w, t }; }), estilo: 'b' });
+    }
+    const titulo_ = (s, nivel, num, secId, salto, sinNumero) => {
+      const vacio = !s.trim();
+      const texto = (num ? num + ' ' : '') + (vacio ? '[sin título]' : s.trim());
+      const estilo = ESTILO_TITULO[nivel - 1];
+      return { tipo: 'h', id: secId, secId, nivel, num, antes: P.tituloAntes, despues: P.tituloDespues, unir: true, vacio, saltoAntes: salto,
+        palabras: vacio ? 0 : contar(s), estilo,
+        lineas: envolver(texto, estilo, 12, g.ancho).map(t => ({ x: 0, w: medir(t, estilo, 12), t })) };
+    };
+    const ir = (lista, nivel, prefijo, cOr, cWs) => {
+      let n = 0;
+      for (const s of lista) {
+        let num = '';
+        if (s.numerada) { n++; num = prefijo + n + '.'; }
+        heads.set(s.id, num);
+        items.push(titulo_(s.titulo, nivel, num, s.id, s.saltoAntes));
+        const or = s.oraciones ?? cOr, ws = s.palabrasOracion ?? cWs;
+        for (const b of s.bloques) {
+          if (b.tipo === 'p') {
+            nP++;
+            const S = b.oraciones ?? or, W = b.palabrasOracion ?? ws, palabras = S * W;
+            const lineas = lineasDeTexto(palabras, pw, g.ancho, sangria, 0);
+            items.push({ tipo: 'p', id: b.id, secId: s.id, n: nP, oraciones: S, palOr: W, palabras, antes: 0, despues: sp, lineas,
+              cortes: cortesDeOracion(lineas, S, W, pw), nota: lineasDeNota(b.nota, g.ancho - sangria, lineas.length) });
+          } else if (b.tipo === 'cita') {
+            const si = 1.27 * CM; // la cita se sangra a ambos lados
+            const ls = lineasDeTexto(b.palabras, pw, g.ancho - 2 * si, 0, 0, si);
+            items.push({ tipo: 'cita', id: b.id, secId: s.id, palabras: b.palabras, antes: 0, despues: sp, lineas: ls, cortes: [],
+              nota: lineasDeNota(b.nota, g.ancho - 2 * si, ls.length) });
+          } else if (b.tipo === 'fig') {
+            nF++;
+            const texto = 'Figura ' + nF + '.' + (String(b.nota || '').trim() ? ' ' + String(b.nota).trim() : '');
+            const ley = envolver(texto, 'r', 12, g.ancho);
+            const maxAlto = g.alto - (ley.length * LINEA + 4);
+            const alto = Math.min(b.alto * CM, maxAlto);
+            items.push({ tipo: 'fig', id: b.id, secId: s.id, n: nF, cm: alto / CM, recortada: b.alto * CM > maxAlto + EPS, alto, antes: sp, despues: sp + 6,
+              ley: ley.map(t => ({ t, w: medir(t, 'r', 12) })), palabrasLey: contar(String(b.nota || '')) + 2, total: alto + 4 + ley.length * LINEA });
+          }
+        }
+        ir(s.subs, nivel + 1, s.numerada ? num : prefijo, or, ws);
+      }
+    };
+    ir(doc.secciones, 1, '', P.oraciones, P.palabrasOracion);
+    if (doc.bib.activa) {
+      items.push(titulo_(doc.bib.titulo, 1, '', 'bib', false));
+      const fr = 1.27 * CM, cap = g.ancho - fr;
+      for (let k = 0; k < doc.bib.items; k++) {
+        const n = doc.bib.lineas, lineas = [];
+        for (let i = 0; i < n; i++) {
+          const ultima = i === n - 1, x = i === 0 ? 0 : fr, c = i === 0 ? g.ancho : cap;
+          lineas.push({ x, w: ultima ? c * 0.7 : c, cap: c });
+        }
+        const palabras = lineas.reduce((a, l) => a + l.w, 0) / pw;
+        items.push({ tipo: 'bib', id: 'bib', secId: 'bib', n: k + 1, palabras, antes: 0, despues: sp, lineas, cortes: [], nota: [] });
+      }
+    }
+    return { items, heads };
+  }
+
+  // ---------- paginador ----------
+  // Reglas de Word: viudas y huérfanas (al menos dos líneas a cada lado del corte),
+  // títulos unidos al texto que sigue, figuras indivisibles, espacio anterior suprimido arriba.
+  function paginar(items, g) {
+    const paginas = []; let act, y;
+    const nueva = () => { act = { frags: [], usado: 0 }; paginas.push(act); y = 0; };
+    nueva();
+    const poner = (item, desde, hasta, yy) => act.frags.push({ item, desde, hasta, y: yy });
+    const cadena = i => { // alto mínimo que debe caber para que un título no quede solo al pie
+      let need = 0, j = i, primero = true;
+      while (j < items.length && items[j].unir && (primero || !items[j].saltoAntes)) {
+        const it = items[j];
+        need += (primero ? 0 : it.antes) + it.lineas.length * LINEA + it.despues;
+        primero = false; j++;
+      }
+      const sig = items[j];
+      if (sig && !sig.saltoAntes) {
+        if (sig.tipo === 'fig') need += sig.antes + sig.total;
+        else { const n = sig.lineas.length; need += sig.antes + (n <= 3 ? n : 2) * LINEA; }
+      }
+      return need;
+    };
+    items.forEach((it, i) => {
+      if (it.saltoAntes && act.frags.length) nueva();
+      if (it.tipo === 'h') {
+        let antes = y === 0 ? 0 : it.antes;
+        if (y > 0 && y + antes + cadena(i) > g.alto + EPS) { nueva(); antes = 0; }
+        poner(it, 0, it.lineas.length, y + antes);
+        y += antes + it.lineas.length * LINEA + it.despues;
+      } else if (it.tipo === 'fig') {
+        let antes = y === 0 ? 0 : it.antes;
+        if (y > 0 && y + antes + it.total > g.alto + EPS) { nueva(); antes = 0; }
+        poner(it, 0, 1, y + antes);
+        y += antes + it.total + it.despues;
+      } else {
+        const n = it.lineas.length; let desde = 0, antes = y === 0 ? 0 : it.antes;
+        while (desde < n) {
+          const libre = Math.max(0, Math.floor((g.alto - y - antes + EPS) / LINEA)), resto = n - desde;
+          if (resto <= libre) { poner(it, desde, n, y + antes); y += antes + resto * LINEA; break; }
+          let k = libre;
+          if (resto - k < 2) k = resto - 2;
+          if (k < 2) {
+            if (act.frags.length === 0) k = Math.max(1, Math.min(resto, libre)); // hoja vacía: siempre se avanza
+            else { nueva(); antes = 0; continue; }
+          }
+          poner(it, desde, desde + k, y + antes);
+          desde += k; nueva(); antes = 0;
+        }
+        y += it.despues;
+      }
+      act.usado = Math.min(g.alto, y);
+    });
+    return paginas;
+  }
+
+  // ---------- cifras ----------
+  function metricas(doc, g, items, paginas) {
+    const ubic = new Map(); // id → [primera hoja, última hoja]
+    paginas.forEach((pg, ip) => pg.frags.forEach(f => {
+      const u = ubic.get(f.item.id);
+      if (!u) ubic.set(f.item.id, [ip + 1, ip + 1]); else u[1] = ip + 1;
+    }));
+    const propio = new Map(); // estadísticas de cada sección sin contar sus subsecciones
+    const base = () => ({ palabras: 0, parrafos: 0, oraciones: 0, citas: 0, figuras: 0, ini: Infinity, fin: 0 });
+    const tot = { cuerpo: 0, titulos: 0, leyendas: 0, bibliografia: 0, parrafos: 0, oraciones: 0, citas: 0, figuras: 0, items: 0 };
+    for (const it of items) {
+      if (it.tipo === 'h') tot.titulos += it.palabras;
+      if (it.tipo === 'fig') { tot.leyendas += it.palabrasLey; tot.figuras++; }
+      if (it.tipo === 'bib') { tot.bibliografia += it.palabras; tot.items++; }
+      if (it.tipo === 'p') { tot.cuerpo += it.palabras; tot.parrafos++; tot.oraciones += it.oraciones; }
+      if (it.tipo === 'cita') { tot.cuerpo += it.palabras; tot.citas++; }
+      if (!it.secId) continue;
+      if (!propio.has(it.secId)) propio.set(it.secId, base());
+      const e = propio.get(it.secId), u = ubic.get(it.id);
+      if (u) { e.ini = Math.min(e.ini, u[0]); e.fin = Math.max(e.fin, u[1]); }
+      if (it.tipo === 'p') { e.palabras += it.palabras; e.parrafos++; e.oraciones += it.oraciones; }
+      if (it.tipo === 'cita') { e.palabras += it.palabras; e.citas++; }
+      if (it.tipo === 'fig') e.figuras++;
+    }
+    tot.bibliografia = Math.round(tot.bibliografia);
+    tot.total = tot.cuerpo + tot.titulos + tot.leyendas + tot.bibliografia;
+    const filas = [], heads = new Map(items.filter(i => i.tipo === 'h').map(i => [i.id, i]));
+    const ir = (lista, nivel) => lista.map(s => {
+      const f = { id: s.id, titulo: s.titulo, num: heads.get(s.id).num, nivel, ...(propio.get(s.id) || base()) };
+      const idx = filas.push(f) - 1;
+      ir(s.subs, nivel + 1).forEach(h => {
+        f.palabras += h.palabras; f.parrafos += h.parrafos; f.oraciones += h.oraciones; f.citas += h.citas; f.figuras += h.figuras;
+        f.ini = Math.min(f.ini, h.ini); f.fin = Math.max(f.fin, h.fin);
+      });
+      f.pct = 0; filas[idx] = f;
+      return f;
+    });
+    ir(doc.secciones, 1);
+    filas.forEach(f => { f.pct = tot.cuerpo ? f.palabras / tot.cuerpo * 100 : 0; });
+    const bibU = ubic.get('bib');
+    const avisos = [];
+    paginas.forEach((pg, i) => {
+      if (i === paginas.length - 1 || !pg.frags.length) return;
+      const hueco = 1 - pg.usado / g.alto;
+      if (hueco >= 0.2) {
+        const sig = paginas[i + 1].frags[0];
+        const causa = sig && sig.item.tipo === 'fig' ? `no cabe la figura ${sig.item.n}` : sig && sig.item.saltoAntes ? 'hay un salto de hoja' : 'el título siguiente salta de hoja';
+        avisos.push(`Hoja ${i + 1}: ${Math.round(hueco * 100)} % en blanco, porque ${causa}.`);
+      }
+    });
+    items.filter(i => i.recortada).forEach(i => avisos.push(`La figura ${i.n} era más alta que la hoja: se ajustó a ${i.cm.toFixed(1)} cm.`));
+    return { ubic, filas, tot, avisos, bib: doc.bib.activa ? { items: doc.bib.items, ini: bibU ? bibU[0] : 0, fin: bibU ? bibU[1] : 0 } : null };
+  }
+
+  function calcular(doc) {
+    const g = geometria(doc);
+    const { items, heads } = componer(doc, g);
+    const paginas = paginar(items, g);
+    const porId = new Map(); items.forEach(i => { if (!porId.has(i.id)) porId.set(i.id, i); });
+    return { g, items, heads, paginas, porId, m: metricas(doc, g, items, paginas), palabrasLinea: g.ancho / doc.p.anchoPalabra };
+  }
+
+  // ---------- dibujo: una sola lista de operaciones para la pantalla, la impresión y el PDF ----------
+  function dibujar(c, doc) {
+    const { g, paginas } = c, v = doc.vista, total = paginas.length;
+    const barras = v.estilo !== 'lineas';
+    const yBarra = top => barras ? top + BASE - 5.5 : top + BASE + 1;
+    const hBarra = barras ? 5.5 : 0.45, cBarra = barras ? COLOR.barra : COLOR.regla;
+    return paginas.map((pg, ip) => {
+      const ops = [];
+      for (const f of pg.frags) {
+        const it = f.item, id = it.id;
+        if (it.tipo === 'h') {
+          for (let i = f.desde; i < f.hasta; i++) {
+            const l = it.lineas[i], top = g.mt + f.y + (i - f.desde) * LINEA;
+            ops.push({ t: 'txt', id, x: g.ml + l.x, y: top + BASE, s: l.t, f: it.estilo, z: 12, c: it.vacio ? COLOR.gris : COLOR.tinta, w: l.w });
+          }
+        } else if (it.tipo === 'fig') {
+          const x = g.ml, y = g.mt + f.y, w = g.ancho, h = it.alto;
+          ops.push({ t: 'caja', id, k: 'b', x, y, w, h, c: COLOR.suave, b: COLOR.regla });
+          ops.push({ t: 'lin', id, x1: x, y1: y, x2: x + w, y2: y + h, c: COLOR.barra, a: 0.5 });
+          ops.push({ t: 'lin', id, x1: x + w, y1: y, x2: x, y2: y + h, c: COLOR.barra, a: 0.5 });
+          const rot = `Figura ${it.n} · ${it.cm.toFixed(1).replace('.', ',')} cm de alto`, rw = medir(rot, 'r', 9);
+          ops.push({ t: 'caja', id, x: x + (w - rw) / 2 - 4, y: y + h / 2 - 8, w: rw + 8, h: 14, c: COLOR.suave, b: null });
+          ops.push({ t: 'txt', id, x: x + (w - rw) / 2, y: y + h / 2 + 2, s: rot, f: 'r', z: 9, c: COLOR.gris, w: rw });
+          it.ley.forEach((l, i) => ops.push({ t: 'txt', id, x, y: y + h + 4 + i * LINEA + BASE, s: l.t, f: 'r', z: 12, c: COLOR.tinta, w: l.w }));
+        } else {
+          for (let i = f.desde; i < f.hasta; i++) {
+            const l = it.lineas[i], top = g.mt + f.y + (i - f.desde) * LINEA;
+            const cortes = v.cortes ? it.cortes.filter(k => k.linea === i).map(k => k.x).sort((a, b) => a - b) : [];
+            let x0 = l.x;
+            for (const k of [...cortes, l.x + l.w]) {
+              const fin = k === l.x + l.w ? k : k - 1.5;
+              if (fin > x0) ops.push({ t: 'rect', id, k: 'b', x: g.ml + x0, y: yBarra(top), w: fin - x0, h: hBarra, c: cBarra });
+              x0 = k + 1.5;
+            }
+            if (v.notas && it.nota[i]) {
+              const w = medir(it.nota[i], 'i', 10);
+              ops.push({ t: 'rect', id, x: g.ml + l.x, y: top + 0.5, w: Math.min(w + 5, l.cap ?? w + 5), h: LINEA - 1, c: COLOR.blanco });
+              ops.push({ t: 'txt', id, x: g.ml + l.x + 1, y: top + BASE, s: it.nota[i], f: 'i', z: 10, c: COLOR.nota, w });
+            }
+          }
+          if (v.marcas && f.desde === 0) {
+            const top = g.mt + f.y;
+            const s = it.tipo === 'p' ? `¶${it.n} · ${it.palabras}` : it.tipo === 'cita' ? `cita · ${it.palabras}` : `[${it.n}]`;
+            const w = medir(s, 'r', 7.5), x = g.ml - 6 - w;
+            if (x >= 4) ops.push({ t: 'txt', id, x, y: top + BASE, s, f: 'r', z: 7.5, c: COLOR.gris, w });
+          }
+        }
+      }
+      if (v.pie && g.mb >= 24) {
+        const y = g.H - g.mb / 2 + 3, n = `${ip + 1} / ${total}`, nw = medir(n, 'r', 8);
+        ops.push({ t: 'txt', x: g.W - g.mr - nw, y, s: n, f: 'r', z: 8, c: COLOR.gris, w: nw });
+        const t = String(doc.titulo || '').trim();
+        if (t) {
+          const rec = envolver(t, 'r', 8, g.ancho * 0.7);
+          const s = rec.length > 1 ? rec[0].replace(/\s*\S*$/, '') + '…' : rec[0];
+          ops.push({ t: 'txt', x: g.ml, y, s, f: 'r', z: 8, c: COLOR.gris, w: medir(s, 'r', 8) });
+        }
+      }
+      return ops;
+    });
+  }
+
+  const n2 = v => { const s = (+v).toFixed(2); return s.replace(/\.?0+$/, '') || '0'; };
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const SVG_FUENTE = { r: 'font-weight:400;font-style:normal', b: 'font-weight:700;font-style:normal', i: 'font-weight:400;font-style:italic', bi: 'font-weight:700;font-style:italic' };
+
+  function aSVG(ops, g) {
+    let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${g.W} ${g.H}" role="img" font-family="'Times New Roman',Tinos,'Liberation Serif',Times,serif"><rect class="fondo" width="${g.W}" height="${g.H}" fill="#ffffff"/>`;
+    let abierto = null;
+    for (const o of ops) {
+      const id = o.id || null;
+      if (id !== abierto) { if (abierto) s += '</g>'; if (id) s += `<g data-id="${esc(id)}">`; abierto = id; }
+      if (o.t === 'rect') s += `<rect${o.k ? ' class="b"' : ''} x="${n2(o.x)}" y="${n2(o.y)}" width="${n2(o.w)}" height="${n2(o.h)}" fill="${o.c}"/>`;
+      else if (o.t === 'caja') s += `<rect${o.k ? ' class="b"' : ''} x="${n2(o.x)}" y="${n2(o.y)}" width="${n2(o.w)}" height="${n2(o.h)}" fill="${o.c}"${o.b ? ` stroke="${o.b}" stroke-width="0.6"` : ''}/>`;
+      else if (o.t === 'lin') s += `<line x1="${n2(o.x1)}" y1="${n2(o.y1)}" x2="${n2(o.x2)}" y2="${n2(o.y2)}" stroke="${o.c}" stroke-width="${o.a}"/>`;
+      else if (o.t === 'txt') s += `<text x="${n2(o.x)}" y="${n2(o.y)}" font-size="${o.z}" fill="${o.c}" style="${SVG_FUENTE[o.f]}" textLength="${n2(o.w)}" lengthAdjust="spacingAndGlyphs">${esc(o.s)}</text>`;
+    }
+    if (abierto) s += '</g>';
+    return s + '</svg>';
+  }
+
+  // PDF 1.4 escrito a mano: fuentes estándar Times en WinAnsi y solo vectores. Tamaño de página: A4 exacto.
+  function aPDF(hojas, g, titulo) {
+    const rgb = h => [1, 3, 5].map(i => n2(parseInt(h.substr(i, 2), 16) / 255)).join(' ');
+    const FUENTE = { r: 'F1', b: 'F2', i: 'F3', bi: 'F4' };
+    const hex = s => { let out = ''; for (const ch of String(s).normalize('NFC')) out += byteDe(ch.codePointAt(0)).toString(16).padStart(2, '0'); return out; };
+    const cuerpo = ops => {
+      let s = '';
+      for (const o of ops) {
+        if (o.t === 'rect') s += `${rgb(o.c)} rg ${n2(o.x)} ${n2(g.H - o.y - o.h)} ${n2(o.w)} ${n2(o.h)} re f\n`;
+        else if (o.t === 'caja') {
+          s += `${rgb(o.c)} rg `;
+          if (o.b) s += `${rgb(o.b)} RG 0.6 w `;
+          s += `${n2(o.x)} ${n2(g.H - o.y - o.h)} ${n2(o.w)} ${n2(o.h)} re ${o.b ? 'B' : 'f'}\n`;
+        } else if (o.t === 'lin') s += `${rgb(o.c)} RG ${o.a} w ${n2(o.x1)} ${n2(g.H - o.y1)} m ${n2(o.x2)} ${n2(g.H - o.y2)} l S\n`;
+        else if (o.t === 'txt') s += `BT /${FUENTE[o.f]} ${o.z} Tf ${rgb(o.c)} rg ${n2(o.x)} ${n2(g.H - o.y)} Td <${hex(o.s)}> Tj ET\n`;
+      }
+      return s;
+    };
+    const objs = [];
+    const nPag = hojas.length, primera = 8;
+    objs[1] = '<< /Type /Catalog /Pages 2 0 R >>';
+    objs[2] = `<< /Type /Pages /Count ${nPag} /Kids [${hojas.map((_, i) => `${primera + 2 * i} 0 R`).join(' ')}] >>`;
+    [['Times-Roman'], ['Times-Bold'], ['Times-Italic'], ['Times-BoldItalic']].forEach(([b], i) => { objs[3 + i] = `<< /Type /Font /Subtype /Type1 /BaseFont /${b} /Encoding /WinAnsiEncoding >>`; });
+    let utf = 'FEFF'; for (let i = 0; i < String(titulo).length; i++) utf += String(titulo).charCodeAt(i).toString(16).toUpperCase().padStart(4, '0');
+    objs[7] = `<< /Title <${utf}> /Producer (VETA) >>`;
+    hojas.forEach((ops, i) => {
+      const n = primera + 2 * i, c = cuerpo(ops);
+      objs[n] = `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${g.W} ${g.H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> /Contents ${n + 1} 0 R >>`;
+      objs[n + 1] = `<< /Length ${c.length} >>\nstream\n${c}endstream`;
+    });
+    let out = '%PDF-1.4\n'; const pos = [];
+    for (let i = 1; i < objs.length; i++) { pos[i] = out.length; out += `${i} 0 obj\n${objs[i]}\nendobj\n`; }
+    const xref = out.length;
+    out += `xref\n0 ${objs.length}\n0000000000 65535 f \n`;
+    for (let i = 1; i < objs.length; i++) out += String(pos[i]).padStart(10, '0') + ' 00000 n \n';
+    out += `trailer\n<< /Size ${objs.length} /Root 1 0 R /Info 7 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+    const b = new Uint8Array(out.length);
+    for (let i = 0; i < out.length; i++) b[i] = out.charCodeAt(i) & 255;
+    return b;
+  }
+
+  return { A4, LINEA, CM, MAX_NIVEL, LIMITES, limitar, medir, envolver, docNuevo, docEjemplo, normalizar, geometria, plano, hallar, hallarBloque, altura,
+    agregarSeccion, quitarSeccion, moverSeccion, subirNivel, bajarNivel, contarParrafos, fijarParrafos, agregarBloque, quitarBloque, moverBloque,
+    componer, paginar, calcular, dibujar, aSVG, aPDF, esc };
+})();
+/*CORE-END*/
+
+(() => {
+  const C = VetaCore, $ = s => document.querySelector(s), esc = C.esc;
+  const CLAVE = 'veta.v1', ZMIN = .25, ZMAX = 2, PX_A4 = 793.7, PY_A4 = 1122.52;
+  const leerAlmacen = () => { try { return JSON.parse(localStorage.getItem(CLAVE)); } catch (e) { return null; } };
+  const fmt = n => Math.round(n).toLocaleString('es-PE');
+
+  let doc, calc, sel = null, cache = [];
+  let z = .75;
+  const cerrados = new Set();
+  const hist = { pila: [], i: -1 };
+
+  function estado(msg, error) {
+    const e = $('#estado'); e.textContent = msg; e.classList.toggle('error', !!error);
+    clearTimeout(estado.t); if (msg && !error) estado.t = setTimeout(() => { if (e.textContent === msg) e.textContent = ''; }, 5000);
+  }
+
+  // ---------- historial y guardado ----------
+  function confirmar() {
+    const s = JSON.stringify(doc);
+    if (hist.pila[hist.i] === s) return;
+    hist.pila.length = hist.i + 1; hist.pila.push(s);
+    if (hist.pila.length > 150) hist.pila.shift();
+    hist.i = hist.pila.length - 1; botonesHist();
+  }
+  function botonesHist() { $('#deshacer').disabled = hist.i <= 0; $('#rehacer').disabled = hist.i >= hist.pila.length - 1; }
+  function viajar(d) {
+    const i = hist.i + d; if (i < 0 || i >= hist.pila.length) return;
+    hist.i = i; doc = JSON.parse(hist.pila[i]); pintarTodo(); botonesHist();
+    estado(d < 0 ? 'Cambio deshecho.' : 'Cambio rehecho.');
+  }
+  let tGuardar;
+  function guardarLuego() {
+    clearTimeout(tGuardar);
+    tGuardar = setTimeout(() => {
+      try { localStorage.setItem(CLAVE, JSON.stringify({ doc, z })); }
+      catch (e) { estado('No se pudo guardar en este navegador. Usa Guardar para descargar el documento.', true); }
+    }, 300);
+  }
+
+  // ---------- estructura ----------
+  const n = v => v === null || v === undefined ? '' : v;
+  const filaBloque = b => {
+    const ops = `<span class="ops">
+      <button type="button" data-a="bSube" data-k="${b.id}:bSube" title="Subir" aria-label="Subir">↑</button>
+      <button type="button" data-a="bBaja" data-k="${b.id}:bBaja" title="Bajar" aria-label="Bajar">↓</button>
+      <button type="button" data-a="bQuita" data-k="${b.id}:bQuita" title="Quitar" aria-label="Quitar">✕</button></span>`;
+    const ctrl = b.tipo === 'p'
+      ? `<label class="mini"><input id="i-${b.id}-o" type="number" inputmode="numeric" data-b="oraciones" value="${n(b.oraciones)}" title="Oraciones de este párrafo" aria-label="Oraciones de este párrafo"></label><span class="por" aria-hidden="true">×</span>
+         <label class="mini"><input id="i-${b.id}-w" type="number" inputmode="numeric" data-b="palabrasOracion" value="${n(b.palabrasOracion)}" title="Palabras por oración" aria-label="Palabras por oración de este párrafo"></label>`
+      : b.tipo === 'cita'
+        ? `<label class="mini"><input id="i-${b.id}-p" type="number" inputmode="numeric" data-b="palabras" value="${b.palabras}" aria-label="Palabras de la cita">pal.</label>`
+        : `<label class="mini"><input id="i-${b.id}-a" type="number" inputmode="decimal" step="0.1" data-b="alto" value="${b.alto}" aria-label="Alto de la figura en centímetros">cm</label>`;
+    const ph = b.tipo === 'fig' ? 'Leyenda de la figura' : b.tipo === 'cita' ? 'Qué aporta esta cita' : 'Función en el argumento';
+    return `<div class="blo ${b.tipo}" data-blo="${b.id}" data-fila="${b.id}">
+      <span class="tag"></span>${ctrl}<output class="lect"></output>${ops}
+      <input id="i-${b.id}-n" class="nota" type="text" data-b="nota" value="${esc(b.nota)}" placeholder="${ph}" aria-label="${ph}">
+    </div>`;
+  };
+  const filaSeccion = (s, nivel) => {
+    const abierto = !cerrados.has(s.id), np = C.contarParrafos(s);
+    const cuerpo = abierto ? `<div class="cuerpo">
+      <div class="aj">
+        <label class="chk"><input id="i-${s.id}-num" type="checkbox" data-s="numerada" ${s.numerada ? 'checked' : ''}>numerada</label>
+        <label class="chk"><input id="i-${s.id}-sal" type="checkbox" data-s="saltoAntes" ${s.saltoAntes ? 'checked' : ''}>hoja nueva</label>
+        <label class="mini"><input id="i-${s.id}-o" type="number" inputmode="numeric" data-s="oraciones" value="${n(s.oraciones)}" title="Oraciones por párrafo en esta sección" aria-label="Oraciones por párrafo en esta sección"></label><span class="por" aria-hidden="true">×</span>
+        <label class="mini"><input id="i-${s.id}-w" type="number" inputmode="numeric" data-s="palabrasOracion" value="${n(s.palabrasOracion)}" title="Palabras por oración en esta sección" aria-label="Palabras por oración en esta sección"></label>
+        <span class="ops">
+          <button type="button" data-a="sSube" data-k="${s.id}:sSube" title="Subir" aria-label="Subir sección">↑</button>
+          <button type="button" data-a="sBaja" data-k="${s.id}:sBaja" title="Bajar" aria-label="Bajar sección">↓</button>
+          <button type="button" data-a="sIzq" data-k="${s.id}:sIzq" title="Subir de nivel" aria-label="Subir de nivel">←</button>
+          <button type="button" data-a="sDer" data-k="${s.id}:sDer" title="Convertir en subsección de la anterior" aria-label="Bajar de nivel">→</button>
+          <button type="button" data-a="sQuita" data-k="${s.id}:sQuita" title="Quitar sección" aria-label="Quitar sección">✕</button>
+        </span>
+      </div>
+      ${s.bloques.length ? `<div class="blos">${s.bloques.map(filaBloque).join('')}</div>` : ''}
+      <div class="add">
+        <button type="button" data-a="addCita" data-k="${s.id}:addCita">+ Cita</button>
+        <button type="button" data-a="addFig" data-k="${s.id}:addFig">+ Figura</button>
+        ${nivel < C.MAX_NIVEL ? `<button type="button" data-a="addSub" data-k="${s.id}:addSub">+ Subsección</button>` : ''}
+      </div>
+    </div>` : '';
+    return `<section class="sec n${nivel}" data-sec="${s.id}">
+      <div class="cab" data-fila="${s.id}">
+        <button class="plegar" type="button" data-a="plegar" data-k="${s.id}:plegar" aria-expanded="${abierto}" aria-label="${abierto ? 'Plegar' : 'Desplegar'} sección">${abierto ? '▾' : '▸'}</button>
+        <span class="num"></span>
+        <input id="i-${s.id}-t" class="tit" type="text" data-s="titulo" value="${esc(s.titulo)}" placeholder="Título de la sección" aria-label="Título de la sección">
+        <span class="stp">
+          <span class="u" aria-hidden="true">¶</span>
+          <button type="button" data-a="menos" data-k="${s.id}:menos" aria-label="Un párrafo menos">−</button>
+          <input id="i-${s.id}-n" type="number" inputmode="numeric" data-s="nParrafos" value="${np}" aria-label="Número de párrafos">
+          <button type="button" data-a="mas" data-k="${s.id}:mas" aria-label="Un párrafo más">+</button>
+        </span>
+      </div>
+      ${cuerpo}
+      ${abierto && s.subs.length ? `<div class="subs">${s.subs.map(c => filaSeccion(c, nivel + 1)).join('')}</div>` : ''}
+    </section>`;
+  };
+  function pintarArbol() {
+    const panel = $('#panel'), top = panel.scrollTop;
+    const act = document.activeElement, clave = act && act.closest && act.closest('#arbol') ? (act.dataset.k || act.id) : null;
+    const b = doc.bib;
+    $('#arbol').innerHTML = (doc.secciones.length ? doc.secciones.map(s => filaSeccion(s, 1)).join('') : '<p class="vacio">Sin secciones todavía. Pulsa + Sección para empezar la tabla de contenidos.</p>') + `
+      <div id="fBib" data-fila="bib">
+        <div class="fila">
+          <input id="b-titulo" class="tit" type="text" data-bib="titulo" value="${esc(b.titulo)}" aria-label="Título de la bibliografía">
+          <label class="chk"><input id="b-activa" type="checkbox" data-bib="activa" ${b.activa ? 'checked' : ''}>incluir</label>
+        </div>
+        <div class="fila">
+          <label class="mini"><input id="b-items" type="number" inputmode="numeric" data-bib="items" value="${b.items}" aria-label="Número de ítems">ítems</label>
+          <label class="mini"><input id="b-lineas" type="number" inputmode="numeric" data-bib="lineas" value="${b.lineas}" aria-label="Líneas por ítem">líneas por ítem</label>
+          <output class="lect" id="bLect"></output>
+        </div>
+      </div>`;
+    panel.scrollTop = top;
+    if (clave) {
+      const el = document.querySelector(`#arbol [data-k="${clave}"]`) || document.getElementById(clave);
+      if (el) el.focus({ preventScroll: true });
+    }
+    resaltarFila();
+  }
+  // Lecturas y valores heredados: se actualizan sin reconstruir para no perder el foco.
+  function refrescarArbol() {
+    const ir = (lista, cOr, cWs) => lista.forEach(s => {
+      const raiz = document.querySelector(`[data-sec="${s.id}"]`); if (!raiz) return;
+      raiz.querySelector(':scope>.cab .num').textContent = calc.heads.get(s.id) || '';
+      const or = s.oraciones ?? cOr, ws = s.palabrasOracion ?? cWs;
+      const iO = document.getElementById(`i-${s.id}-o`), iW = document.getElementById(`i-${s.id}-w`);
+      if (iO) { iO.placeholder = cOr; iW.placeholder = cWs; }
+      for (const b of s.bloques) {
+        const f = document.querySelector(`[data-blo="${b.id}"]`); if (!f) continue;
+        const it = calc.porId.get(b.id);
+        if (b.tipo === 'p') {
+          f.querySelector('.tag').textContent = '¶' + it.n;
+          document.getElementById(`i-${b.id}-o`).placeholder = or;
+          document.getElementById(`i-${b.id}-w`).placeholder = ws;
+          f.querySelector('.lect').textContent = `${fmt(it.palabras)} p · ${it.lineas.length} lín`;
+        } else if (b.tipo === 'cita') {
+          f.querySelector('.tag').textContent = 'cita';
+          f.querySelector('.lect').textContent = `${it.lineas.length} lín`;
+        } else {
+          f.querySelector('.tag').textContent = 'fig. ' + it.n;
+          f.querySelector('.lect').textContent = it.recortada ? `ajustada a ${it.cm.toFixed(1).replace('.', ',')} cm` : `≈ ${Math.round(it.total / C.LINEA)} lín`;
+        }
+      }
+      ir(s.subs, or, ws);
+    });
+    ir(doc.secciones, doc.p.oraciones, doc.p.palabrasOracion);
+    const bl = $('#bLect');
+    if (bl) bl.textContent = doc.bib.activa ? `≈ ${fmt(calc.m.tot.bibliografia)} p` : '';
+    $('#avisoEjemplo').hidden = !doc.ejemplo;
+  }
+
+  // ---------- hojas ----------
+  function pintarHojas() {
+    const ops = C.dibujar(calc, doc), cont = $('#hojas'), total = ops.length;
+    ops.forEach((o, i) => {
+      let h = cont.children[i];
+      if (!h) {
+        h = document.createElement('div'); h.className = 'hoja';
+        h.innerHTML = '<div class="lienzo"></div><div class="rotulo"></div>';
+        cont.append(h);
+      }
+      const svg = C.aSVG(o, calc.g);
+      if (cache[i] !== svg) { h.firstChild.innerHTML = svg; cache[i] = svg; }
+      h.firstChild.firstChild.setAttribute('aria-label', `Hoja ${i + 1} de ${total}`);
+      h.lastChild.textContent = i + 1;
+    });
+    while (cont.children.length > total) cont.lastChild.remove();
+    cache.length = total;
+  }
+
+  // ---------- cifras ----------
+  function pintarCifras() {
+    const m = calc.m, t = m.tot, hojas = calc.paginas.length;
+    $('#resumen').textContent = `${hojas} ${hojas === 1 ? 'hoja' : 'hojas'} · ≈ ${fmt(t.cuerpo)} palabras`;
+    let meta = '';
+    if (doc.meta > 0) {
+      const dif = doc.meta - t.cuerpo, pc = t.cuerpo / doc.meta * 100;
+      meta = `<div class="cifra-g"><h2>Meta</h2>
+        <p class="meta-txt">${dif >= 0 ? `Faltan ${fmt(dif)}` : `Sobran ${fmt(-dif)}`} de ${fmt(doc.meta)} palabras · ${Math.round(pc)} %</p>
+        <div class="medidor${dif < 0 ? ' exceso' : ''}" role="img" aria-label="${Math.round(pc)} % de la meta"><i style="width:${Math.min(100, pc)}%"></i></div></div>`;
+    }
+    const filas = m.filas.map(f => {
+      const pag = f.ini === Infinity ? '' : f.ini === f.fin ? `h. ${f.ini}` : `h. ${f.ini}–${f.fin}`;
+      const det = [pag, f.parrafos ? `${f.parrafos} ¶` : '', f.citas ? `${f.citas} cita${f.citas > 1 ? 's' : ''}` : '', f.figuras ? `${f.figuras} fig.` : ''].filter(Boolean).join(' · ');
+      return `<button type="button" class="niv${f.nivel}" data-ir="${f.id}"><span class="nom">${esc((f.num ? f.num + ' ' : '') + (f.titulo.trim() || '[sin título]'))}</span><span class="val">${Math.round(f.pct)} %</span><span class="det">${fmt(f.palabras)} p · ${det}</span><span class="pista"><i style="width:${f.pct}%"></i></span></button>`;
+    }).join('');
+    const bib = m.bib ? `<button type="button" data-ir="bib"><span class="nom">${esc(doc.bib.titulo || 'Bibliografía')}</span><span class="val"></span><span class="det">${m.bib.items} ítems${m.bib.ini ? ` · h. ${m.bib.ini === m.bib.fin ? m.bib.ini : m.bib.ini + '–' + m.bib.fin}` : ''}</span></button>` : '';
+    $('#cifras').innerHTML = `
+      <div class="cifra-g"><h2>Extensión estimada</h2>
+        <dl class="dl">
+          <dt class="fuerte">Hojas A4</dt><dd class="fuerte">${hojas}</dd>
+          <dt class="fuerte">Palabras del cuerpo</dt><dd class="fuerte">${fmt(t.cuerpo)}</dd>
+          <dt>Títulos</dt><dd>${fmt(t.titulos)}</dd>
+          <dt>Leyendas</dt><dd>${fmt(t.leyendas)}</dd>
+          <dt>Bibliografía</dt><dd>≈ ${fmt(t.bibliografia)}</dd>
+          <dt>Total</dt><dd>≈ ${fmt(t.total)}</dd>
+          <dt>Palabras por hoja</dt><dd>${fmt(t.cuerpo / hojas)}</dd>
+        </dl>
+      </div>
+      ${meta}
+      <div class="cifra-g"><h2>Elementos</h2>
+        <dl class="dl">
+          <dt>Párrafos</dt><dd>${fmt(t.parrafos)}</dd><dt>Oraciones</dt><dd>${fmt(t.oraciones)}</dd>
+          <dt>Citas en bloque</dt><dd>${fmt(t.citas)}</dd><dt>Figuras</dt><dd>${fmt(t.figuras)}</dd>
+          <dt>Ítems de bibliografía</dt><dd>${fmt(t.items)}</dd>
+        </dl>
+      </div>
+      <div class="cifra-g"><h2>Distribución del cuerpo</h2><div class="dist">${filas || '<p class="vacio">Sin secciones.</p>'}${bib}</div></div>
+      ${m.avisos.length ? `<div class="cifra-g"><h2>Avisos</h2><ul class="avisos">${m.avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul></div>` : ''}`;
+  }
+
+  // ---------- documento y vista ----------
+  const leerRuta = (d, r) => r.split('.').reduce((o, k) => o[k], d);
+  const fijarRuta = (d, r, v) => { const ks = r.split('.'), u = ks.pop(); ks.reduce((o, k) => o[k], d)[u] = v; };
+  function pintarCamposDoc() {
+    document.querySelectorAll('[data-d]').forEach(el => {
+      if (el === document.activeElement) return;
+      const r = el.dataset.d;
+      if (r === 'palabrasLinea') el.value = +(calc.palabrasLinea).toFixed(1);
+      else if (r === 'meta') el.value = doc.meta || '';
+      else el.value = leerRuta(doc, r);
+    });
+    document.querySelectorAll('[data-v]').forEach(el => {
+      const k = el.dataset.v;
+      if (el.type === 'checkbox') el.checked = doc.vista[k]; else el.value = doc.vista[k];
+    });
+    const g = calc.g;
+    $('#notaGeo').textContent = `Fijo: A4, Times New Roman 12, interlineado simple. Con estos márgenes caben ${g.lineasHoja} líneas por hoja.`;
+  }
+  function recalcular() { calc = C.calcular(doc); pintarHojas(); pintarCifras(); refrescarArbol(); pintarCamposDoc(); guardarLuego(); }
+  let rPend = 0;
+  const programar = () => { if (!rPend) rPend = requestAnimationFrame(() => { rPend = 0; recalcular(); }); };
+  const descargarPendiente = () => { if (rPend) { cancelAnimationFrame(rPend); rPend = 0; recalcular(); } };
+  function pintarTodo() { calc = C.calcular(doc); pintarArbol(); recalcular(); marcar(sel && (sel === 'bib' || C.hallar(doc, sel) || C.hallarBloque(doc, sel)) ? sel : null, false); }
+  const editado = () => { doc.ejemplo = false; };
+
+  // ---------- selección ----------
+  function resaltarFila() {
+    document.querySelectorAll('.seleccion').forEach(e => e.classList.remove('seleccion'));
+    if (!sel) return;
+    const f = document.querySelector(`[data-fila="${sel}"]`); if (!f) return;
+    if (f.classList.contains('cab')) f.parentElement.classList.add('seleccion'); else f.classList.add('seleccion');
+  }
+  function marcar(id, irAHoja = true) {
+    sel = id;
+    $('#estiloSel').textContent = id ? `@media screen{#hojas g[data-id="${id}"] .b{fill:#8fa676}#hojas g[data-id="${id}"] text{fill:#586a45}}` : '';
+    resaltarFila();
+    if (!id || !irAHoja) return;
+    const g = document.querySelector(`#hojas g[data-id="${id}"]`), caja = $('#hojasCaja');
+    if (!g || !caja.offsetParent) return;
+    const r = g.getBoundingClientRect(), s = caja.getBoundingClientRect();
+    if (r.top < s.top + 30 || r.top > s.bottom - 60) caja.scrollBy({ top: r.top - s.top - 70 });
+  }
+  function abrirHasta(id) { // despliega las secciones que contienen a este elemento
+    const b = C.hallarBloque(doc, id);
+    let secId = b ? b.sec.id : id, cambia = false;
+    while (secId) {
+      const h = C.hallar(doc, secId); if (!h) break;
+      if (cerrados.delete(secId)) cambia = true;
+      secId = h.padre ? h.padre.id : null;
+    }
+    if (cambia) { pintarArbol(); refrescarArbol(); }
+  }
+  function irA(id, abrirEn) {
+    abrirHasta(id); marcar(id, abrirEn === 'hoja');
+    const f = document.querySelector(`[data-fila="${id}"]`);
+    if (f) f.scrollIntoView({ block: 'nearest' });
+  }
+
+  // ---------- acciones del árbol ----------
+  function accion(a, el) {
+    const sId = el.closest('[data-sec]') && el.closest('[data-sec]').dataset.sec;
+    const bId = el.closest('[data-blo]') && el.closest('[data-blo]').dataset.blo;
+    const sec = sId && C.hallar(doc, sId) && C.hallar(doc, sId).sec;
+    let hecho = true, foco = null;
+    switch (a) {
+      case 'plegar': if (cerrados.has(sId)) cerrados.delete(sId); else cerrados.add(sId); pintarArbol(); refrescarArbol(); return;
+      case 'menos': hecho = C.fijarParrafos(sec, C.contarParrafos(sec) - 1); break;
+      case 'mas': hecho = C.fijarParrafos(sec, C.contarParrafos(sec) + 1); break;
+      case 'addCita': { const b = C.agregarBloque(sec, 'cita'); foco = b.id; break; }
+      case 'addFig': { const b = C.agregarBloque(sec, 'fig'); foco = b.id; break; }
+      case 'addSub': { const s = C.agregarSeccion(doc, sId); hecho = !!s; if (s) foco = `i-${s.id}-t`; break; }
+      case 'sSube': hecho = C.moverSeccion(doc, sId, -1); break;
+      case 'sBaja': hecho = C.moverSeccion(doc, sId, 1); break;
+      case 'sIzq': hecho = C.subirNivel(doc, sId); if (!hecho) estado('Esta sección ya está en el primer nivel.'); break;
+      case 'sDer': hecho = C.bajarNivel(doc, sId); if (!hecho) estado('No se puede: necesita una sección anterior y un máximo de tres niveles.'); break;
+      case 'sQuita': hecho = C.quitarSeccion(doc, sId); if (hecho) estado('Sección quitada. Puedes deshacer.'); break;
+      case 'bSube': hecho = C.moverBloque(doc, bId, -1); break;
+      case 'bBaja': hecho = C.moverBloque(doc, bId, 1); break;
+      case 'bQuita': hecho = C.quitarBloque(doc, bId); break;
+      default: return;
+    }
+    if (!hecho) return;
+    editado(); calc = C.calcular(doc); pintarArbol(); recalcular(); confirmar();
+    if (foco) {
+      const el2 = document.getElementById(foco) || document.querySelector(`[data-blo="${foco}"] input`);
+      if (el2) { el2.focus(); el2.scrollIntoView({ block: 'nearest' }); }
+      marcar(foco.startsWith('i-') ? foco.split('-')[1] : foco, true);
+    }
+  }
+  $('#arbol').addEventListener('click', e => {
+    const b = e.target.closest('[data-a]'); if (b) accion(b.dataset.a, b);
+  });
+  // Edición de campos: 'input' redibuja mientras se escribe; 'change' recorta el valor y entra al historial.
+  const LIM_B = { oraciones: 'oraciones', palabrasOracion: 'palabrasOracion', palabras: 'palabras', alto: 'alto' };
+  function aplicarArbol(el, final) {
+    const v = el.value;
+    if (el.dataset.b) {
+      const b = C.hallarBloque(doc, el.closest('[data-blo]').dataset.blo).bloque, k = el.dataset.b;
+      if (k === 'nota') b.nota = v;
+      else {
+        const hereda = k === 'oraciones' || k === 'palabrasOracion';
+        if (v === '') { if (hereda) b[k] = null; else if (final) el.value = b[k]; }
+        else { const x = C.limitar(LIM_B[k], v); if (x !== null) { b[k] = x; if (final) el.value = x; } }
+      }
+    } else if (el.dataset.s) {
+      const s = C.hallar(doc, el.closest('[data-sec]').dataset.sec).sec, k = el.dataset.s;
+      if (k === 'titulo') s.titulo = v;
+      else if (k === 'numerada' || k === 'saltoAntes') s[k] = el.checked;
+      else if (k === 'nParrafos') {
+        if (!final) return false; // cambiar el número de párrafos reconstruye la lista: se aplica al confirmar
+        if (v !== '' && C.fijarParrafos(s, v)) { calc = C.calcular(doc); pintarArbol(); } else el.value = C.contarParrafos(s);
+      } else {
+        if (v === '') s[k] = null;
+        else { const x = C.limitar(k, v); if (x !== null) { s[k] = x; if (final) el.value = x; } }
+      }
+    } else if (el.dataset.bib) {
+      const k = el.dataset.bib, B = doc.bib;
+      if (k === 'titulo') B.titulo = v;
+      else if (k === 'activa') B.activa = el.checked;
+      else {
+        const x = v === '' ? null : C.limitar(k === 'items' ? 'items' : 'lineasItem', v);
+        if (x !== null) { B[k] = x; if (final) el.value = x; } else if (final) el.value = B[k];
+      }
+    } else return false;
+    return true;
+  }
+  $('#arbol').addEventListener('input', e => { if (e.target.type !== 'checkbox' && aplicarArbol(e.target, false)) { editado(); programar(); } });
+  $('#arbol').addEventListener('change', e => { if (aplicarArbol(e.target, true)) { editado(); descargarPendiente(); recalcular(); confirmar(); } });
+  $('#arbol').addEventListener('focusin', e => {
+    const f = e.target.closest('[data-fila]'); if (!f || e.target.dataset.a === 'plegar') return;
+    if (f.dataset.fila !== sel) marcar(f.dataset.fila, true);
+  });
+  $('#agregarSec').addEventListener('click', () => {
+    const s = C.agregarSeccion(doc, null); editado(); calc = C.calcular(doc); pintarArbol(); recalcular(); confirmar();
+    const i = document.getElementById(`i-${s.id}-t`); if (i) { i.focus(); i.scrollIntoView({ block: 'nearest' }); }
+  });
+  $('#plegarTodo').addEventListener('click', () => { C.plano(doc).forEach(({ sec }) => cerrados.add(sec.id)); pintarArbol(); refrescarArbol(); });
+  $('#desplegarTodo').addEventListener('click', () => { cerrados.clear(); pintarArbol(); refrescarArbol(); });
+
+  function aplicarDoc(el, final) {
+    const r = el.dataset.d, v = el.value;
+    if (r === 'titulo') { doc.titulo = v; return true; }
+    if (r === 'meta' && v === '') { doc.meta = 0; return true; }
+    const x = v === '' ? null : C.limitar(el.dataset.lim, v);
+    if (x === null) { if (final) pintarCamposDocForzado(el); return false; }
+    if (r === 'palabrasLinea') doc.p.anchoPalabra = calc.g.ancho / x;
+    else fijarRuta(doc, r, x);
+    if (final) el.value = x;
+    return true;
+  }
+  const pintarCamposDocForzado = el => { el.blur(); pintarCamposDoc(); };
+  $('#camposDoc').addEventListener('input', e => { if (aplicarDoc(e.target, false)) { editado(); programar(); } });
+  $('#camposDoc').addEventListener('change', e => { if (aplicarDoc(e.target, true)) { editado(); descargarPendiente(); recalcular(); confirmar(); } });
+  document.querySelector('.barra').addEventListener('change', e => {
+    const k = e.target.dataset.v; if (!k) return;
+    doc.vista[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    recalcular(); confirmar();
+  });
+
+  // ---------- zoom ----------
+  function fijarZoom(v, guardar = true) {
+    z = Math.min(ZMAX, Math.max(ZMIN, v));
+    document.documentElement.style.setProperty('--z', z.toFixed(4));
+    $('#rangoZoom').value = Math.round(z * 100); $('#salidaZoom').textContent = Math.round(z * 100) + ' %';
+    if (guardar) guardarLuego();
+  }
+  const paso = d => fijarZoom((Math.round(z * 20) + d) / 20);
+  $('#rangoZoom').addEventListener('input', e => fijarZoom(+e.target.value / 100));
+  $('#zMenos').addEventListener('click', () => paso(-1));
+  $('#zMas').addEventListener('click', () => paso(1));
+  $('#z100').addEventListener('click', () => fijarZoom(1));
+  const ajusteAncho = () => ($('#hojasCaja').clientWidth - 16 - 16 - 2) / PX_A4;
+  $('#zAncho').addEventListener('click', () => fijarZoom(ajusteAncho()));
+  $('#zHoja').addEventListener('click', () => fijarZoom(($('#hojasCaja').clientHeight - 80) / PY_A4));
+  $('#hojasCaja').addEventListener('wheel', e => {
+    if (!e.ctrlKey && !e.metaKey) return;
+    e.preventDefault(); paso(e.deltaY > 0 ? -1 : 1);
+  }, { passive: false });
+  $('#hojas').addEventListener('click', e => {
+    const g = e.target.closest('g[data-id]'); if (!g) return;
+    const id = g.dataset.id;
+    if (id === 'titulo') { $('#detDoc').open = true; $('#d-titulo').focus(); return; }
+    irA(id); if (document.body.dataset.tab !== 'hojas') return;
+  });
+  $('#cifras').addEventListener('click', e => {
+    const b = e.target.closest('[data-ir]'); if (!b) return;
+    irA(b.dataset.ir, 'hoja');
+  });
+
+  // ---------- archivos e impresión ----------
+  const nombre = () => (String(doc.titulo || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'documento') + '-veta';
+  function descargar(partes, tipo, archivo) {
+    const url = URL.createObjectURL(new Blob(partes, { type: tipo })), a = document.createElement('a');
+    a.href = url; a.download = archivo; document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
+  }
+  $('#guardar').addEventListener('click', () => { descargar([JSON.stringify(doc, null, 1)], 'application/json', nombre() + '.json'); estado('Documento descargado.'); });
+  $('#abrir').addEventListener('click', () => $('#archivo').click());
+  $('#archivo').addEventListener('change', async e => {
+    const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      const d = C.normalizar(JSON.parse(await f.text()));
+      doc = d; cerrados.clear(); sel = null; pintarTodo(); confirmar();
+      estado(`Abierto: ${f.name}. Puedes deshacer para volver al anterior.`);
+    } catch (err) { estado(err instanceof SyntaxError ? 'Ese archivo no es un JSON válido.' : err.message, true); }
+  });
+  $('#nuevo').addEventListener('click', () => {
+    doc = C.docNuevo(); C.agregarSeccion(doc, null); cerrados.clear(); sel = null; pintarTodo(); confirmar();
+    estado('Documento nuevo. Puedes deshacer para recuperar el anterior.');
+  });
+  $('#pdf').addEventListener('click', () => {
+    descargarPendiente();
+    try {
+      const b = C.aPDF(C.dibujar(calc, doc), calc.g, String(doc.titulo || 'VETA').trim() || 'VETA');
+      descargar([b], 'application/pdf', nombre() + '.pdf');
+      estado(`PDF A4 descargado: ${calc.paginas.length} hojas. Imprímelo a tamaño real (100 %).`);
+    } catch (err) { estado('No se pudo generar el PDF: ' + err.message, true); }
+  });
+  $('#imprimir').addEventListener('click', () => { descargarPendiente(); window.print(); });
+  let tituloPagina = document.title;
+  window.addEventListener('beforeprint', () => { descargarPendiente(); tituloPagina = document.title; document.title = String(doc.titulo || '').trim() || 'VETA'; });
+  window.addEventListener('afterprint', () => { document.title = tituloPagina; });
+
+  // ---------- generales ----------
+  $('#marca').addEventListener('click', () => location.reload());
+  $('#deshacer').addEventListener('click', () => viajar(-1));
+  $('#rehacer').addEventListener('click', () => viajar(1));
+  document.addEventListener('keydown', e => {
+    if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 'z') return;
+    if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)) return; // deshacer nativo del campo
+    e.preventDefault(); viajar(e.shiftKey ? 1 : -1);
+  });
+  document.querySelector('nav').addEventListener('click', e => {
+    const b = e.target.closest('[data-tab]'); if (!b) return;
+    document.body.dataset.tab = b.dataset.tab;
+    document.querySelectorAll('nav [data-tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+  });
+  $('#cifraBtn').addEventListener('click', e => {
+    const oculto = document.body.classList.toggle('sin-cifras');
+    e.target.setAttribute('aria-pressed', !oculto);
+  });
+  window.addEventListener('pagehide', () => {
+    clearTimeout(tGuardar);
+    try { localStorage.setItem(CLAVE, JSON.stringify({ doc, z })); } catch (e) { /* sin almacenamiento */ }
+  });
+
+  // ---------- arranque ----------
+  function iniciar() {
+    const g = leerAlmacen(); let zGuardado = null;
+    try { if (g && g.doc) { doc = C.normalizar(g.doc); if (Number.isFinite(g.z)) zGuardado = g.z; } } catch (e) { doc = null; }
+    if (!doc) doc = C.docEjemplo();
+    if (innerWidth < 1280) { document.body.classList.add('sin-cifras'); $('#cifraBtn').setAttribute('aria-pressed', 'false'); }
+    pintarTodo();
+    fijarZoom(zGuardado ?? (innerWidth <= 860 ? ajusteAncho() : .75), false);
+    if (zGuardado === null && innerWidth <= 860) requestAnimationFrame(() => fijarZoom(ajusteAncho(), false));
+    confirmar();
+  }
+  iniciar();
+})();
+
+</script>
+</body>
+</html>
