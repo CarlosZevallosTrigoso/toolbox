@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>contactos — toolbox</title>
+<style>
+:root{--ac:#5a7a3a;--ink:#111;--mut:#777;--line:#d9d9d4;--bg:#fff;--soft:#f4f4f0;--f:"Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:12px/1.5 var(--f);color:var(--ink);background:var(--bg);display:flex;flex-direction:column}
+header{display:flex;align-items:baseline;gap:14px;padding:10px 14px;border-bottom:1px solid var(--line)}
+header a{color:var(--mut);text-decoration:none}
+header a:hover{color:var(--ac)}
+h1{font-size:14px;margin:0;font-weight:600;cursor:pointer}
+h1 span{color:var(--ac)}
+#info{margin-left:auto;color:var(--mut);text-align:right}
+main{flex:1;display:flex;min-height:0}
+aside{width:290px;flex:none;overflow:auto;border-right:1px solid var(--line);padding:4px 14px 30px}
+fieldset{border:0;border-top:1px solid var(--line);margin:12px 0 0;padding:8px 0 0}
+fieldset:first-child{border-top:0}
+legend{padding:0 6px 0 0;color:var(--ac);font-weight:600}
+.r{display:flex;align-items:center;gap:6px;margin:5px 0}
+.r>label{flex:1;color:#444}
+.r>input[type=number]{width:64px}
+.r>select,.r>input[type=text]{width:150px}
+input,select,button{font:inherit;color:inherit;border:1px solid var(--line);border-radius:2px;background:#fff;padding:3px 5px;min-height:26px}
+input[type=color]{padding:1px;width:40px}
+input[type=range]{flex:1;padding:0;border:0}
+input[type=checkbox]{min-height:0}
+input:focus,select:focus,button:focus-visible{outline:1px solid var(--ac);border-color:var(--ac)}
+button{cursor:pointer;padding:3px 9px}
+button:hover{border-color:var(--ac);color:var(--ac)}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}
+button.p:hover{color:#fff;filter:brightness(1.1)}
+button:disabled{opacity:.45;cursor:default}
+.btns{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.hint{color:var(--mut);font-size:11px;margin:4px 0}
+#status{color:var(--ac);min-height:18px;margin-top:6px;white-space:pre-wrap}
+#prev{flex:1;overflow:auto;background:var(--soft);padding:20px;display:flex;flex-wrap:wrap;gap:20px;align-content:flex-start;justify-content:center;position:relative}
+#empty{margin:auto;align-self:center;border:1px dashed #b9b9b2;border-radius:2px;padding:44px 34px;color:var(--mut);text-align:center;background:#fff;cursor:pointer}
+#prev.drop{outline:2px dashed var(--ac);outline-offset:-8px}
+.pw{display:flex;flex-direction:column;gap:4px}
+.pn{color:var(--mut);font-size:11px}
+.page{position:relative;overflow:hidden;box-shadow:0 0 0 1px var(--line),0 2px 8px rgba(0,0,0,.08);flex:none}
+.hd{position:absolute;display:flex;justify-content:space-between;white-space:nowrap;line-height:1}
+.cell{position:absolute;user-select:none;-webkit-user-select:none}
+.cell img{display:block;width:100%;pointer-events:none;-webkit-user-drag:none}
+.cell.ovl{box-shadow:-3px 0 0 var(--ac)}
+.cell.ovr{box-shadow:3px 0 0 var(--ac)}
+.cell.src{opacity:.35}
+.cap{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:text;user-select:text;-webkit-user-select:text}
+.cap:focus{outline:1px solid var(--ac);text-overflow:clip;background:rgba(90,122,58,.12)}
+.grip,.x{position:absolute;top:2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.92);color:#111;border:1px solid var(--line);border-radius:2px;font-size:12px;line-height:1}
+.grip{left:2px;cursor:grab;touch-action:none}
+.x{right:2px;cursor:pointer}
+.x:hover{color:#b03030;border-color:#b03030}
+@media (hover:hover){.grip,.x{opacity:0}.cell:hover .grip,.cell:hover .x{opacity:1}.cell{cursor:grab}}
+body.dragging,body.dragging *{cursor:grabbing!important}
+#ghost{position:fixed;z-index:9;pointer-events:none;width:90px;opacity:.85;box-shadow:0 2px 10px rgba(0,0,0,.3);border:2px solid var(--ac)}
+[hidden]{display:none!important}
+@media (max-width:760px){main{flex-direction:column}aside{width:auto;max-height:44vh;border-right:0;border-bottom:1px solid var(--line)}#info{display:none}}
+</style>
+</head>
+<body>
+<header>
+  <a href="../index.html" title="Volver al toolbox">← toolbox/</a>
+  <h1 id="title" title="recargar">contactos<span>.</span></h1>
+  <div id="info"></div>
+</header>
+<main>
+<aside>
+  <fieldset><legend>imágenes</legend>
+    <div class="btns">
+      <button class="p" id="add">+ añadir</button>
+      <button id="sName">a→z</button><button id="sDate">fecha</button><button id="sRev">invertir</button>
+      <button id="clear">vaciar</button>
+    </div>
+    <input type="file" id="file" accept="image/*" multiple hidden>
+    <div class="hint">arrastra para reordenar · clic en el pie para renombrar · en táctil usa ⠿</div>
+  </fieldset>
+
+  <fieldset><legend>hoja</legend>
+    <div class="r"><label>tamaño</label><select data-k="size">
+      <option value="a5">a5 · 148×210</option><option value="a4">a4 · 210×297</option><option value="a3">a3 · 297×420</option>
+      <option value="carta">carta · 216×279</option><option value="oficio">oficio · 216×330</option><option value="legal">legal · 216×356</option>
+      <option value="tabloide">tabloide · 279×432</option><option value="cuadrado">cuadrado · 210×210</option><option value="custom">personalizado</option></select></div>
+    <div class="r" data-show="size=custom"><label>ancho × alto mm</label><input type="number" data-k="cw" min="30" max="2000"><input type="number" data-k="ch" min="30" max="2000"></div>
+    <div class="r"><label>orientación</label><select data-k="orient"><option value="v">vertical</option><option value="h">horizontal</option></select></div>
+    <div class="r"><label>margen mm</label><input type="number" data-k="margin" min="0" max="100" step="1"></div>
+    <div class="r"><label>separación mm</label><input type="number" data-k="gap" min="0" max="50" step="0.5"></div>
+    <div class="r"><label>fondo</label><input type="color" data-k="bg"></div>
+  </fieldset>
+
+  <fieldset><legend>composición</legend>
+    <div class="r"><label>modo</label><select data-k="mode"><option value="grid">grilla</option><option value="rows">filas justificadas</option><option value="masonry">masonry (columnas)</option></select></div>
+    <div data-show="mode=grid">
+      <div class="r"><label>columnas × filas</label><input type="number" data-k="cols" min="1" max="30"><input type="number" data-k="rows" min="1" max="30"></div>
+      <div class="r"><label>imágenes por hoja</label><input type="number" id="per" min="1" max="400" title="calcula columnas × filas"></div>
+      <div class="r"><label>ajuste</label><select data-k="fit"><option value="contain">completa</option><option value="cover">recortar a celda</option></select></div>
+    </div>
+    <div data-show="mode=rows">
+      <div class="r"><label>filas por hoja (aprox.)</label><input type="number" data-k="jrows" min="1" max="30"></div>
+    </div>
+    <div data-show="mode=masonry">
+      <div class="r"><label>columnas</label><input type="number" data-k="mcols" min="1" max="20"></div>
+    </div>
+    <div class="r" data-show="mode!=grid"><label>máx. por hoja (0 = libre)</label><input type="number" data-k="maxPer" min="0" max="400"></div>
+  </fieldset>
+
+  <fieldset><legend>pie de imagen</legend>
+    <div class="r"><label>contenido</label><select data-k="cap"><option value="name">nombre</option><option value="ext">nombre.ext</option><option value="numname">nº · nombre</option><option value="num">solo nº</option><option value="none">ninguno</option></select></div>
+    <div class="r"><label>tamaño pt</label><input type="number" data-k="capPt" min="4" max="24" step="0.5"></div>
+    <div class="r"><label>alineación</label><select data-k="capAlign"><option value="left">izquierda</option><option value="center">centro</option></select></div>
+  </fieldset>
+
+  <fieldset><legend>encabezado</legend>
+    <div class="r"><label>título</label><input type="text" data-k="title" placeholder="(vacío)"></div>
+    <div class="r"><label for="pnum">numerar hojas</label><input type="checkbox" id="pnum" data-k="pnum"></div>
+  </fieldset>
+
+  <fieldset><legend>exportar</legend>
+    <div class="r"><label>resolución</label><select data-k="dpi"><option value="150">150 dpi</option><option value="200">200 dpi</option><option value="300">300 dpi</option></select></div>
+    <div class="r"><label>calidad jpg</label><input type="number" data-k="q" min="0.5" max="1" step="0.05"></div>
+    <div class="r"><label>nombre</label><input type="text" data-k="base"></div>
+    <div class="btns"><button class="p" id="xPdf">pdf</button><button id="xJpg">jpg por hoja</button></div>
+    <div id="status"></div>
+  </fieldset>
+
+  <fieldset><legend>vista</legend>
+    <div class="r"><label>zoom</label><input type="range" data-k="zoom" min="0.8" max="6" step="0.1"></div>
+  </fieldset>
+</aside>
+<section id="prev"></section>
+</main>
+
+<script>
+'use strict';
+/*PURE*/
+const SIZES={a5:[148,210],a4:[210,297],a3:[297,420],carta:[216,279],oficio:[216,330],legal:[216,356],tabloide:[279,432],cuadrado:[210,210]};
+const PT=0.3528; // mm por punto
+
+function geom(c){
+  let [w,h]=c.size==='custom'?[+c.cw||210,+c.ch||297]:SIZES[c.size]||SIZES.a4;
+  if((c.orient==='h'&&h>w)||(c.orient==='v'&&w>h))[w,h]=[h,w];
+  const m=Math.max(0,Math.min(+c.margin||0,Math.min(w,h)/2-5));
+  const capMm=c.capPt*PT, capH=c.cap==='none'?0:capMm*1.5+0.6;
+  const headMm=(c.capPt+2)*PT, headH=(c.title||c.pnum)?headMm*1.9:0;
+  return {pw:w,ph:h,m,W:w-2*m,H:Math.max(5,h-2*m-headH),headH,headMm,capH,capMm};
+}
+
+// devuelve hojas: [[{i,x,y,w,h}]] en mm, relativo al área útil; el pie va debajo de cada caja
+function layout(c,ars){
+  const pages=[];let cur=[];
+  const push=()=>{if(cur.length){pages.push(cur);cur=[];}};
+  const W=c.W,H=c.H,g=Math.max(0,+c.gap||0),capH=c.capH;
+  const max=c.maxPer>0?c.maxPer:Infinity;
+  if(c.mode==='grid'){
+    const cols=Math.max(1,c.cols|0),rows=Math.max(1,c.rows|0);
+    const cw=(W-(cols-1)*g)/cols,ch=(H-(rows-1)*g)/rows,bh=Math.max(1,ch-capH);
+    ars.forEach((ar,i)=>{const k=i%(cols*rows);if(k===0)push();
+      cur.push({i,x:(k%cols)*(cw+g),y:((k/cols)|0)*(ch+g),w:cw,h:bh});});
+  }else if(c.mode==='rows'){
+    const rows=Math.max(1,c.rows|0),maxH=Math.max(1,H-capH);
+    const target=Math.max(1,(H-(rows-1)*g)/rows-capH);
+    let y=0,row=[],sum=0;
+    const flush=last=>{
+      if(!row.length)return;
+      let h=(W-(row.length-1)*g)/sum;
+      if(last&&h>target)h=target;
+      h=Math.min(h,maxH);
+      if(cur.length&&(y+h+capH>H+1e-6||cur.length+row.length>max)){push();y=0;}
+      let x=0;row.forEach(i=>{const w=h*ars[i];cur.push({i,x,y,w,h});x+=w+g;});
+      y+=h+capH+g;row=[];sum=0;
+    };
+    ars.forEach((ar,i)=>{
+      if(row.length){
+        const hp=(W-(row.length-1)*g)/sum,hn=(W-row.length*g)/(sum+ar);
+        if(hn<target&&Math.abs(hp-target)<=Math.abs(hn-target))flush(false);
+      }
+      row.push(i);sum+=ar;
+      if((W-(row.length-1)*g)/sum<=target||row.length>=max)flush(false);
+    });
+    flush(true);
+  }else{
+    const cols=Math.max(1,c.cols|0),cw=(W-(cols-1)*g)/cols,maxH=Math.max(1,H-capH);
+    const ys=new Array(cols).fill(0);
+    ars.forEach((ar,i)=>{
+      let w=cw,h=cw/ar;if(h>maxH){h=maxH;w=h*ar;}
+      let k=0;for(let j=1;j<cols;j++)if(ys[j]<ys[k]-1e-6)k=j;
+      if(cur.length&&((ys[k]>0&&ys[k]+h+capH>H+1e-6)||cur.length>=max)){push();ys.fill(0);k=0;}
+      cur.push({i,x:k*(cw+g)+(cw-w)/2,y:ys[k],w,h});ys[k]+=h+capH+g;
+    });
+  }
+  push();return pages;
+}
+
+// columnas × filas para n imágenes por hoja, buscando celdas cercanas a 4:3 y pocos huecos
+function autoGrid(n,W,H){
+  n=Math.max(1,n|0);let best=null;
+  for(let cols=1;cols<=n;cols++){
+    const rows=Math.ceil(n/cols),a=(W/cols)/(H/rows);
+    const s=Math.abs(Math.log(a/1.2))+(cols*rows-n)/n;
+    if(!best||s<best.s)best={cols,rows,s};
+  }
+  return best;
+}
+
+// encaje de una imagen iw×ih en una caja bw×bh
+function fitRect(iw,ih,bw,bh,cover){
+  const s=cover?Math.max(bw/iw,bh/ih):Math.min(bw/iw,bh/ih);
+  const dw=Math.min(bw,iw*s),dh=Math.min(bh,ih*s),sw=dw/s,sh=dh/s;
+  return {sx:(iw-sw)/2,sy:(ih-sh)/2,sw,sh,dx:(bw-dw)/2,dy:(bh-dh)/2,dw,dh};
+}
+
+function stem(n){const k=n.lastIndexOf('.');return k>0?n.slice(0,k):n;}
+function capText(it,idx,total,mode){
+  const num=String(idx+1).padStart(Math.max(2,String(total).length),'0');
+  const name=it.custom!=null?it.custom:(mode==='ext'?it.orig:stem(it.orig));
+  return mode==='none'?'':mode==='num'?num:mode==='numname'?num+' · '+name:name;
+}
+function inkFor(hex){
+  const n=parseInt(hex.slice(1),16),r=n>>16&255,g=n>>8&255,b=n&255;
+  return (0.299*r+0.587*g+0.114*b)<140?'#f2f2ee':'#111111';
+}
+
+// pdf mínimo: una imagen jpeg a página completa por hoja. pages: [{jpg:Uint8Array,pxW,pxH,wPt,hPt}]
+function pdfParts(pages){
+  const enc=new TextEncoder(),parts=[],offs=[];let off=0;
+  const add=d=>{if(typeof d==='string')d=enc.encode(d);parts.push(d);off+=d.length;};
+  const obj=(n,body,stream)=>{offs[n]=off;add(n+' 0 obj\n'+body+'\n');if(stream){add('stream\n');add(stream);add('\nendstream\n');}add('endobj\n');};
+  const f=v=>(+v.toFixed(3)).toString();
+  add('%PDF-1.4\n%éééé\n');
+  obj(1,'<< /Type /Catalog /Pages 2 0 R >>');
+  obj(2,'<< /Type /Pages /Count '+pages.length+' /Kids ['+pages.map((_,k)=>(3+3*k)+' 0 R').join(' ')+'] >>');
+  pages.forEach((p,k)=>{
+    const a=3+3*k,w=f(p.wPt),h=f(p.hPt),cs='q '+w+' 0 0 '+h+' 0 0 cm /Im0 Do Q';
+    obj(a,'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 '+w+' '+h+'] /Resources << /XObject << /Im0 '+(a+2)+' 0 R >> >> /Contents '+(a+1)+' 0 R >>');
+    obj(a+1,'<< /Length '+cs.length+' >>',cs);
+    obj(a+2,'<< /Type /XObject /Subtype /Image /Width '+p.pxW+' /Height '+p.pxH+' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length '+p.jpg.length+' >>',p.jpg);
+  });
+  const N=2+3*pages.length,x=off;
+  let t='xref\n0 '+(N+1)+'\n0000000000 65535 f \n';
+  for(let n=1;n<=N;n++)t+=String(offs[n]).padStart(10,'0')+' 00000 n \n';
+  add(t+'trailer\n<< /Size '+(N+1)+' /Root 1 0 R >>\nstartxref\n'+x+'\n%%EOF\n');
+  return parts;
+}
+
+// zip sin compresión (los jpg ya están comprimidos). files: [{name,data:Uint8Array}]
+let CRCT=null;
+function crc32(d){
+  if(!CRCT){CRCT=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;CRCT[n]=c>>>0;}}
+  let c=0xFFFFFFFF;for(let i=0;i<d.length;i++)c=CRCT[(c^d[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;
+}
+function zipParts(files){
+  const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+  const hdr=(sig,n)=>{const b=new Uint8Array(n),v=new DataView(b.buffer);v.setUint32(0,sig,true);return [b,v];};
+  files.forEach(f=>{
+    const nm=enc.encode(f.name),crc=crc32(f.data),sz=f.data.length;
+    const [b,v]=hdr(0x04034b50,30);
+    v.setUint16(4,20,true);v.setUint16(6,0x800,true);v.setUint16(10,0,true);v.setUint16(12,0x21,true);
+    v.setUint32(14,crc,true);v.setUint32(18,sz,true);v.setUint32(22,sz,true);v.setUint16(26,nm.length,true);
+    parts.push(b,nm,f.data);
+    const [cb,cv]=hdr(0x02014b50,46);
+    cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x800,true);cv.setUint16(14,0x21,true);
+    cv.setUint32(16,crc,true);cv.setUint32(20,sz,true);cv.setUint32(24,sz,true);cv.setUint16(28,nm.length,true);cv.setUint32(42,off,true);
+    cen.push(cb,nm);off+=30+nm.length+sz;
+  });
+  const csz=cen.reduce((s,p)=>s+p.length,0),[eb,ev]=hdr(0x06054b50,22);
+  ev.setUint16(8,files.length,true);ev.setUint16(10,files.length,true);ev.setUint32(12,csz,true);ev.setUint32(16,off,true);
+  return parts.concat(cen,[eb]);
+}
+/*END*/
+
+if(typeof document!=='undefined')(function(){
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const FONT='"Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+const KEY='toolbox.contactos.v1';
+const cfg={size:'a4',cw:210,ch:297,orient:'v',margin:10,gap:4,bg:'#ffffff',mode:'grid',cols:4,rows:5,fit:'contain',jrows:5,mcols:3,maxPer:0,cap:'name',capPt:7,capAlign:'left',title:'',pnum:false,dpi:300,q:0.9,base:'contactos',zoom:2};
+try{Object.assign(cfg,JSON.parse(localStorage.getItem(KEY)||'{}'));}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(cfg));}catch(e){}};
+
+let items=[],uid=0,busy=false,raf=0;
+const prev=$('#prev'),statusEl=$('#status');
+const status=t=>{statusEl.textContent=t||'';};
+
+/* ---------- controles ---------- */
+function syncInputs(){
+  $$('[data-k]').forEach(el=>{const v=cfg[el.dataset.k];if(el.type==='checkbox')el.checked=!!v;else el.value=v;});
+  $('#per').value=cfg.cols*cfg.rows;
+  $$('[data-show]').forEach(el=>{
+    const m=el.dataset.show.match(/^(\w+)(!?=)(\w+)$/),eq=String(cfg[m[1]])===m[3];
+    el.hidden=m[2]==='='?!eq:eq;
+  });
+}
+function onInput(e){
+  const el=e.target,k=el.dataset.k;if(!k)return;
+  let v=el.type==='checkbox'?el.checked:(el.type==='number'||el.type==='range')?parseFloat(el.value):el.value;
+  if(k==='dpi')v=parseInt(v,10);
+  if(typeof v==='number'&&!isFinite(v))return; // campo a medio escribir
+  cfg[k]=v;save();
+  if(el.tagName==='SELECT'||k==='cols'||k==='rows')syncInputs();
+  schedule();
+}
+document.querySelector('aside').addEventListener('input',onInput);
+$('#per').addEventListener('change',e=>{
+  const G=geom(cfg),b=autoGrid(parseInt(e.target.value,10)||1,G.W,G.H);
+  cfg.cols=b.cols;cfg.rows=b.rows;save();syncInputs();schedule();
+});
+$('#title').onclick=()=>location.reload();
+
+/* ---------- carga ---------- */
+const isImg=f=>/^image\//.test(f.type)||/\.(jpe?g|png|webp|gif|avif|bmp|heic|heif|tiff?)$/i.test(f.name);
+async function addFiles(list){
+  const files=[...list].filter(isImg);if(!files.length||busy)return;
+  busy=true;const fail=[];
+  for(let n=0;n<files.length;n++){
+    const f=files[n];status('leyendo '+(n+1)+'/'+files.length+'…');
+    try{
+      const bmp=await createImageBitmap(f);
+      const s=Math.min(1,1000/Math.max(bmp.width,bmp.height));
+      const cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(bmp.width*s));cv.height=Math.max(1,Math.round(bmp.height*s));
+      const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.imageSmoothingQuality='high';x.drawImage(bmp,0,0,cv.width,cv.height);
+      const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.82));
+      if(!blob)throw new Error('miniatura');
+      items.push({id:++uid,file:f,orig:f.name,custom:null,w:bmp.width,h:bmp.height,ar:bmp.width/bmp.height,url:URL.createObjectURL(blob),date:f.lastModified||0});
+      bmp.close();cv.width=cv.height=0;
+    }catch(err){fail.push(f.name);}
+    if(n%6===5)render();
+  }
+  busy=false;render();
+  status(fail.length?'no se pudo leer ('+fail.length+'): '+fail.slice(0,6).join(', ')+(fail.length>6?'…':''):'');
+}
+$('#add').onclick=()=>$('#file').click();
+$('#file').onchange=e=>{addFiles(e.target.files);e.target.value='';};
+window.addEventListener('dragover',e=>{if(e.dataTransfer&&[...e.dataTransfer.types].includes('Files')){e.preventDefault();prev.classList.add('drop');}});
+window.addEventListener('dragleave',e=>{if(!e.relatedTarget)prev.classList.remove('drop');});
+window.addEventListener('drop',e=>{if(!e.dataTransfer||!e.dataTransfer.files.length)return;e.preventDefault();prev.classList.remove('drop');addFiles(e.dataTransfer.files);});
+
+$('#sName').onclick=()=>{items.sort((a,b)=>a.orig.localeCompare(b.orig,undefined,{numeric:true,sensitivity:'base'}));render();};
+$('#sDate').onclick=()=>{items.sort((a,b)=>a.date-b.date);render();};
+$('#sRev').onclick=()=>{items.reverse();render();};
+$('#clear').onclick=()=>{if(!items.length||busy)return;items.forEach(it=>URL.revokeObjectURL(it.url));items=[];render();status('');};
+
+/* ---------- composición ---------- */
+function compute(){
+  const G=geom(cfg);
+  const pages=layout({mode:cfg.mode,W:G.W,H:G.H,gap:cfg.gap,capH:G.capH,maxPer:cfg.maxPer,
+    cols:cfg.mode==='masonry'?cfg.mcols:cfg.cols,rows:cfg.mode==='rows'?cfg.jrows:cfg.rows},items.map(it=>it.ar));
+  return {G,pages};
+}
+const schedule=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(render);};
+const px=v=>(Math.round(v*100)/100)+'px';
+
+function render(){
+  const {G,pages}=compute(),S=cfg.zoom,ink=inkFor(cfg.bg);
+  const sy=prev.scrollTop;
+  prev.textContent='';
+  $('#info').textContent=items.length+' imágenes · '+pages.length+' hoja'+(pages.length===1?'':'s')+' · '+(+G.pw.toFixed(1))+'×'+(+G.ph.toFixed(1))+' mm';
+  if(!items.length){
+    const e=document.createElement('div');e.id='empty';e.textContent='arrastra imágenes aquí o pulsa para elegirlas';e.onclick=()=>$('#file').click();prev.append(e);return;
+  }
+  const cover=cfg.mode==='grid'&&cfg.fit==='cover',editable=cfg.cap!=='num'&&cfg.cap!=='none';
+  pages.forEach((pg,k)=>{
+    const wrap=document.createElement('div');wrap.className='pw';
+    const page=document.createElement('div');page.className='page';
+    page.style.cssText='width:'+px(G.pw*S)+';height:'+px(G.ph*S)+';background:'+cfg.bg+';color:'+ink+';font-family:'+FONT.replace(/"/g,"'");
+    if(G.headH){
+      const hd=document.createElement('div');hd.className='hd';
+      hd.style.cssText='left:'+px(G.m*S)+';top:'+px(G.m*S)+';width:'+px(G.W*S)+';font-size:'+px(G.headMm*S);
+      const a=document.createElement('span'),b=document.createElement('span');
+      a.textContent=cfg.title||'';b.textContent=cfg.pnum?(k+1)+'/'+pages.length:'';hd.append(a,b);page.append(hd);
+    }
+    pg.forEach(c=>{
+      const it=items[c.i],cell=document.createElement('div');cell.className='cell';cell.dataset.id=it.id;
+      cell.style.cssText='left:'+px((G.m+c.x)*S)+';top:'+px((G.m+G.headH+c.y)*S)+';width:'+px(c.w*S);
+      const img=document.createElement('img');img.src=it.url;img.alt='';img.draggable=false;
+      img.style.cssText='height:'+px(c.h*S)+';object-fit:'+(cover?'cover':'contain');
+      cell.append(img);
+      if(G.capH){
+        const cap=document.createElement('div');cap.className='cap';
+        cap.style.cssText='height:'+px(G.capH*S)+';font-size:'+px(G.capMm*S)+';line-height:'+px(G.capH*S)+';text-align:'+cfg.capAlign;
+        cap.textContent=capText(it,c.i,items.length,cfg.cap);cap.title=it.orig;
+        if(editable){cap.contentEditable='true';cap.spellcheck=false;}
+        cell.append(cap);
+      }
+      const grip=document.createElement('div');grip.className='grip';grip.textContent='⠿';grip.title='arrastrar';
+      const x=document.createElement('div');x.className='x';x.textContent='×';x.title='quitar';
+      cell.append(grip,x);page.append(cell);
+    });
+    const pn=document.createElement('div');pn.className='pn';pn.textContent='hoja '+(k+1)+' · '+pg.length+' img';
+    wrap.append(pn,page);prev.append(wrap);
+  });
+  prev.scrollTop=sy;
+}
+
+/* ---------- pies editables y quitar ---------- */
+const byId=id=>items.find(it=>it.id===+id);
+prev.addEventListener('focusin',e=>{
+  const cap=e.target.closest('.cap');if(!cap)return;
+  const it=byId(cap.parentNode.dataset.id);if(it)cap.textContent=capText(it,0,1,cfg.cap==='numname'?'name':cfg.cap);
+});
+prev.addEventListener('focusout',e=>{
+  const cap=e.target.closest('.cap');if(!cap)return;
+  const it=byId(cap.parentNode.dataset.id);if(!it)return;
+  const t=cap.textContent.replace(/\s+/g,' ').trim(),def=cfg.cap==='ext'?it.orig:stem(it.orig);
+  it.custom=(t===''||t===def)?null:t;
+  schedule();
+});
+prev.addEventListener('keydown',e=>{if(e.target.closest('.cap')&&(e.key==='Enter'||e.key==='Escape')){e.preventDefault();e.target.blur();}});
+prev.addEventListener('click',e=>{
+  const x=e.target.closest('.x');if(!x||busy)return;
+  const k=items.findIndex(it=>it.id===+x.parentNode.dataset.id);
+  if(k>=0){URL.revokeObjectURL(items[k].url);items.splice(k,1);render();}
+});
+
+/* ---------- reordenar arrastrando ---------- */
+let drag=null;
+const clearOver=()=>$$('.cell.ovl,.cell.ovr').forEach(c=>c.classList.remove('ovl','ovr'));
+prev.addEventListener('pointerdown',e=>{
+  const cell=e.target.closest('.cell');
+  if(!cell||busy||e.button||e.target.closest('.cap,.x'))return;
+  if(e.pointerType!=='mouse'&&!e.target.closest('.grip'))return;
+  drag={id:+cell.dataset.id,x:e.clientX,y:e.clientY,on:false,cell,target:null,after:false};
+  if(e.pointerType==='mouse')e.preventDefault();
+});
+window.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  if(!drag.on){
+    if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)<6)return;
+    drag.on=true;document.body.classList.add('dragging');drag.cell.classList.add('src');
+    const g=document.createElement('img');g.id='ghost';g.src=byId(drag.id).url;document.body.append(g);drag.ghost=g;
+  }
+  drag.ghost.style.left=(e.clientX+10)+'px';drag.ghost.style.top=(e.clientY+10)+'px';
+  const r=prev.getBoundingClientRect();
+  if(e.clientY<r.top+50)prev.scrollTop-=14;else if(e.clientY>r.bottom-50)prev.scrollTop+=14;
+  clearOver();drag.target=null;
+  const el=document.elementFromPoint(e.clientX,e.clientY),cell=el&&el.closest('.cell');
+  if(cell&&+cell.dataset.id!==drag.id){
+    const b=cell.getBoundingClientRect();drag.after=e.clientX>b.left+b.width/2;drag.target=+cell.dataset.id;
+    cell.classList.add(drag.after?'ovr':'ovl');
+  }
+});
+const endDrag=()=>{
+  if(!drag)return;const d=drag;drag=null;
+  if(d.ghost)d.ghost.remove();document.body.classList.remove('dragging');clearOver();
+  if(!d.on)return;
+  if(d.target!=null){
+    const a=items.findIndex(it=>it.id===d.id),it=items.splice(a,1)[0];
+    const b=items.findIndex(x=>x.id===d.target);items.splice(b+(d.after?1:0),0,it);
+  }
+  render();
+};
+window.addEventListener('pointerup',endDrag);
+window.addEventListener('pointercancel',endDrag);
+
+/* ---------- exportación ---------- */
+function ell(x,t,maxW){
+  if(x.measureText(t).width<=maxW)return t;
+  let lo=0,hi=t.length;
+  while(lo<hi){const mid=(lo+hi+1)>>1;if(x.measureText(t.slice(0,mid)+'…').width<=maxW)lo=mid;else hi=mid-1;}
+  return t.slice(0,lo)+'…';
+}
+async function renderPage(pg,k,total,G){
+  const S=cfg.dpi/25.4,cv=document.createElement('canvas');
+  cv.width=Math.round(G.pw*S);cv.height=Math.round(G.ph*S);
+  const x=cv.getContext('2d');if(!x)throw new Error('no se pudo crear el lienzo');
+  const ink=inkFor(cfg.bg),cover=cfg.mode==='grid'&&cfg.fit==='cover';
+  x.fillStyle=cfg.bg;x.fillRect(0,0,cv.width,cv.height);x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';
+  x.fillStyle=ink;x.textBaseline='middle';
+  if(G.headH){
+    x.font=(G.headMm*S)+'px '+FONT;const y=(G.m+G.headMm/2)*S;
+    const pn=cfg.pnum?(k+1)+'/'+total:'',pw=pn?x.measureText(pn).width:0;
+    if(pn){x.textAlign='right';x.fillText(pn,(G.m+G.W)*S,y);}
+    if(cfg.title){x.textAlign='left';x.fillText(ell(x,cfg.title,G.W*S-pw-(pn?G.headMm*S:0)),G.m*S,y);}
+  }
+  for(const c of pg){
+    const it=items[c.i],bx=(G.m+c.x)*S,by=(G.m+G.headH+c.y)*S,bw=c.w*S,bh=c.h*S;
+    const bmp=await createImageBitmap(it.file);
+    const r=fitRect(bmp.width,bmp.height,bw,bh,cover);
+    x.drawImage(bmp,r.sx,r.sy,r.sw,r.sh,bx+r.dx,by+r.dy,r.dw,r.dh);bmp.close();
+    if(G.capH){
+      x.font=(G.capMm*S)+'px '+FONT;x.fillStyle=ink;
+      const t=ell(x,capText(it,c.i,items.length,cfg.cap),bw),cy=by+bh+G.capH*S/2;
+      if(cfg.capAlign==='center'){x.textAlign='center';x.fillText(t,bx+bw/2,cy);}else{x.textAlign='left';x.fillText(t,bx,cy);}
+    }
+  }
+  const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',Math.min(1,Math.max(0.5,+cfg.q||0.9))));
+  const pxW=cv.width,pxH=cv.height;cv.width=cv.height=0;
+  if(!blob)throw new Error('la hoja es demasiado grande para este navegador a '+cfg.dpi+' dpi; prueba una resolución menor');
+  return {jpg:new Uint8Array(await blob.arrayBuffer()),pxW,pxH,wPt:G.pw*72/25.4,hPt:G.ph*72/25.4};
+}
+function download(parts,type,name){
+  const url=URL.createObjectURL(new Blob(parts,{type})),a=document.createElement('a');
+  a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),20000);
+}
+async function exportAll(kind){
+  if(busy||!items.length)return;
+  if(document.activeElement)document.activeElement.blur();
+  busy=true;$('#xPdf').disabled=$('#xJpg').disabled=true;
+  try{
+    if(document.fonts&&document.fonts.load)await document.fonts.load('12px "Fira Code"').catch(()=>{});
+    const {G,pages}=compute(),out=[],base=(cfg.base||'contactos').replace(/[\\/:*?"<>|]+/g,'-').trim()||'contactos';
+    for(let k=0;k<pages.length;k++){
+      status('componiendo hoja '+(k+1)+'/'+pages.length+'…');
+      await new Promise(r=>setTimeout(r,0));
+      out.push(await renderPage(pages[k],k,pages.length,G));
+    }
+    if(kind==='pdf')download(pdfParts(out),'application/pdf',base+'.pdf');
+    else if(out.length===1)download([out[0].jpg],'image/jpeg',base+'.jpg');
+    else{
+      const d=Math.max(2,String(out.length).length);
+      download(zipParts(out.map((p,k)=>({name:base+'-'+String(k+1).padStart(d,'0')+'.jpg',data:p.jpg}))),'application/zip',base+'.zip');
+    }
+    status('listo: '+pages.length+' hoja'+(pages.length===1?'':'s')+' a '+cfg.dpi+' dpi');
+  }catch(err){status('error: '+(err&&err.message||err));}
+  busy=false;$('#xPdf').disabled=$('#xJpg').disabled=false;
+}
+$('#xPdf').onclick=()=>exportAll('pdf');
+$('#xJpg').onclick=()=>exportAll('jpg');
+
+window.__contactos={addFiles,cfg,get items(){return items;},render,syncInputs};
+syncInputs();render();
+})();
+</script>
+</body>
+</html>
